@@ -11,9 +11,7 @@ const Register = () => {
         name: '',
         email: '',
         password: '',
-        username: '',
         userType: 'individual',
-        category: '',
         phone: ''
     });
     const [error, setError] = useState(null);
@@ -118,25 +116,6 @@ const Register = () => {
                                     </div>
                                 </div>
 
-                                {/* Username */}
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-600">Username</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <FiUser className="h-5 w-5 text-gray-400" />
-                                        </div>
-                                        <input
-                                            type="text"
-                                            name="username"
-                                            value={formData.username}
-                                            onChange={handleInputChange}
-                                            required
-                                            className="w-full pl-10 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent"
-                                            placeholder="johndoe"
-                                        />
-                                    </div>
-                                </div>
-
                                 {/* Password */}
                                 <div className="space-y-2">
                                     <label className="block text-sm font-medium text-gray-600">Password</label>
@@ -191,35 +170,6 @@ const Register = () => {
                                         >
                                             <option value="individual">Individual</option>
                                             <option value="business">Business</option>
-                                        </select>
-                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                            <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Category */}
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-600">Category</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <FiHome className="h-5 w-5 text-gray-400" />
-                                        </div>
-                                        <select
-                                            name="category"
-                                            value={formData.category}
-                                            onChange={handleInputChange}
-                                            required
-                                            className="w-full pl-10 pr-10 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent appearance-none cursor-pointer"
-                                        >
-                                            <option value="">Select Category</option>
-                                            <option value="healthcare">Healthcare</option>
-                                            <option value="technology">Technology</option>
-                                            <option value="education">Education</option>
-                                            <option value="retail">Retail</option>
-                                            <option value="manufacturing">Manufacturing</option>
                                         </select>
                                         <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                             <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">

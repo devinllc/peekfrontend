@@ -361,7 +361,7 @@ export const AuthProvider = ({ children }) => {
             setError(null);
 
             // Validate required fields
-            const requiredFields = ['name', 'email', 'password', 'username', 'userType', 'category', 'phone'];
+            const requiredFields = ['name', 'email', 'password', 'userType', 'phone'];
             const missingFields = requiredFields.filter(field => !userData[field]);
 
             if (missingFields.length > 0) {
@@ -373,18 +373,12 @@ export const AuthProvider = ({ children }) => {
                 throw new Error('Invalid user type. Must be either "individual" or "business"');
             }
 
-            // Validate category
-            if (!['manufacturing', 'education', 'healthcare', 'technology', 'retail'].includes(userData.category)) {
-                throw new Error('Invalid category. Must be one of: manufacturing, education, healthcare, technology, retail');
-            }
 
             const response = await axios.post(`${API_BASE_URL}/users/regester`, {
                 name: userData.name,
                 email: userData.email,
                 password: userData.password,
-                username: userData.username,
                 userType: userData.userType,
-                category: userData.category,
                 phone: userData.phone
             });
 
@@ -490,7 +484,7 @@ export const AuthProvider = ({ children }) => {
 
                 return { success: true, data: response.data };
             } else {
-                return { success: false, error: response.data.message || 'Upload failed' };
+                return { success: true, data: response.data.message || 'Upload failed' };
             }
         } catch (err) {
             console.error('File upload error:', err);
