@@ -16,3 +16,5 @@ If you are developing a production application, we recommend using TypeScript wi
 after running this site , i need to refresh it then the content losds , and need to scroll 2-3 time beforl content of all pages appears. fix
 
 it is taking time before all content loads
+updated frontend
+
