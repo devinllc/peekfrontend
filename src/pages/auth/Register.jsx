@@ -45,29 +45,29 @@ const Register = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-6">
+        <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-2 sm:p-4 md:p-6">
             <div className="max-w-6xl mx-auto">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
-                    className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden"
+                    className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden w-full max-w-2xl mx-auto"
                 >
                     {/* Header */}
-                    <div className="bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] p-8 text-white">
-                        <div className="flex items-center justify-between">
+                    <div className="bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] p-6 sm:p-8 text-white">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                             <div className="flex items-center space-x-4">
-                                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
                                     <FiUser className="w-8 h-8" />
                                 </div>
                                 <div>
-                                    <h1 className="text-3xl font-bold">Create Your Account</h1>
-                                    <p className="text-white/80">Join PeekBI to start creating powerful data visualizations</p>
+                                    <h1 className="text-2xl sm:text-3xl font-bold">Create Your Account</h1>
+                                    <p className="text-white/80 text-sm sm:text-base">Join PeekBI to start creating powerful data visualizations</p>
                                 </div>
                             </div>
                             <Link
                                 to="/"
-                                className="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-xl hover:bg-white/30 transition-all duration-200 flex items-center space-x-2 border border-white/30"
+                                className="mt-4 sm:mt-0 px-3 py-2 sm:px-4 sm:py-2 bg-white/20 backdrop-blur-sm rounded-xl hover:bg-white/30 transition-all duration-200 flex items-center space-x-2 border border-white/30 text-sm sm:text-base"
                             >
                                 <FiArrowLeft className="w-4 h-4" />
                                 <span>Back to Home</span>
@@ -76,8 +76,8 @@ const Register = () => {
                     </div>
 
                     {/* Content */}
-                    <div className="p-8">
-                        <div className="max-w-4xl mx-auto">
+                    <div className="p-4 sm:p-8">
+                        <div className="w-full max-w-lg mx-auto">
                             {error && (
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.95 }}
@@ -167,7 +167,7 @@ const Register = () => {
                                     </div>
 
                                     {/* User Type */}
-                                    <div className="space-y-2">
+                                    <div className="space-y-2 md:col-span-2">
                                         <label className="block text-sm font-medium text-gray-600">Account Type</label>
                                         <div className="relative">
                                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -192,8 +192,8 @@ const Register = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center justify-between pt-6">
-                                    <p className="text-sm text-gray-600">
+                                <div className="flex flex-col sm:flex-row items-center justify-between pt-6 gap-4">
+                                    <p className="text-sm text-gray-600 text-center sm:text-left">
                                         Already have an account?{' '}
                                         <Link to="/login" className="text-[#7400B8] hover:text-[#9B4DCA] transition-colors font-medium">
                                             Log in
@@ -204,7 +204,7 @@ const Register = () => {
                                         whileTap={{ scale: 0.95 }}
                                         type="submit"
                                         disabled={loading}
-                                        className={`px-8 py-3 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:shadow-lg transition-all duration-200 font-medium ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                        className={`px-8 py-3 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:shadow-lg transition-all duration-200 font-medium w-full sm:w-auto ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
                                     >
                                         {loading ? (
                                             <div className="flex items-center space-x-2">

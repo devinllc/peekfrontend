@@ -69,7 +69,9 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
                                 </div>
                             </div>
                             <p className="text-2xl font-bold text-[#7400B8]">
-                                ${typeof value === 'number' ? value.toLocaleString() : value}
+                                {key.includes('total') || key.includes('avg') || key.includes('median') ? 
+                                  `₹${typeof value === 'number' ? value.toLocaleString() : value}` : 
+                                  typeof value === 'number' ? value.toLocaleString() : value}
                             </p>
                         </motion.div>
                     ))}
@@ -79,7 +81,11 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
             {/* Charts Grid */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                 {/* Sales by Region */}
-                {analysis.insights.totals?.sales_by_region && (
+                {analysis.insights.totals?.sales_by_region?.Region &&
+                 Array.isArray(analysis.insights.totals.sales_by_region.Region) &&
+                 Array.isArray(analysis.insights.totals.sales_by_region.Sales) &&
+                 analysis.insights.totals.sales_by_region.Region.length > 0 &&
+                 analysis.insights.totals.sales_by_region.Sales.length === analysis.insights.totals.sales_by_region.Region.length && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -104,7 +110,7 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
                                     <YAxis />
                                     <Tooltip 
                                         formatter={(value, name) => [
-                                            `$${value.toLocaleString()}`,
+                                            `₹${value.toLocaleString()}`,
                                             name === 'sales' ? 'Sales' : 'Trend'
                                         ]}
                                         labelStyle={{ color: '#7400B8' }}
@@ -141,8 +147,80 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
                     </motion.div>
                 )}
 
+                {/* Sales by Region/Category */}
+                {analysis.insights.totals?.sales_by_category &&
+                 Array.isArray(analysis.insights.totals.sales_by_category) &&
+                 analysis.insights.totals.sales_by_category.length >= 2 &&
+                 Array.isArray(analysis.insights.totals.sales_by_category[0]) &&
+                 Array.isArray(analysis.insights.totals.sales_by_category[1]) &&
+                 analysis.insights.totals.sales_by_category[0].length > 0 &&
+                 analysis.insights.totals.sales_by_category[0].length === analysis.insights.totals.sales_by_category[1].length && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
+                    >
+                        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                            <FiBarChart2 className="w-6 h-6 text-[#7400B8]" />
+                            Sales by Category
+                        </h3>
+                        <div className="h-[350px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <ComposedChart
+                                    data={analysis.insights.totals.sales_by_category[0].map((category, index) => ({
+                                        name: category,
+                                        sales: analysis.insights.totals.sales_by_category[1][index],
+                                        trend: analysis.insights.totals.sales_by_category[1][index] * 0.8 + Math.random() * 0.4 * analysis.insights.totals.sales_by_category[1][index]
+                                    }))}
+                                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey="name" />
+                                    <YAxis />
+                                    <Tooltip 
+                                        formatter={(value) => [`₹${value.toLocaleString()}`, 'Sales']}
+                                        labelStyle={{ color: '#7400B8' }}
+                                        contentStyle={{
+                                            backgroundColor: 'white',
+                                            border: '1px solid #f0f0f0',
+                                            borderRadius: '12px',
+                                            padding: '12px',
+                                            boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                                        }}
+                                    />
+                                    <Legend />
+                                    <Bar 
+                                        dataKey="sales" 
+                                        fill="#7400B8" 
+                                        radius={[8, 8, 0, 0]}
+                                        barSize={40}
+                                    >
+                                        {analysis.insights.totals.sales_by_category[0].map((_, index) => (
+                                            <Cell key={`cell-${index}`} fill={`rgba(116, 0, 184, ${0.3 + (index * 0.15)})`} />
+                                        ))}
+                                    </Bar>
+                                    <Line 
+                                        type="monotone" 
+                                        dataKey="trend" 
+                                        stroke="#9B4DCA" 
+                                        strokeWidth={3}
+                                        dot={{ fill: '#9B4DCA', strokeWidth: 2, r: 6 }}
+                                        activeDot={{ r: 10 }}
+                                    />
+                                </ComposedChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </motion.div>
+                )}
+
                 {/* Sales by Category - Pie Chart */}
-                {analysis.insights.totals?.sales_by_category && (
+                {analysis.insights.totals?.sales_by_category &&
+                 Array.isArray(analysis.insights.totals.sales_by_category) &&
+                 analysis.insights.totals.sales_by_category.length >= 2 &&
+                 Array.isArray(analysis.insights.totals.sales_by_category[0]) &&
+                 Array.isArray(analysis.insights.totals.sales_by_category[1]) &&
+                 analysis.insights.totals.sales_by_category[0].length > 0 &&
+                 analysis.insights.totals.sales_by_category[0].length === analysis.insights.totals.sales_by_category[1].length && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -157,9 +235,9 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
-                                        data={analysis.insights.totals.sales_by_category.Category.map((category, index) => ({
+                                        data={analysis.insights.totals.sales_by_category[0].map((category, index) => ({
                                             name: category,
-                                            value: analysis.insights.totals.sales_by_category.Sales[index]
+                                            value: analysis.insights.totals.sales_by_category[1][index]
                                         }))}
                                         cx="50%"
                                         cy="50%"
@@ -169,7 +247,7 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
                                         fill="#8884d8"
                                         dataKey="value"
                                     >
-                                        {analysis.insights.totals.sales_by_category.Category.map((_, index) => (
+                                        {analysis.insights.totals.sales_by_category[0].map((_, index) => (
                                             <Cell 
                                                 key={`cell-${index}`} 
                                                 fill={pieColors[index % pieColors.length]}
@@ -177,7 +255,7 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
                                         ))}
                                     </Pie>
                                     <Tooltip 
-                                        formatter={(value) => [`$${value.toLocaleString()}`, 'Sales']}
+                                        formatter={(value) => [`₹${value.toLocaleString()}`, 'Sales']}
                                         contentStyle={{
                                             backgroundColor: 'white',
                                             border: '1px solid #f0f0f0',
@@ -197,7 +275,13 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
             {/* Performance Analysis */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                 {/* High Performers */}
-                {analysis.insights.highPerformers && analysis.insights.highPerformers.Category && (
+                {analysis.insights.highPerformers &&
+                 Array.isArray(analysis.insights.highPerformers) &&
+                 analysis.insights.highPerformers.length >= 2 &&
+                 Array.isArray(analysis.insights.highPerformers[0]) &&
+                 Array.isArray(analysis.insights.highPerformers[1]) &&
+                 analysis.insights.highPerformers[0].length > 0 &&
+                 analysis.insights.highPerformers[0].length === analysis.insights.highPerformers[1].length && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -213,11 +297,11 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
                         <div className="h-[350px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart
-                                    data={analysis.insights.highPerformers.Category.map((category, index) => ({
+                                    data={analysis.insights.highPerformers[0].map((category, index) => ({
                                         name: category,
-                                        sales: analysis.insights.highPerformers.Sales[index],
-                                        percentage: (analysis.insights.highPerformers.Sales[index] / 
-                                            analysis.insights.highPerformers.Sales.reduce((a, b) => a + b, 0) * 100).toFixed(1)
+                                        sales: analysis.insights.highPerformers[1][index],
+                                        percentage: (analysis.insights.highPerformers[1][index] / 
+                                            analysis.insights.highPerformers[1].reduce((a, b) => a + b, 0) * 100).toFixed(1)
                                     }))}
                                     margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                                 >
@@ -227,7 +311,7 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
                                     <YAxis yAxisId="right" orientation="right" stroke="#22c55e" />
                                     <Tooltip 
                                         formatter={(value, name) => [
-                                            name === 'sales' ? `$${value.toLocaleString()}` : `${value}%`,
+                                            name === 'sales' ? `₹${value.toLocaleString()}` : `${value}%`,
                                             name === 'sales' ? 'Sales' : 'Percentage'
                                         ]}
                                         labelStyle={{ color: '#22c55e' }}
@@ -247,7 +331,7 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
                                         radius={[8, 8, 0, 0]}
                                         barSize={40}
                                     >
-                                        {analysis.insights.highPerformers.Category.map((_, index) => (
+                                        {analysis.insights.highPerformers[0].map((_, index) => (
                                             <Cell key={`cell-${index}`} fill={`rgba(34, 197, 94, ${0.3 + (index * 0.15)})`} />
                                         ))}
                                     </Bar>
@@ -267,7 +351,13 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
                 )}
 
                 {/* Low Performers */}
-                {analysis.insights.lowPerformers && analysis.insights.lowPerformers.Category && (
+                {analysis.insights.lowPerformers &&
+                 Array.isArray(analysis.insights.lowPerformers) &&
+                 analysis.insights.lowPerformers.length >= 2 &&
+                 Array.isArray(analysis.insights.lowPerformers[0]) &&
+                 Array.isArray(analysis.insights.lowPerformers[1]) &&
+                 analysis.insights.lowPerformers[0].length > 0 &&
+                 analysis.insights.lowPerformers[0].length === analysis.insights.lowPerformers[1].length && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -283,11 +373,11 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
                         <div className="h-[350px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart
-                                    data={analysis.insights.lowPerformers.Category.map((category, index) => ({
+                                    data={analysis.insights.lowPerformers[0].map((category, index) => ({
                                         name: category,
-                                        sales: analysis.insights.lowPerformers.Sales[index],
-                                        percentage: (analysis.insights.lowPerformers.Sales[index] / 
-                                            analysis.insights.lowPerformers.Sales.reduce((a, b) => a + b, 0) * 100).toFixed(1)
+                                        sales: analysis.insights.lowPerformers[1][index],
+                                        percentage: (analysis.insights.lowPerformers[1][index] / 
+                                            analysis.insights.lowPerformers[1].reduce((a, b) => a + b, 0) * 100).toFixed(1)
                                     }))}
                                     margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                                 >
@@ -297,7 +387,7 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
                                     <YAxis yAxisId="right" orientation="right" stroke="#ef4444" />
                                     <Tooltip 
                                         formatter={(value, name) => [
-                                            name === 'sales' ? `$${value.toLocaleString()}` : `${value}%`,
+                                            name === 'sales' ? `₹${value.toLocaleString()}` : `${value}%`,
                                             name === 'sales' ? 'Sales' : 'Percentage'
                                         ]}
                                         labelStyle={{ color: '#ef4444' }}
@@ -317,7 +407,7 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
                                         radius={[8, 8, 0, 0]}
                                         barSize={40}
                                     >
-                                        {analysis.insights.lowPerformers.Category.map((_, index) => (
+                                        {analysis.insights.lowPerformers[0].map((_, index) => (
                                             <Cell key={`cell-${index}`} fill={`rgba(239, 68, 68, ${0.3 + (index * 0.15)})`} />
                                         ))}
                                     </Bar>
@@ -338,7 +428,7 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
             </div>
 
             {/* Trends Section */}
-            {analysis.insights.trends && analysis.insights.trends.length > 0 && (
+            {Array.isArray(analysis.insights.trends) && analysis.insights.trends.length > 0 && analysis.insights.trends[0] && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -359,7 +449,7 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
                                 <XAxis dataKey="date" />
                                 <YAxis />
                                 <Tooltip 
-                                    formatter={(value) => [`$${value.toLocaleString()}`, 'Average']}
+                                    formatter={(value) => [`₹${value.toLocaleString()}`, 'Average']}
                                     labelStyle={{ color: '#7400B8' }}
                                     contentStyle={{
                                         backgroundColor: 'white',
@@ -372,7 +462,8 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
                                 <Legend />
                                 <Area 
                                     type="monotone" 
-                                    dataKey="avg" 
+                                    dataKey="total_sales" 
+                                    name="Total Sales"
                                     stroke="#7400B8" 
                                     fill="url(#trendGradient)"
                                     strokeWidth={3}
@@ -390,83 +481,85 @@ const Analysis = ({ selectedFile, analysis, onBack }) => {
             )}
 
             {/* Summary Statistics */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-            >
-                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                    <FiBarChart2 className="w-6 h-6 text-[#7400B8]" />
-                    Summary Statistics
-                </h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {analysis.summary && Object.entries(analysis.summary).map(([metric, stats], index) => (
-                        <motion.div
-                            key={metric}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.6 + index * 0.1 }}
-                            className="bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl p-6 border border-[#7400B8]/10"
-                        >
-                            <h4 className="font-bold text-gray-800 mb-4 text-lg">{metric}</h4>
-                            <div className="h-[200px] w-full mb-4">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart
-                                        data={[
-                                            { name: 'Min', value: stats.min },
-                                            { name: 'Max', value: stats.max },
-                                            { name: 'Mean', value: stats.mean },
-                                            { name: 'Median', value: stats.median }
-                                        ]}
-                                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                                    >
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                        <XAxis dataKey="name" />
-                                        <YAxis />
-                                        <Tooltip 
-                                            formatter={(value) => [value.toLocaleString(), 'Value']}
-                                            contentStyle={{
-                                                backgroundColor: 'white',
-                                                border: '1px solid #f0f0f0',
-                                                borderRadius: '12px',
-                                                padding: '12px',
-                                                boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                            }}
-                                        />
-                                        <Bar 
-                                            dataKey="value" 
-                                            fill="#7400B8" 
-                                            radius={[8, 8, 0, 0]}
-                                            barSize={40}
+            {analysis.summary && typeof analysis.summary === 'object' && Object.keys(analysis.summary).length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
+                >
+                    <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        <FiBarChart2 className="w-6 h-6 text-[#7400B8]" />
+                        Summary Statistics
+                    </h3>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {Object.entries(analysis.summary).map(([metric, stats], index) => (
+                            <motion.div
+                                key={metric}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.6 + index * 0.1 }}
+                                className="bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl p-6 border border-[#7400B8]/10"
+                            >
+                                <h4 className="font-bold text-gray-800 mb-4 text-lg">{metric}</h4>
+                                <div className="h-[200px] w-full mb-4">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <ComposedChart
+                                            data={[
+                                                { name: 'Min', value: stats.min },
+                                                { name: 'Max', value: stats.max },
+                                                { name: 'Mean', value: stats.mean },
+                                                { name: 'Median', value: stats.median }
+                                            ]}
+                                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                                         >
-                                            {['Min', 'Max', 'Mean', 'Median'].map((_, index) => (
-                                                <Cell 
-                                                    key={`cell-${index}`} 
-                                                    fill={`rgba(116, 0, 184, ${0.3 + (index * 0.15)})`} 
-                                                />
-                                            ))}
-                                        </Bar>
-                                    </ComposedChart>
-                                </ResponsiveContainer>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 bg-white/60 rounded-xl border border-[#7400B8]/10">
-                                    <p className="text-sm text-gray-600 font-medium">Standard Deviation</p>
-                                    <p className="font-bold text-[#7400B8] text-lg">{stats.stddev.toLocaleString()}</p>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                            <XAxis dataKey="name" />
+                                            <YAxis />
+                                            <Tooltip 
+                                                formatter={(value) => [value.toLocaleString(), 'Value']}
+                                                contentStyle={{
+                                                    backgroundColor: 'white',
+                                                    border: '1px solid #f0f0f0',
+                                                    borderRadius: '12px',
+                                                    padding: '12px',
+                                                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                                                }}
+                                            />
+                                            <Bar 
+                                                dataKey="value" 
+                                                fill="#7400B8" 
+                                                radius={[8, 8, 0, 0]}
+                                                barSize={40}
+                                            >
+                                                {['Min', 'Max', 'Mean', 'Median'].map((_, index) => (
+                                                    <Cell 
+                                                        key={`cell-${index}`} 
+                                                        fill={`rgba(116, 0, 184, ${0.3 + (index * 0.15)})`} 
+                                                    />
+                                                ))}
+                                            </Bar>
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
                                 </div>
-                                <div className="p-4 bg-white/60 rounded-xl border border-[#7400B8]/10">
-                                    <p className="text-sm text-gray-600 font-medium">Range</p>
-                                    <p className="font-bold text-[#7400B8] text-lg">{(stats.max - stats.min).toLocaleString()}</p>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 bg-white/60 rounded-xl border border-[#7400B8]/10">
+                                        <p className="text-sm text-gray-600 font-medium">Standard Deviation</p>
+                                        <p className="font-bold text-[#7400B8] text-lg">{stats.stddev.toLocaleString()}</p>
+                                    </div>
+                                    <div className="p-4 bg-white/60 rounded-xl border border-[#7400B8]/10">
+                                        <p className="text-sm text-gray-600 font-medium">Range</p>
+                                        <p className="font-bold text-[#7400B8] text-lg">{(stats.max - stats.min).toLocaleString()}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        </motion.div>
-                    ))}
-                </div>
-            </motion.div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </motion.div>
+            )}
 
             {/* Insights Section */}
-            {analysis.insights.hypothesis && analysis.insights.hypothesis.length > 0 && (
+            {Array.isArray(analysis.insights.hypothesis) && analysis.insights.hypothesis.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}

@@ -47,22 +47,22 @@ const HeroSection = () => {
 
           {/* Image - Takes remaining height */}
           <motion.div 
-            className="relative flex justify-center flex-1 min-h-0"
+            className="relative flex justify-center flex-1 min-h-0 overflow-hidden"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.8 }}
           >
-            <div className="relative w-full">
+            <div className="relative w-full h-full overflow-hidden">
               <img
                 src="/assets/hero.png"
                 alt="PeekBI Analytics Dashboard"
-                className="w-full h-[60vh] object-cover object-top rounded-xl shadow-2xl"
+                className="w-full h-[62vh] object-cover object-top rounded-t-xl rounded-b-none shadow-2xl"
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.src = "https://placehold.co/1200x600/2D1B69/white?text=PeekBI+Analytics";
                 }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#2D1B69]/20 to-transparent rounded-xl"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-[#2D1B69]/20 to-transparent rounded-t-xl"></div>
             </div>
           </motion.div>
         </div>

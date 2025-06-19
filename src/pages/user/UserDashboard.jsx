@@ -276,7 +276,7 @@ const UserDashboard = () => {
         <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5">
             <div className="flex h-screen overflow-hidden">
                 <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-                <main className={`flex-1 overflow-y-auto transition-all duration-300 ${sidebarOpen ? 'ml-72' : 'ml-20'}`}>
+                <main className={`flex-1 overflow-y-auto transition-all duration-300 w-full ml-0 ${sidebarOpen ? 'lg:ml-72' : 'lg:ml-20'}`}>
                             <Routes>
                                 <Route index element={
                             <div className="h-full flex flex-col">

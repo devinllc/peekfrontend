@@ -55,27 +55,36 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     return (
         <>
             {/* Mobile sidebar toggle */}
-            <div className="lg:hidden fixed top-4 left-4 z-50">
+            <div className="lg:hidden">
                 <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setSidebarOpen(!sidebarOpen)}
-                    className="p-3 rounded-2xl bg-white/90 backdrop-blur-sm shadow-xl text-gray-700 hover:text-[#7400B8] transition-all duration-200 border border-white/30"
+                    className="fixed top-4 left-4 z-50 p-3 rounded-2xl bg-white/90 backdrop-blur-sm shadow-xl text-gray-700 hover:text-[#7400B8] transition-all duration-200 border border-white/30"
+                    style={{ pointerEvents: 'auto' }}
                 >
                     {sidebarOpen ? <FiX className="w-6 h-6" /> : <FiMenu className="w-6 h-6" />}
                 </motion.button>
             </div>
 
+            {/* Mobile Sidebar Overlay */}
+            {sidebarOpen && (
+                <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
+            )}
+
             {/* Sidebar */}
             <motion.div
-                className={`fixed inset-y-0 left-0 z-40 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] shadow-2xl transform transition-all duration-300 ease-in-out ${
-                    sidebarOpen ? 'w-72' : 'w-20'
-                }`}
+                className={`fixed inset-y-0 left-0 z-50 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] shadow-2xl transform transition-all duration-300 ease-in-out
+                    ${sidebarOpen ? 'block w-72' : 'hidden w-0'}
+                    lg:block
+                    ${sidebarOpen ? 'lg:w-72' : 'lg:w-20'}
+                `}
                 initial={{ x: -300 }}
-                animate={{ x: 0 }}
+                animate={{ x: sidebarOpen || window.innerWidth >= 1024 ? 0 : -300 }}
                 transition={{ duration: 0.5 }}
+                style={{ maxWidth: sidebarOpen || window.innerWidth >= 1024 ? (window.innerWidth >= 1024 && !sidebarOpen ? '5rem' : '18rem') : '0', minWidth: 0 }}
             >
-                <div className="flex flex-col h-full">
+                <div className={`flex flex-col h-full ${sidebarOpen || window.innerWidth >= 1024 ? '' : 'hidden'} ${!sidebarOpen && window.innerWidth >= 1024 ? 'items-center' : ''}`}>
                     {/* Logo and Toggle */}
                     <div className="flex items-center justify-between h-20 px-6 border-b border-white/20">
                         {sidebarOpen ? (
@@ -121,6 +130,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: index * 0.1 }}
+                                onClick={() => {
+                                    navigate(item.path);
+                                    if (window.innerWidth < 1024) setSidebarOpen(false);
+                                }}
                             >
                                 <Link
                                     to={item.path}

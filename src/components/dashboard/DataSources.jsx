@@ -211,7 +211,7 @@ const DataSources = () => {
                         <div className="h-full">
                             {files.length > 0 ? (
                                 <div className="h-full">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 lg:gap-6 h-full overflow-y-auto custom-scrollbar pr-2">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 h-full overflow-y-auto custom-scrollbar pr-0 sm:pr-2">
                                         {files.map((file, index) => (
                                             <motion.div
                                                 key={file._id}
@@ -220,41 +220,39 @@ const DataSources = () => {
                                                 transition={{ delay: index * 0.1 }}
                                                 whileHover={{ y: -5, scale: 1.02 }}
                                                 onClick={() => handleFileSelect(file)}
-                                                className={`bg-gradient-to-br from-[#F9F4FF] to-white p-4 lg:p-6 rounded-2xl cursor-pointer transition-all duration-300 border flex flex-col justify-between h-48 lg:h-52 ${
+                                                className={`bg-gradient-to-br from-[#F9F4FF] to-white p-3 sm:p-4 lg:p-6 rounded-2xl cursor-pointer transition-all duration-300 border flex flex-col justify-between h-40 sm:h-48 lg:h-52 ${
                                                     selectedFile?._id === file._id
                                                         ? 'border-[#7400B8]/50 shadow-lg'
                                                         : 'border-[#7400B8]/10 hover:border-[#7400B8]/30 hover:shadow-md'
                                                 }`}
                                             >
                                                 <div className="flex-1">
-                                                    <div className="flex items-center space-x-3 mb-3 lg:mb-4">
-                                                        <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-xl bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] flex items-center justify-center">
-                                                            <FiFile className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
+                                                    <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3 lg:mb-4">
+                                                        <div className="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-xl bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] flex items-center justify-center">
+                                                            <FiFile className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-white" />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
-                                                            <p className="text-xs lg:text-sm font-semibold text-gray-800 truncate">
+                                                            <p className="text-xs sm:text-sm lg:text-base font-semibold text-gray-800 truncate">
                                                                 {file.originalName}
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    
-                                                    <div className="space-y-2 lg:space-y-3">
+                                                    <div className="space-y-1 sm:space-y-2 lg:space-y-3">
                                                         <div className="flex items-center text-xs text-gray-600">
-                                                            <FiDatabase className="w-3 h-3 mr-2" />
+                                                            <FiDatabase className="w-3 h-3 mr-1" />
                                                             <span className="truncate">{file.fileCategory}</span>
                                                         </div>
                                                         <div className="flex items-center text-xs text-gray-600">
-                                                            <FiDownload className="w-3 h-3 mr-2" />
+                                                            <FiDownload className="w-3 h-3 mr-1" />
                                                             <span>{formatFileSize(file.sizeInBytes)}</span>
                                                         </div>
                                                         <div className="flex items-center text-xs text-gray-600">
-                                                            <FiCalendar className="w-3 h-3 mr-2" />
+                                                            <FiCalendar className="w-3 h-3 mr-1" />
                                                             <span>{formatDate(file.uploadedAt)}</span>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                
-                                                <div className="mt-3 lg:mt-4">
+                                                <div className="mt-2 sm:mt-3 lg:mt-4">
                                                     {file.analysis ? (
                                                         <motion.button
                                                             whileHover={{ scale: 1.05 }}
@@ -263,9 +261,9 @@ const DataSources = () => {
                                                                 e.stopPropagation();
                                                                 navigate(`/user/dashboard?fileId=${file._id}`);
                                                             }}
-                                                            className="w-full px-2 lg:px-3 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all duration-200 flex items-center justify-center space-x-2 text-xs lg:text-sm font-medium shadow-lg"
+                                                            className="w-full px-2 sm:px-3 lg:px-3 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all duration-200 flex items-center justify-center space-x-1 sm:space-x-2 text-xs sm:text-sm font-medium shadow-lg"
                                                         >
-                                                            <FiBarChart2 className="w-3 h-3 lg:w-4 lg:h-4" />
+                                                            <FiBarChart2 className="w-3 h-3 sm:w-4 sm:h-4 lg:w-4 lg:h-4" />
                                                             <span>View Analysis</span>
                                                         </motion.button>
                                                     ) : (
@@ -276,9 +274,9 @@ const DataSources = () => {
                                                                 e.stopPropagation();
                                                                 navigate(`/user/dashboard?fileId=${file._id}`);
                                                             }}
-                                                            className="w-full px-2 lg:px-3 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2 text-xs lg:text-sm font-medium"
+                                                            className="w-full px-2 sm:px-3 lg:px-3 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-1 sm:space-x-2 text-xs sm:text-sm font-medium"
                                                         >
-                                                            <FiCpu className="w-3 h-3 lg:w-4 lg:h-4" />
+                                                            <FiCpu className="w-3 h-3 sm:w-4 sm:h-4 lg:w-4 lg:h-4" />
                                                             <span>Analyze</span>
                                                         </motion.button>
                                                     )}
@@ -314,7 +312,7 @@ const DataSources = () => {
                 </div>
             </div>
 
-            <style jsx>{`
+            <style>{`
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 6px;
                 }
