@@ -250,6 +250,7 @@ export const AuthProvider = ({ children }) => {
 
                 setUser({
                     _id: tokenData.id,
+                    id: tokenData.id,
                     email: tokenData.email,
                     name: tokenData.name || tokenData.email.split('@')[0],
                     role: tokenData.role || 'user'
@@ -335,10 +336,11 @@ export const AuthProvider = ({ children }) => {
                 console.log('Login token data:', tokenData); // Debug log
                 
                 setUser({
-                    _id: tokenData.id, // Changed from userId to id to match your token
+                    _id: tokenData.id,
+                    id: tokenData.id,
                     email: tokenData.email,
-                    name: tokenData.name || email.split('@')[0], // Fallback to email username if name not provided
-                    role: tokenData.role || 'user' // Fallback to user if role not provided
+                    name: tokenData.name || email.split('@')[0],
+                    role: tokenData.role || 'user'
                 });
 
                 // Setup token refresh
@@ -420,18 +422,27 @@ export const AuthProvider = ({ children }) => {
                 throw new Error('No authentication token found');
             }
 
+            console.log('Making PUT request to update profile:', userData);
             const response = await axios.patch(`${API_BASE_URL}/users/${userId}`, userData, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
+            
+            console.log('Update profile API response:', response.data);
 
-            if (response.data.status === 'success') {
-                const updatedUser = response.data.Data;
+            // Handle the API response pattern where user data is in response.data.user
+            if (response.data.status === 'success' && response.data.user) {
+                const updatedUser = response.data.user;
+                console.log('Setting user state with updated data:', updatedUser);
                 setUser(updatedUser);
                 setLocalStorage('user', updatedUser);
                 return { success: true, user: updatedUser };
             }
+            
+            // If the API doesn't return user data but the request was successful
+            console.log('API request successful but no user data returned');
+            return { success: true };
         } catch (err) {
             console.error('Error updating profile:', err);
             const errorMessage = err.response?.data?.message || err.message || 'Failed to update profile';
@@ -442,7 +453,7 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const uploadFile = async (userId, file, industryCategory) => {
+    const uploadFile = async (userId, file, category) => {
         try {
             const token = localStorage.getItem('token');
 
@@ -454,14 +465,17 @@ export const AuthProvider = ({ children }) => {
                 throw new Error('No file provided for upload');
             }
 
-            if (!industryCategory) {
+            if (!category) {
                 throw new Error('Industry category is required');
             }
 
+        // Debug: Log what we're sending
+        console.log('Sending category:', category);
+        console.log('Category type:', typeof category);
+        console.log('Category length:', category.length);
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('industryCategory', industryCategory);
-
+            formData.append('category', category); 
             const response = await axios.post(
                 `${API_BASE_URL}/files/upload/${userId}`,
                 formData,

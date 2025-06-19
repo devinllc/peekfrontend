@@ -1,212 +1,78 @@
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { FiUser, FiMail, FiCalendar, FiShield, FiDatabase, FiCreditCard, FiCheck, FiX, FiEdit, FiSave, FiLoader, FiPhone, FiBriefcase } from 'react-icons/fi';
 import { motion } from 'framer-motion';
-import { FiUser, FiMail, FiCalendar, FiCreditCard, FiShield, FiDatabase, FiCheck, FiX, FiEdit2, FiSave, FiLoader, FiArrowLeft } from 'react-icons/fi';
 import axios from 'axios';
+import Header from './Header';
+
+const API_BASE_URL = 'https://api.peekbi.com';
 
 const Profile = () => {
+    const { user: authUser, logout, updateProfile } = useAuth();
     const navigate = useNavigate();
-    const { user: currentUser, loading: authLoading } = useAuth();
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
-    const [updateError, setUpdateError] = useState(null);
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        username: '',
-        userType: '',
-        bussinessCategory: '',
-        bussinessType: '',
-        phone: '',
-        companyName: ''
-    });
+    const [formData, setFormData] = useState({});
 
-    // Add lastLogin display helper
     const formatLastLogin = (lastLogin) => {
-        if (!lastLogin || lastLogin.length === 0) return 'Never';
-        const lastLoginDate = new Date(lastLogin[lastLogin.length - 1]);
-        return lastLoginDate.toLocaleString();
+        if (!lastLogin) return 'Never';
+        const date = new Date(lastLogin);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
     };
 
     useEffect(() => {
-        const fetchUserProfile = async () => {
+        const fetchProfileData = async () => {
+            if (!authUser?.id && !authUser?._id) {
+                setLoading(false);
+                return;
+            }
+
             try {
                 setLoading(true);
-                setError(null);
-
-                // Wait for auth to finish loading
-                if (authLoading) {
-                    return;
-                }
-
-                // If no current user, we can't proceed
-                if (!currentUser) {
-                    throw new Error('Please log in to view your profile');
-                }
-
-                // Use currentUser._id for API calls
-                const userId = currentUser._id;
-
-                // Double check userId is available
-                if (!userId) {
-                    console.error('No user ID available:', {
-                        currentUser,
-                        currentUserId: currentUser?._id,
-                        authLoading
-                    });
-                    throw new Error('User ID not found. Please log in again.');
-                }
-
                 const token = localStorage.getItem('token');
                 if (!token) {
-                    throw new Error('No authentication token found. Please log in again.');
+                    throw new Error('No authentication token found');
                 }
 
-                console.log('Fetching user profile for ID:', userId, 'Current user:', currentUser);
-                const response = await axios.get(`https://api.peekbi.com/users/${userId}`, {
+                const userId = authUser?.id || authUser?._id;
+                const response = await axios.get(`${API_BASE_URL}/users/${userId}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
                 });
 
-                console.log('API Response:', response.data);
-
-                // Check if response has the expected structure
-                if (!response.data) {
-                    throw new Error('Empty response received from server');
+                if (response.data.status === 'success' && response.data.user) {
+                    setUser(response.data.user);
+                    setFormData(response.data.user);
+                } else {
+                    // Fallback to authUser if API doesn't return expected data
+                    setUser(authUser);
+                    setFormData(authUser);
                 }
-
-                // Check if response has status field
-                if (response.data.status !== 'success') {
-                    throw new Error(`API returned status: ${response.data.status}`);
-                }
-
-                // Check if response has user field
-                if (!response.data.user) {
-                    console.error('Response missing user field:', response.data);
-                    throw new Error('Invalid response format: missing user field');
-                }
-
-                const userData = response.data.user;
-
-                // Validate required user fields
-                if (!userData.id && !userData._id) {
-                    console.error('User data missing ID:', userData);
-                    throw new Error('Invalid user data: missing ID');
-                }
-
-                // Set user data exactly as received from API
-                setUser({
-                    ...userData,
-                    // Ensure we have all fields with correct types
-                    id: userData.id,
-                    name: userData.name || '',
-                    email: userData.email || '',
-                    username: userData.username || '',
-                    userType: userData.userType || '',
-                    bussinessCategory: userData.bussinessCategory || '',
-                    bussinessType: userData.bussinessType || '',
-                    phone: userData.phone || '',
-                    createdAt: userData.createdAt,
-                    lastLogin: userData.lastLogin || [],
-                    plan: userData.plan || {
-                        _id: '',
-                        name: 'free',
-                        price: 0,
-                        billingInterval: 'monthly',
-                        maxReports: 0,
-                        maxSavedCharts: 0,
-                        maxUsersPerAccount: 1,
-                        dataRetentionDays: 30,
-                        features: {}
-                    },
-                    subscriptionStataus: userData.subscriptionStataus || 'inactive',
-                    currentPeriodEnd: userData.currentPeriodEnd,
-                    repoerCount: userData.repoerCount || 0,
-                    chartCount: userData.chartCount || 0
-                });
-
-                // Set form data with exact field names
-                setFormData({
-                    name: userData.name || '',
-                    email: userData.email || '',
-                    username: userData.username || '',
-                    userType: userData.userType || '',
-                    bussinessCategory: userData.bussinessCategory || '',
-                    bussinessType: userData.bussinessType || '',
-                    phone: userData.phone || ''
-                });
-
             } catch (err) {
-                console.error('Error fetching user profile:', {
-                    error: err,
-                    response: err.response?.data,
-                    status: err.response?.status,
-                    message: err.message,
-                    currentUser,
-                    currentUserId: currentUser?._id,
-                    authLoading
-                });
-
-                let errorMessage = 'Failed to fetch user profile';
-
-                if (err.response?.status === 401) {
-                    errorMessage = 'Session expired. Please log in again.';
-                } else if (err.response?.status === 403) {
-                    errorMessage = 'You do not have permission to view this profile.';
-                } else if (err.response?.status === 404) {
-                    errorMessage = 'User profile not found.';
-                } else if (err.response?.data?.message) {
-                    errorMessage = err.response.data.message;
-                } else if (err.message) {
-                    errorMessage = err.message;
-                }
-
-                setError(errorMessage);
+                console.error('Error fetching profile:', err);
+                // Fallback to authUser if fetch fails
+                setUser(authUser);
+                setFormData(authUser);
             } finally {
                 setLoading(false);
             }
         };
 
-        // Only fetch if auth is not loading and we have current user
-        if (!authLoading && currentUser) {
-            fetchUserProfile();
-        } else if (!authLoading) {
-            console.error('No user available:', {
-                currentUser,
-                currentUserId: currentUser?._id,
-                authLoading
-            });
-            setError('User not found. Please log in again.');
-            setLoading(false);
-        }
-    }, [currentUser, authLoading, navigate]);
+        fetchProfileData();
+    }, []); // Empty dependency array - only run once on mount
 
     const handleEdit = () => {
         setIsEditing(true);
-        setUpdateError(null);
     };
 
     const handleCancel = () => {
         setIsEditing(false);
-        setUpdateError(null);
-        // Reset form data to original user data
-        if (user) {
-            setFormData({
-                name: user.name || '',
-                email: user.email || '',
-                username: user.username || '',
-                userType: user.userType || '',
-                bussinessCategory: user.bussinessCategory || '',
-                bussinessType: user.bussinessType || '',
-                phone: user.phone || '',
-                companyName: user.companyName || ''
-            });
-        }
+        setFormData(user || {});
     };
 
     const handleInputChange = (e) => {
@@ -219,111 +85,73 @@ const Profile = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setUpdateError(null);
-        setIsUpdating(true);
-
         try {
-            if (!currentUser) {
-                throw new Error('User not found. Please log in again.');
+            setIsUpdating(true);
+            
+            // Get the user ID from authUser, checking both id and _id properties
+            const userId = authUser?.id || authUser?._id;
+            
+            if (!userId) {
+                throw new Error('User ID is required');
             }
 
-            const userId = currentUser._id;
-            const token = localStorage.getItem('token');
-            if (!token) {
-                throw new Error('No authentication token found. Please log in again.');
-            }
-
-            // Send update data with exact field names as expected by the backend
-            const updateData = {
+            console.log('Submitting form data:', formData);
+            
+            // Ensure we're sending the right fields in the right format
+            const dataToSend = {
                 name: formData.name,
                 email: formData.email,
-                phone: formData.phone,
                 userType: formData.userType,
                 category: formData.bussinessCategory,
-                username: formData.username,
                 businessType: formData.bussinessType,
+                phone: formData.phone,
                 companyName: formData.companyName
             };
 
-            console.log('Sending update request with data:', updateData);
+            console.log('Sending update data:', dataToSend);
 
-            const response = await axios.patch(`https://api.peekbi.com/users/${userId}`, updateData, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
+            // Use updateProfile from AuthContext instead of direct axios call
+            const result = await updateProfile(userId, dataToSend);
+            console.log('Update profile result:', result);
+
+            if (result && result.success) {
+                if (result.user) {
+                    // If user data is returned, use it
+                    console.log('Updated profile data:', result.user);
+                    setUser(result.user);
+                    setIsEditing(false);
+                } else {
+                    setError('Update successful but no user data returned');
                 }
-            });
-
-            console.log('Update response:', response.data);
-
-            if (response.data.status === 'success' && response.data.user) {
-                // Set user data exactly as received from API
-                const updatedUser = response.data.user;
-                setUser({
-                    ...updatedUser,
-                    name: updatedUser.name,
-                    email: updatedUser.email,
-                    phone: updatedUser.phone,
-                    userType: updatedUser.userType,
-                    bussinessCategory: updatedUser.category,
-                    username: updatedUser.username,
-                    bussinessType: updatedUser.businessType,
-                    companyName: updatedUser.companyName,
-                    subscriptionStataus: updatedUser.subscriptionStatus,
-                    currentPeriodEnd: updatedUser.currentPeriodEnd,
-                    repoerCount: updatedUser.reportCount,
-                    chartCount: updatedUser.chartCount
-                });
-                setIsEditing(false);
-                setUpdateError(null);
             } else {
-                throw new Error('Invalid response format from server');
+                setError(result?.error || 'Failed to update profile');
             }
         } catch (err) {
-            console.error('Error updating profile:', {
-                error: err,
-                response: err.response?.data,
-                status: err.response?.status,
-                message: err.message,
-                currentUser,
-                currentUserId: currentUser?._id
-            });
-
-            let errorMessage = 'Failed to update profile';
-
-            if (err.response?.status === 401) {
-                errorMessage = 'Session expired. Please log in again.';
-            } else if (err.response?.status === 403) {
-                errorMessage = 'You do not have permission to update this profile.';
-            } else if (err.response?.data?.message) {
-                errorMessage = err.response.data.message;
-            } else if (err.message) {
-                errorMessage = err.message;
-            }
-
-            setUpdateError(errorMessage);
+            console.error('Error updating profile:', err);
+            setError(err.message || 'Failed to update profile');
         } finally {
             setIsUpdating(false);
         }
     };
 
-    // Show loading state while auth is loading
-    if (authLoading) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-[#F9F4FF] via-white to-[#F9F4FF] flex items-center justify-center">
-                <div className="flex flex-col items-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#7400B8]"></div>
-                    <p className="mt-4 text-gray-600">Loading user data...</p>
-                </div>
-            </div>
-        );
-    }
-
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-[#F9F4FF] via-white to-[#F9F4FF] flex items-center justify-center">
-                <div className="flex flex-col items-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#7400B8]"></div>
-                    <p className="mt-4 text-gray-600">Loading profile...</p>
+            <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-6">
+                <div className="max-w-6xl mx-auto">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8"
+                    >
+                        <div className="flex items-center justify-center h-64">
+                            <div className="flex flex-col items-center space-y-4">
+                                <div className="w-16 h-16 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full flex items-center justify-center">
+                                    <FiLoader className="w-8 h-8 text-white animate-spin" />
+                                </div>
+                                <p className="text-gray-600 font-medium">Loading profile...</p>
+                            </div>
+                        </div>
+                    </motion.div>
                 </div>
             </div>
         );
@@ -331,15 +159,23 @@ const Profile = () => {
 
     if (error) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-[#F9F4FF] via-white to-[#F9F4FF] flex items-center justify-center p-4">
-                <div className="text-center">
-                    <div className="text-red-600 mb-4">{error}</div>
-                    <button
-                        onClick={() => navigate('/user/dashboard')}
-                        className="px-4 py-2 bg-[#7400B8] text-white rounded-lg hover:bg-[#9B4DCA] transition-colors"
+            <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-6">
+                <div className="max-w-6xl mx-auto">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8"
                     >
-                        Return to Dashboard
-                    </button>
+                        <div className="flex items-center justify-center h-64">
+                            <div className="text-center">
+                                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <FiX className="w-8 h-8 text-red-500" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-800 mb-2">Error Loading Profile</h3>
+                                <p className="text-gray-600">{error}</p>
+                            </div>
+                        </div>
+                    </motion.div>
                 </div>
             </div>
         );
@@ -347,101 +183,102 @@ const Profile = () => {
 
     if (!user) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-[#F9F4FF] via-white to-[#F9F4FF] flex items-center justify-center p-4">
+            <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-6">
+                <div className="max-w-6xl mx-auto">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8"
+                    >
+                        <div className="flex items-center justify-center h-64">
                 <div className="text-center">
-                    <div className="text-gray-600 mb-4">No user data available</div>
+                                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <FiUser className="w-8 h-8 text-yellow-500" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-800 mb-2">No Profile Data</h3>
+                                <p className="text-gray-600">Unable to load user profile data</p>
                     <button
                         onClick={() => navigate('/user/dashboard')}
-                        className="px-4 py-2 bg-[#7400B8] text-white rounded-lg hover:bg-[#9B4DCA] transition-colors"
+                                    className="mt-4 px-4 py-2 bg-[#7400B8] text-white rounded-xl"
                     >
                         Return to Dashboard
                     </button>
+                            </div>
+                        </div>
+                    </motion.div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#F9F4FF] via-white to-[#F9F4FF]">
-            <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="h-full flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-2xl font-bold bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-transparent bg-clip-text">Profile Information</h2>
-                    {!isEditing && user && (
-                        <button
+            <Header
+                title="Profile"
+                description="Manage your account information"
+                icon={FiUser}
+                actionButton={
+                    !isEditing && (
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={handleEdit}
-                            className="flex items-center px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-lg hover:shadow-lg transition-all duration-300"
+                            className="px-6 py-3 bg-white/20 backdrop-blur-sm rounded-xl hover:bg-white/30 transition-all duration-200 flex items-center space-x-2 border border-white/30"
                         >
-                            <FiEdit2 className="w-5 h-5 mr-2" />
-                            Edit Profile
-                        </button>
-                    )}
-                </div>
+                            <FiEdit className="w-5 h-5" />
+                            <span>Edit Profile</span>
+                        </motion.button>
+                    )
+                }
+            />
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-2xl shadow-xl overflow-hidden"
-                >
-                    {/* User Information */}
-                    <div className="p-8">
+            {/* Content */}
+            <div className="flex-1 p-8 overflow-y-auto">
+                <div className="max-w-7xl mx-auto">
+                    <div className="mb-8">
                         {isEditing ? (
                             <form onSubmit={handleSubmit} className="space-y-6">
-                                {updateError && (
-                                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-                                        {updateError}
-                                    </div>
-                                )}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-600">Name</label>
+                                        <label className="block text-sm font-semibold text-gray-700">Name</label>
                                         <input
                                             type="text"
                                             name="name"
-                                            value={formData.name}
+                                            value={formData.name || ''}
                                             onChange={handleInputChange}
-                                            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent"
+                                            className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent transition-all duration-200"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-600">Email</label>
+                                        <label className="block text-sm font-semibold text-gray-700">Email</label>
                                         <input
                                             type="email"
                                             name="email"
-                                            value={formData.email}
+                                            value={formData.email || ''}
                                             onChange={handleInputChange}
-                                            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent"
+                                            className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent transition-all duration-200"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-600">Username</label>
-                                        <input
-                                            type="text"
-                                            name="username"
-                                            value={formData.username}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-600">User Type</label>
+                                        <label className="block text-sm font-semibold text-gray-700">User Type</label>
                                         <select
                                             name="userType"
-                                            value={formData.userType}
+                                            value={formData.userType || 'individual'}
                                             onChange={handleInputChange}
-                                            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent"
+                                            className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent transition-all duration-200"
                                         >
                                             <option value="individual">Individual</option>
                                             <option value="business">Business</option>
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-600">Business Category</label>
+                                        <label className="block text-sm font-semibold text-gray-700">Business Category</label>
                                         <select
                                             name="bussinessCategory"
                                             value={formData.bussinessCategory}
                                             onChange={handleInputChange}
-                                            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent"
+                                            className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent transition-all duration-200"
                                         >
                                             <option value="healthcare">Healthcare</option>
                                             <option value="technology">Technology</option>
@@ -451,12 +288,12 @@ const Profile = () => {
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-600">Business Type</label>
+                                        <label className="block text-sm font-semibold text-gray-700">Business Type</label>
                                         <select
                                             name="bussinessType"
                                             value={formData.bussinessType}
                                             onChange={handleInputChange}
-                                            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent"
+                                            className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent transition-all duration-200"
                                         >
                                             <option value="B2B">B2B</option>
                                             <option value="B2C">B2C</option>
@@ -464,38 +301,42 @@ const Profile = () => {
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-600">Phone</label>
+                                        <label className="block text-sm font-semibold text-gray-700">Phone</label>
                                         <input
                                             type="number"
                                             name="phone"
                                             value={formData.phone}
                                             onChange={handleInputChange}
-                                            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent"
+                                            className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent transition-all duration-200"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-gray-600">Company Name</label>
+                                        <label className="block text-sm font-semibold text-gray-700">Company Name</label>
                                         <input
                                             type="text"
                                             name="companyName"
                                             value={formData.companyName}
                                             onChange={handleInputChange}
-                                            className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent"
+                                            className="w-full px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent transition-all duration-200"
                                         />
                                     </div>
                                 </div>
-                                <div className="flex justify-end space-x-3 pt-4">
-                                    <button
+                                <div className="flex justify-end space-x-4 pt-6">
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
                                         type="button"
                                         onClick={handleCancel}
-                                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                                        className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium"
                                         disabled={isUpdating}
                                     >
                                         Cancel
-                                    </button>
-                                    <button
+                                    </motion.button>
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
                                         type="submit"
-                                        className="px-4 py-2 bg-[#7400B8] text-white rounded-lg hover:bg-[#9B4DCA] transition-colors flex items-center space-x-2"
+                                        className="px-6 py-3 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:from-[#9B4DCA] hover:to-[#C77DFF] transition-all duration-200 flex items-center space-x-2 font-medium shadow-lg"
                                         disabled={isUpdating}
                                     >
                                         {isUpdating ? (
@@ -509,201 +350,328 @@ const Profile = () => {
                                                 <span>Save Changes</span>
                                             </>
                                         )}
-                                    </button>
+                                    </motion.button>
                                 </div>
                             </form>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="flex items-center space-x-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="w-10 h-10 bg-[#7400B8]/10 rounded-lg flex items-center justify-center">
-                                        <FiUser className="w-6 h-6 text-[#7400B8]" />
+                            <motion.div 
+                                className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.5 }}
+                            >
+                                <motion.div 
+                                    className="flex items-center space-x-4 p-6 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300"
+                                    whileHover={{ y: -2 }}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.1 }}
+                                >
+                                    <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-xl flex items-center justify-center">
+                                        <FiUser className="w-6 h-6 text-white" />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-600">Name</p>
-                                        <p className="font-medium text-gray-800">{user.name || 'N/A'}</p>
+                                        <p className="text-sm text-gray-600 font-medium">Name</p>
+                                        <p className="font-semibold text-gray-800">{user.name || 'N/A'}</p>
                                     </div>
-                                </div>
-                                <div className="flex items-center space-x-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="w-10 h-10 bg-[#7400B8]/10 rounded-lg flex items-center justify-center">
-                                        <FiMail className="w-6 h-6 text-[#7400B8]" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Email</p>
-                                        <p className="font-medium text-gray-800">{user.email || 'N/A'}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center space-x-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="w-10 h-10 bg-[#7400B8]/10 rounded-lg flex items-center justify-center">
-                                        <FiUser className="w-6 h-6 text-[#7400B8]" />
+                                </motion.div>
+                                <motion.div 
+                                    className="flex items-center space-x-4 p-6 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300"
+                                    whileHover={{ y: -2 }}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.2 }}
+                                >
+                                    <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-xl flex items-center justify-center">
+                                        <FiMail className="w-6 h-6 text-white" />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-600">Username</p>
-                                        <p className="font-medium text-gray-800">{user.username || 'N/A'}</p>
+                                        <p className="text-sm text-gray-600 font-medium">Email</p>
+                                        <p className="font-semibold text-gray-800">{user.email || 'N/A'}</p>
                                     </div>
-                                </div>
-                                <div className="flex items-center space-x-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="w-10 h-10 bg-[#7400B8]/10 rounded-lg flex items-center justify-center">
-                                        <FiCalendar className="w-6 h-6 text-[#7400B8]" />
+                                </motion.div>
+                                <motion.div 
+                                    className="flex items-center space-x-4 p-6 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300"
+                                    whileHover={{ y: -2 }}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.3 }}
+                                >
+                                    <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-xl flex items-center justify-center">
+                                        <FiCalendar className="w-6 h-6 text-white" />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-600">Created At</p>
-                                        <p className="font-medium text-gray-800">
+                                        <p className="text-sm text-gray-600 font-medium">Created At</p>
+                                        <p className="font-semibold text-gray-800">
                                             {new Date(user.createdAt).toLocaleDateString()}
                                         </p>
                                     </div>
-                                </div>
-                                <div className="flex items-center space-x-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="w-10 h-10 bg-[#7400B8]/10 rounded-lg flex items-center justify-center">
-                                        <FiShield className="w-6 h-6 text-[#7400B8]" />
+                                </motion.div>
+                                <motion.div 
+                                    className="flex items-center space-x-4 p-6 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300"
+                                    whileHover={{ y: -2 }}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.4 }}
+                                >
+                                    <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-xl flex items-center justify-center">
+                                        <FiShield className="w-6 h-6 text-white" />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-600">Subscription Status</p>
-                                        <p className="font-medium text-gray-800 capitalize">
+                                        <p className="text-sm text-gray-600 font-medium">Subscription Status</p>
+                                        <p className="font-semibold text-gray-800 capitalize">
                                             {user.subscriptionStataus || 'N/A'}
                                         </p>
                                     </div>
-                                </div>
-                                <div className="flex items-center space-x-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="w-10 h-10 bg-[#7400B8]/10 rounded-lg flex items-center justify-center">
-                                        <FiDatabase className="w-6 h-6 text-[#7400B8]" />
+                                </motion.div>
+                                <motion.div 
+                                    className="flex items-center space-x-4 p-6 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300"
+                                    whileHover={{ y: -2 }}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.5 }}
+                                >
+                                    <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-xl flex items-center justify-center">
+                                        <FiDatabase className="w-6 h-6 text-white" />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-600">Business Category</p>
-                                        <p className="font-medium text-gray-800 capitalize">{user.bussinessCategory || 'N/A'}</p>
+                                        <p className="text-sm text-gray-600 font-medium">Business Category</p>
+                                        <p className="font-semibold text-gray-800 capitalize">{user.bussinessCategory || 'N/A'}</p>
                                     </div>
-                                </div>
-                                <div className="flex items-center space-x-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="w-10 h-10 bg-[#7400B8]/10 rounded-lg flex items-center justify-center">
-                                        <FiShield className="w-6 h-6 text-[#7400B8]" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">Business Type</p>
-                                        <p className="font-medium text-gray-800">{user.bussinessType || 'N/A'}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center space-x-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="w-10 h-10 bg-[#7400B8]/10 rounded-lg flex items-center justify-center">
-                                        <FiShield className="w-6 h-6 text-[#7400B8]" />
+                                </motion.div>
+                                <motion.div 
+                                    className="flex items-center space-x-4 p-6 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300"
+                                    whileHover={{ y: -2 }}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.6 }}
+                                >
+                                    <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-xl flex items-center justify-center">
+                                        <FiShield className="w-6 h-6 text-white" />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-600">Phone</p>
-                                        <p className="font-medium text-gray-800">{user.phone || 'N/A'}</p>
+                                        <p className="text-sm text-gray-600 font-medium">Business Type</p>
+                                        <p className="font-semibold text-gray-800">{user.bussinessType || 'N/A'}</p>
                                     </div>
-                                </div>
-                                <div className="flex items-center space-x-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="w-10 h-10 bg-[#7400B8]/10 rounded-lg flex items-center justify-center">
-                                        <FiUser className="w-6 h-6 text-[#7400B8]" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-600">User Type</p>
-                                        <p className="font-medium text-gray-800 capitalize">{user.userType || 'N/A'}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center space-x-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="w-10 h-10 bg-[#7400B8]/10 rounded-lg flex items-center justify-center">
-                                        <FiCalendar className="w-6 h-6 text-[#7400B8]" />
+                                </motion.div>
+                                <motion.div 
+                                    className="flex items-center space-x-4 p-6 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300"
+                                    whileHover={{ y: -2 }}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.7 }}
+                                >
+                                    <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-xl flex items-center justify-center">
+                                        <FiPhone className="w-6 h-6 text-white" />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-600">Last Login</p>
-                                        <p className="font-medium text-gray-800">
-                                            {formatLastLogin(user.lastLogin)}
-                                        </p>
+                                        <p className="text-sm text-gray-600 font-medium">Phone</p>
+                                        <p className="font-semibold text-gray-800">{user.phone || 'N/A'}</p>
                                     </div>
-                                </div>
-                                <div className="flex items-center space-x-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="w-10 h-10 bg-[#7400B8]/10 rounded-lg flex items-center justify-center">
-                                        <FiDatabase className="w-6 h-6 text-[#7400B8]" />
+                                </motion.div>
+                                <motion.div 
+                                    className="flex items-center space-x-4 p-6 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300"
+                                    whileHover={{ y: -2 }}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.8 }}
+                                >
+                                    <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-xl flex items-center justify-center">
+                                        <FiShield className="w-6 h-6 text-white" />
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-600">Company Name</p>
-                                        <p className="font-medium text-gray-800">{user.companyName || 'N/A'}</p>
+                                        <p className="text-sm text-gray-600 font-medium">User Type</p>
+                                        <p className="font-semibold text-gray-800 capitalize">{user.userType || 'N/A'}</p>
                                     </div>
+                                </motion.div>
+                                <motion.div 
+                                    className="flex items-center space-x-4 p-6 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300"
+                                    whileHover={{ y: -2 }}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.9 }}
+                                >
+                                    <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-xl flex items-center justify-center">
+                                        <FiBriefcase className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-600 font-medium">Company Name</p>
+                                        <p className="font-semibold text-gray-800">{user.companyName || 'N/A'}</p>
+                                    </div>
+                                </motion.div>
+                                <motion.div 
+                                    className="md:col-span-2 p-6 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg hover:shadow-xl transition-all duration-300"
+                                    whileHover={{ y: -2 }}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 1.0 }}
+                                >
+                                    <div className="flex items-center space-x-4 mb-4">
+                                        <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-xl flex items-center justify-center">
+                                            <FiCalendar className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div>
+                                            <p className="text-sm text-gray-600 font-medium">Login History</p>
+                                            <p className="font-semibold text-gray-800">
+                                                Recent logins ({Array.isArray(user.lastLogin) ? user.lastLogin.length : 0})
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    {Array.isArray(user.lastLogin) && user.lastLogin.length > 0 ? (
+                                        <div className="max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                                            <table className="w-full text-sm">
+                                                <thead className="bg-gray-50/80 text-gray-700">
+                                                    <tr>
+                                                        <th className="py-2 px-4 text-left">#</th>
+                                                        <th className="py-2 px-4 text-left">Date</th>
+                                                        <th className="py-2 px-4 text-left">Time</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-100">
+                                                    {user.lastLogin.map((login, index) => {
+                                                        const date = new Date(login);
+                                                        return (
+                                                            <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                                                                <td className="py-2 px-4">{index + 1}</td>
+                                                                <td className="py-2 px-4">{date.toLocaleDateString()}</td>
+                                                                <td className="py-2 px-4">{date.toLocaleTimeString()}</td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
                                 </div>
-                            </div>
+                                    ) : (
+                                        <p className="text-gray-500 italic">No login history available</p>
+                                    )}
+                                </motion.div>
+                            </motion.div>
                         )}
                     </div>
 
                     {/* Subscription Plan */}
-                    <div className="border-t border-gray-200 p-8 bg-gradient-to-r from-[#7400B8]/5 to-[#9B4DCA]/5">
-                        <h3 className="text-xl font-semibold text-gray-800 mb-6">Subscription Plan</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-                                <div className="flex items-center space-x-4 mb-4">
-                                    <div className="w-12 h-12 bg-[#7400B8]/10 rounded-lg flex items-center justify-center">
+                    <div className="border-t border-gray-200/50 p-8 bg-gradient-to-r from-[#7400B8]/5 to-[#9B4DCA]/5 rounded-2xl">
+                        <h3 className="text-2xl font-bold text-gray-800 mb-8 flex items-center space-x-3">
                                         <FiCreditCard className="w-8 h-8 text-[#7400B8]" />
+                            <span>Subscription Plan</span>
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <motion.div 
+                                className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/30 shadow-lg"
+                                whileHover={{ y: -4 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                <div className="flex items-center space-x-4 mb-6">
+                                    <div className="w-16 h-16 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-2xl flex items-center justify-center">
+                                        <FiCreditCard className="w-8 h-8 text-white" />
                                     </div>
                                     <div>
-                                        <h4 className="text-lg font-semibold text-gray-800 capitalize">
-                                            {user.plan?.name || 'free'} Plan
+                                        <h4 className="text-xl font-bold text-gray-800 capitalize">
+                                            {user?.plan?.name || 'free'} Plan
                                         </h4>
                                         <p className="text-sm text-gray-600 capitalize">
-                                            {user.subscriptionStataus || 'inactive'}
+                                            {user?.subscriptionStataus || 'inactive'}
                                         </p>
                                     </div>
                                 </div>
-                                <dl className="space-y-2 text-sm">
-                                    <div className="flex justify-between">
-                                        <dt className="text-gray-600">Max Reports</dt>
-                                        <dd className="font-medium text-gray-800">{user.plan?.maxReports || 0}</dd>
+                                <dl className="space-y-4 text-sm">
+                                    <div className="flex justify-between items-center p-3 bg-gray-50/50 rounded-xl">
+                                        <dt className="text-gray-600 font-medium">Max Reports</dt>
+                                        <dd className="font-bold text-gray-800">{user?.plan?.maxReports || 0}</dd>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <dt className="text-gray-600">Max Saved Charts</dt>
-                                        <dd className="font-medium text-gray-800">{user.plan?.maxSavedCharts || 0}</dd>
+                                    <div className="flex justify-between items-center p-3 bg-gray-50/50 rounded-xl">
+                                        <dt className="text-gray-600 font-medium">Max Saved Charts</dt>
+                                        <dd className="font-bold text-gray-800">{user?.plan?.maxSavedCharts || 0}</dd>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <dt className="text-gray-600">Max Users</dt>
-                                        <dd className="font-medium text-gray-800">{user.plan?.maxUsersPerAccount || 1}</dd>
+                                    <div className="flex justify-between items-center p-3 bg-gray-50/50 rounded-xl">
+                                        <dt className="text-gray-600 font-medium">Max Users</dt>
+                                        <dd className="font-bold text-gray-800">{user?.plan?.maxUsersPerAccount || 1}</dd>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <dt className="text-gray-600">Data Retention</dt>
-                                        <dd className="font-medium text-gray-800">{user.plan?.dataRetentionDays || 30} days</dd>
+                                    <div className="flex justify-between items-center p-3 bg-gray-50/50 rounded-xl">
+                                        <dt className="text-gray-600 font-medium">Data Retention</dt>
+                                        <dd className="font-bold text-gray-800">{user?.plan?.dataRetentionDays || 30} days</dd>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <dt className="text-gray-600">Billing Interval</dt>
-                                        <dd className="font-medium text-gray-800 capitalize">{user.plan?.billingInterval || 'Monthly'}</dd>
+                                    <div className="flex justify-between items-center p-3 bg-gray-50/50 rounded-xl">
+                                        <dt className="text-gray-600 font-medium">Billing Interval</dt>
+                                        <dd className="font-bold text-gray-800 capitalize">{user?.plan?.billingInterval || 'Monthly'}</dd>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <dt className="text-gray-600">Price</dt>
-                                        <dd className="font-medium text-gray-800">${user.plan?.price || 0}/month</dd>
+                                    <div className="flex justify-between items-center p-3 bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 rounded-xl">
+                                        <dt className="text-gray-700 font-bold">Price</dt>
+                                        <dd className="font-bold text-[#7400B8]">${user?.plan?.price || 0}/month</dd>
                                     </div>
                                 </dl>
-                            </div>
+                            </motion.div>
 
-                            <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-                                <h4 className="font-medium text-gray-800 mb-4">Plan Features</h4>
-                                <ul className="space-y-2 text-sm">
-                                    {user.plan?.features && Object.entries(user.plan.features).map(([feature, enabled]) => (
-                                        <li key={feature} className="flex items-center space-x-2">
+                            <motion.div 
+                                className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/30 shadow-lg"
+                                whileHover={{ y: -4 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                <h4 className="font-bold text-gray-800 mb-6 text-lg">Plan Features</h4>
+                                <ul className="space-y-4 text-sm">
+                                    {user?.plan?.features && Object.entries(user.plan.features).map(([feature, enabled], index) => (
+                                        <motion.li 
+                                            key={feature} 
+                                            className="flex items-center space-x-3 p-3 rounded-xl"
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: index * 0.1 }}
+                                        >
                                             {enabled ?
-                                                <FiCheck className="w-5 h-5 text-green-500" /> :
-                                                <FiX className="w-5 h-5 text-red-500" />
+                                                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                                    <FiCheck className="w-4 h-4 text-white" />
+                                                </div> :
+                                                <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+                                                    <FiX className="w-4 h-4 text-white" />
+                                                </div>
                                             }
-                                            <span className={enabled ? "text-gray-800" : "text-gray-500"}>
+                                            <span className={`font-medium ${enabled ? "text-gray-800" : "text-gray-500"}`}>
                                                 {feature.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                                             </span>
-                                        </li>
+                                        </motion.li>
                                     ))}
                                 </ul>
-                            </div>
+                            </motion.div>
                         </div>
 
                         {/* Usage Statistics */}
-                        <div className="mt-6 bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-                            <h4 className="font-medium text-gray-800 mb-4">Usage Statistics</h4>
-                            <dl className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <dt className="text-gray-600">Reports Created</dt>
-                                    <dd className="font-medium text-gray-800">{user.repoerCount || 0}</dd>
+                        <motion.div 
+                            className="mt-8 bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/30 shadow-lg"
+                            whileHover={{ y: -4 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <h4 className="font-bold text-gray-800 mb-6 text-lg">Usage Statistics</h4>
+                            <dl className="grid grid-cols-2 gap-6 text-sm">
+                                <div className="p-4 bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 rounded-xl">
+                                    <dt className="text-gray-600 font-medium mb-2">Reports Created</dt>
+                                    <dd className="font-bold text-2xl text-[#7400B8]">{user?.repoerCount || 0}</dd>
                                 </div>
-                                <div>
-                                    <dt className="text-gray-600">Charts Created</dt>
-                                    <dd className="font-medium text-gray-800">{user.chartCount || 0}</dd>
+                                <div className="p-4 bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 rounded-xl">
+                                    <dt className="text-gray-600 font-medium mb-2">Charts Created</dt>
+                                    <dd className="font-bold text-2xl text-[#7400B8]">{user?.chartCount || 0}</dd>
                                 </div>
                             </dl>
-                        </div>
+                        </motion.div>
                     </div>
-                </motion.div>
+                </div>
             </div>
+            <style jsx>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 6px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: #f1f1f1;
+                    border-radius: 3px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #7400B8;
+                    border-radius: 3px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #9B4DCA;
+                }
+            `}</style>
         </div>
     );
 };

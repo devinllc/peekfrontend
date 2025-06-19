@@ -115,14 +115,14 @@ const DataUpload = () => {
     // Handle file upload
     const uploadFiles = async () => {
         if (files.length === 0 || !selectedIndustry) return;
-
+        
         setUploadStep('uploading');
         setUploading(true);
         setApiLogs([]); // Clear previous logs
         logIdRef.current = 0; // Reset log ID counter
         let uploadedCount = 0;
         const responses = [];
-
+        const category = selectedIndustry.charAt(0).toUpperCase() + selectedIndustry.slice(1).toLowerCase();
         try {
             // Add initial log with unique ID
             setApiLogs(prev => [...prev, {
@@ -141,16 +141,19 @@ const DataUpload = () => {
                 message: `Preparing file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`,
                 timestamp: new Date().toISOString()
             }]);
-
+        // Debug: Log the category being sent
+        console.log('Selected industry:', selectedIndustry);
+        console.log('Formatted industry:', category);
+        console.log('Formatted industry length:', category.length);
             // Log the upload request
             console.log('Uploading file:', {
                 fileName: file.name,
                 fileSize: file.size,
                 fileType: file.type,
-                industry: selectedIndustry
+                industry: category
             });
 
-            const response = await uploadFile(user._id, file, selectedIndustry);
+            const response = await uploadFile(user._id, file, category);
             
             // Log the raw upload response for debugging
             console.log('Raw upload response:', response);
@@ -250,573 +253,580 @@ const DataUpload = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#F9F4FF] via-white to-[#F9F4FF]">
-            {/* Main Content */}
-            <main className="flex-grow flex items-center justify-center p-6">
-                <div className="max-w-[1200px] w-full mx-auto">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}
-                        className="w-full"
-                    >
-                        <div className="text-center mb-12">
-                            <h1 className="text-4xl font-bold text-gray-800 mb-3 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] bg-clip-text text-transparent">
-                                {uploadStep === 'select' ? 'Upload Your Data' :
-                                 uploadStep === 'category' ? 'Select Industry Category' :
-                                 'Uploading Files'}
-                            </h1>
-                            <p className="text-lg text-gray-600">
-                                {uploadStep === 'select' ? 'Upload your data files to get started with PeekBI analytics' :
-                                 uploadStep === 'category' ? 'Choose your industry to get relevant insights' :
-                                 'Please wait while we process your data'}
-                            </p>
+        <div className="h-full">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] p-8 text-white shadow-xl">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                        <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                            <FiUpload className="w-8 h-8" />
                         </div>
-                        <div className={`grid ${uploadStep === 'select' && !selectedIndustry ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-12 items-start`}>
-                            {/* Left side - Content Area */}
-                            <div className={`space-y-8 ${uploadStep === 'category' ? 'max-w-6xl mx-auto' : ''}`}>
-                                {uploadStep === 'select' && (
-                                    <div className="space-y-8">
-                    {/* Upload Area */}
-                    {!uploading ? (
-                                            <div className="space-y-8">
-                                                <motion.div
-                                                    className={`border-2 border-dashed rounded-xl p-12 text-center transition-all duration-300 bg-white/80 backdrop-blur-sm ${
-                                                        dragActive ? 'border-[#7400B8] bg-purple-50/80 scale-105' : 'border-gray-300 hover:border-[#7400B8] hover:bg-purple-50/50'
-                                                    }`}
-                                onDragEnter={handleDrag}
-                                onDragLeave={handleDrag}
-                                onDragOver={handleDrag}
-                                onDrop={handleDrop}
-                                                    whileHover={{ scale: 1.01 }}
-                                                    whileTap={{ scale: 0.99 }}
-                                                >
-                                                    <motion.div 
-                                                        className="flex flex-col items-center justify-center space-y-6"
-                                                        initial={{ opacity: 0 }}
-                                                        animate={{ opacity: 1 }}
-                                                        transition={{ duration: 0.3 }}
-                                                    >
-                                                        <motion.div
-                                                            className="bg-gradient-to-br from-[#7400B8] to-[#9B4DCA] p-4 rounded-full"
-                                                            whileHover={{ scale: 1.1, rotate: 5 }}
-                                                            whileTap={{ scale: 0.9 }}
-                                                        >
-                                                            <FiUpload className="w-10 h-10 text-white" />
-                                                        </motion.div>
-                                                        <motion.div 
-                                                            className="space-y-2"
-                                                            initial={{ opacity: 0, y: 10 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            transition={{ duration: 0.3, delay: 0.1 }}
-                                                        >
-                                                            <p className="text-xl font-medium text-gray-700">Upload your data file</p>
-                                                            <p className="text-gray-500">or</p>
-                                                        </motion.div>
-                                                        <motion.label
-                                                            className="bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white px-8 py-4 rounded-lg cursor-pointer hover:shadow-lg transition-all duration-200 text-lg font-medium"
-                                                            whileHover={{ scale: 1.05 }}
-                                                            whileTap={{ scale: 0.95 }}
-                                                        >
-                                                            Choose File
-                                        <input
-                                            type="file"
-                                            className="hidden"
-                                            onChange={handleChange}
-                                                                accept=".csv,.xlsx,.json,.sql"
-                                                            />
-                                                        </motion.label>
-                                                        <motion.p 
-                                                            className="text-gray-500 text-sm"
-                                                            initial={{ opacity: 0 }}
-                                                            animate={{ opacity: 1 }}
-                                                            transition={{ duration: 0.3, delay: 0.2 }}
-                                                        >
-                                                            Supported formats: CSV, Excel, JSON, SQL (Max 1 file)
-                                                        </motion.p>
-                                                    </motion.div>
-                                                </motion.div>
+                        <div>
+                            <h1 className="text-3xl font-bold">Data Upload</h1>
+                            <p className="text-white/80">Upload and analyze your data files</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                            {/* File List */}
-                            {files.length > 0 && (
-                                                    <motion.div
-                                                        className="mt-8"
-                                                        initial={{ opacity: 0, y: 20 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        transition={{ duration: 0.3 }}
-                                                    >
-                                                        <h3 className="text-lg font-medium text-gray-800 mb-4">Selected File</h3>
-                                                        <div className="space-y-3">
-                                                            <motion.div
-                                                                className="flex items-center justify-between bg-white/80 backdrop-blur-sm p-4 rounded-lg border border-gray-100 hover:border-[#7400B8]/50 transition-colors duration-200"
-                                                                initial={{ opacity: 0, x: -20 }}
-                                                                animate={{ opacity: 1, x: 0 }}
-                                                            >
-                                                <div className="flex items-center">
-                                                                    <div className="bg-purple-100 p-2 rounded-lg mr-3">
-                                                                        <FiFile className="w-5 h-5 text-[#7400B8]" />
-                                                                    </div>
-                                                    <div>
-                                                                        <p className="text-sm font-medium text-gray-800">{files[0].name}</p>
-                                                                        <p className="text-xs text-gray-500">{(files[0].size / 1024).toFixed(2)} KB</p>
-                                                                    </div>
-                                                                </div>
-                                                                <motion.button
-                                                                    onClick={() => removeFile(0)}
-                                                                    className="text-gray-500 hover:text-red-500 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
-                                                                    whileHover={{ scale: 1.1 }}
-                                                                    whileTap={{ scale: 0.9 }}
-                                                                >
-                                                                    <FiX className="w-5 h-5" />
-                                                                </motion.button>
-                                                            </motion.div>
-                                                        </div>
-                                                    </motion.div>
-                                                )}
-
-                                                {/* Action Buttons */}
-                                                <div className="flex justify-between pt-6">
-                                                    <motion.button
-                                                        onClick={handleSkip}
-                                                        className="px-6 py-3 text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium"
-                                                        whileHover={{ scale: 1.02 }}
-                                                        whileTap={{ scale: 0.98 }}
-                                                    >
-                                                        Skip Upload
-                                                    </motion.button>
-                                                    <div className="flex space-x-4">
-                                                        <motion.button
-                                                            onClick={() => navigate('/')}
-                                                            className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium"
-                                                            whileHover={{ scale: 1.02 }}
-                                                            whileTap={{ scale: 0.98 }}
-                                                        >
-                                                            Cancel
-                                                        </motion.button>
-                                                        <motion.button
-                                                            onClick={handleContinue}
-                                                            disabled={files.length === 0}
-                                                            className={`px-6 py-3 rounded-lg text-white font-medium ${
-                                                                files.length > 0
-                                                                    ? 'bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] hover:shadow-lg'
-                                                                    : 'bg-gray-400 cursor-not-allowed'
-                                                            } transition-all duration-200 flex items-center space-x-2`}
-                                                            whileHover={files.length > 0 ? { scale: 1.02 } : {}}
-                                                            whileTap={files.length > 0 ? { scale: 0.98 } : {}}
-                                                        >
-                                                            <FiUpload className="w-5 h-5" />
-                                                            <span>Continue</span>
-                                                        </motion.button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-8">
-                                                <motion.div
-                                                    className="text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl"
-                                                    initial={{ opacity: 0, scale: 0.95 }}
-                                                    animate={{ opacity: 1, scale: 1 }}
+            {/* Content */}
+            <div className="p-8">
+                <div className="max-w-7xl mx-auto">
+                    <div className="text-center mb-12">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-3">
+                            {uploadStep === 'select' ? 'Upload Your Data' :
+                             uploadStep === 'category' ? 'Select Industry Category' :
+                             'Uploading Files'}
+                        </h2>
+                        <p className="text-lg text-gray-600">
+                            {uploadStep === 'select' ? 'Upload your data files to get started with PeekBI analytics' :
+                             uploadStep === 'category' ? 'Choose your industry to get relevant insights' :
+                             'Please wait while we process your data'}
+                        </p>
+                    </div>
+                    
+                    <div className={`grid ${uploadStep === 'select' && !selectedIndustry ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-12 items-start`}>
+                        {/* Left side - Content Area */}
+                        <div className={`space-y-8 ${uploadStep === 'category' ? 'max-w-6xl mx-auto' : ''}`}>
+                            {uploadStep === 'select' && (
+                                <div className="space-y-8">
+                                    {/* Upload Area */}
+                                    {!uploading ? (
+                                        <div className="space-y-8">
+                                            <motion.div
+                                                className={`border-2 border-dashed rounded-3xl p-12 text-center transition-all duration-300 bg-white/60 backdrop-blur-sm ${
+                                                    dragActive ? 'border-[#7400B8] bg-purple-50/80 scale-105' : 'border-gray-300 hover:border-[#7400B8] hover:bg-purple-50/50'
+                                                }`}
+                                                onDragEnter={handleDrag}
+                                                onDragLeave={handleDrag}
+                                                onDragOver={handleDrag}
+                                                onDrop={handleDrop}
+                                                whileHover={{ scale: 1.01 }}
+                                                whileTap={{ scale: 0.99 }}
+                                            >
+                                                <motion.div 
+                                                    className="flex flex-col items-center justify-center gap-6"
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
                                                     transition={{ duration: 0.3 }}
                                                 >
-                                                    <div className="flex flex-col items-center justify-center space-y-6">
-                                                        <div className="relative">
-                                                            <div className="w-24 h-24 border-4 border-[#7400B8] border-opacity-25 rounded-full"></div>
-                                                            <motion.div
-                                                                className="w-24 h-24 border-4 border-[#7400B8] rounded-full absolute top-0 left-0"
-                                                                animate={{ rotate: 360 }}
-                                                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                                                                style={{
-                                                                    clipPath: `polygon(50% 50%, 50% 0%, ${uploadProgress}% 0%, ${uploadProgress}% 100%, 50% 100%)`,
-                                                                    transform: 'rotate(90deg)'
-                                                                }}
-                                                            ></motion.div>
-                                                            <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
-                                                                <span className="text-[#7400B8] font-bold text-2xl">{uploadProgress}%</span>
-                                                            </div>
-                                                        </div>
-                                                        <p className="text-xl font-medium text-gray-700">Uploading your files...</p>
-                                                        <p className="text-gray-500">Please wait while we process your data</p>
-                                                    </div>
+                                                    <motion.div
+                                                        className="bg-gradient-to-br from-[#7400B8] to-[#9B4DCA] p-4 rounded-full shadow-lg"
+                                                        whileHover={{ scale: 1.1, rotate: 5 }}
+                                                        whileTap={{ scale: 0.9 }}
+                                                    >
+                                                        <FiUpload className="w-10 h-10 text-white" />
+                                                    </motion.div>
+                                                    <motion.div 
+                                                        className="space-y-2"
+                                                        initial={{ opacity: 0, y: 10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        transition={{ duration: 0.3, delay: 0.1 }}
+                                                    >
+                                                        <p className="text-xl font-medium text-gray-700">Upload your data file</p>
+                                                        <p className="text-gray-500">or</p>
+                                                    </motion.div>
+                                                    <motion.label
+                                                        className="bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white px-8 py-4 rounded-xl cursor-pointer hover:shadow-lg transition-all duration-200 text-lg font-medium"
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                    >
+                                                        Choose File
+                                                        <input
+                                                            type="file"
+                                                            className="hidden"
+                                                            onChange={handleChange}
+                                                            accept=".csv,.xlsx,.json,.sql"
+                                                        />
+                                                    </motion.label>
+                                                    <motion.p 
+                                                        className="text-gray-500 text-sm"
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        transition={{ duration: 0.3, delay: 0.2 }}
+                                                    >
+                                                        Supported formats: CSV, Excel, JSON, SQL (Max 1 file)
+                                                    </motion.p>
                                                 </motion.div>
+                                            </motion.div>
 
-                                                {/* File List During Upload */}
-                                                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                                                    {files.map((file) => (
+                                            {/* File List */}
+                                            {files.length > 0 && (
+                                                <motion.div
+                                                    className="mt-8"
+                                                    initial={{ opacity: 0, y: 20 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ duration: 0.3 }}
+                                                >
+                                                    <h3 className="text-lg font-medium text-gray-800 mb-4">Selected File</h3>
+                                                    <div className="space-y-3">
                                                         <motion.div
-                                                            key={`upload-${file.name}-${file.size}-${file.lastModified}`}
-                                                            className="flex items-center justify-between bg-white/80 backdrop-blur-sm p-4 rounded-lg border border-gray-100"
+                                                            className="flex items-center justify-between bg-white/60 backdrop-blur-sm p-4 rounded-2xl border border-gray-100 hover:border-[#7400B8]/50 transition-colors duration-200"
                                                             initial={{ opacity: 0, x: -20 }}
                                                             animate={{ opacity: 1, x: 0 }}
-                                                            transition={{ duration: 0.2 }}
                                                         >
                                                             <div className="flex items-center">
-                                                                <div className="bg-purple-100 p-2 rounded-lg mr-3">
+                                                                <div className="bg-purple-100 p-2 rounded-xl mr-3">
                                                                     <FiFile className="w-5 h-5 text-[#7400B8]" />
                                                                 </div>
                                                                 <div>
-                                                                    <p className="text-sm font-medium text-gray-800">{file.name}</p>
-                                                                    <div className="w-48 h-1.5 bg-gray-200 rounded-full mt-1 overflow-hidden">
-                                                                        <motion.div
-                                                                            className="h-1.5 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full"
-                                                                            initial={{ width: 0 }}
-                                                                            animate={{ width: `${uploadProgress}%` }}
-                                                                            transition={{ duration: 0.3 }}
-                                                                        ></motion.div>
-                                                                    </div>
+                                                                    <p className="text-sm font-medium text-gray-800">{files[0].name}</p>
+                                                                    <p className="text-xs text-gray-500">{(files[0].size / 1024).toFixed(2)} KB</p>
                                                                 </div>
                                                             </div>
-                                                            <div className="text-sm font-medium text-[#7400B8]">{uploadProgress}%</div>
+                                                            <motion.button
+                                                                onClick={() => removeFile(0)}
+                                                                className="text-gray-500 hover:text-red-500 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
+                                                                whileHover={{ scale: 1.1 }}
+                                                                whileTap={{ scale: 0.9 }}
+                                                            >
+                                                                <FiX className="w-5 h-5" />
+                                                            </motion.button>
                                                         </motion.div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                                                    </div>
+                                                </motion.div>
+                                            )}
 
-                                {uploadStep === 'category' && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.3 }}
-                                        className="w-full max-w-6xl mx-auto"
-                                    >
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {/* First row - 3 columns */}
-                                            <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                                                {Object.entries(INDUSTRY_CATEGORIES).slice(0, 3).map(([key, category]) => (
-                                                    <motion.button
-                                                        key={key}
-                                                        onClick={() => setSelectedIndustry(key)}
-                                                        className={`relative p-6 rounded-lg text-left transition-all duration-300 bg-white/80 backdrop-blur-sm ${
-                                                            selectedIndustry === key
-                                                                ? 'ring-2 ring-[#7400B8] ring-offset-1 shadow-lg'
-                                                                : 'hover:ring-2 hover:ring-[#7400B8]/50 hover:ring-offset-1 hover:shadow-md'
-                                                        } bg-gradient-to-br ${category.color}`}
-                                                        whileHover={{ scale: 1.01, y: -1 }}
-                                                        whileTap={{ scale: 0.99 }}
-                                                    >
-                                                        <div className="flex items-start space-x-3">
-                                                            <div className={`p-2.5 rounded-lg bg-gradient-to-br ${category.iconColor} text-white shadow-sm`}>
-                                                                {category.icon}
-                                                            </div>
-                                                            <div>
-                                                                <h3 className="text-base font-medium text-gray-800 mb-1">{category.name}</h3>
-                                                                <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">{category.description}</p>
-                                                            </div>
-                                                        </div>
-                                                        {selectedIndustry === key && (
-                                                            <motion.div
-                                                                className="absolute top-2 right-2"
-                                                                initial={{ scale: 0 }}
-                                                                animate={{ scale: 1 }}
-                                                                transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                                                            >
-                                                                <FiCheckCircle className="w-4 h-4 text-[#7400B8]" />
-                                                            </motion.div>
-                                                        )}
-                                                        <div className="mt-3 pt-2 border-t border-gray-100">
-                                                            <h4 className="text-xs font-medium text-gray-700 mb-1">Key Metrics:</h4>
-                                                            <ul className="space-y-0.5">
-                                                                {category.metrics.map((metric, idx) => (
-                                                                    <li key={`${key}-metric-${idx}`} className="text-xs text-gray-600 flex items-center">
-                                                                        <FiCheck className="w-3 h-3 text-[#7400B8] mr-1.5" />
-                                                                        {metric}
-                                                                    </li>
-                                                                ))}
-                                                            </ul>
-                                                        </div>
-                                                    </motion.button>
-                                                ))}
-                                            </div>
-                                            {/* Second row - 2 columns */}
-                                            <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                                {Object.entries(INDUSTRY_CATEGORIES).slice(3).map(([key, category]) => (
-                                                    <motion.button
-                                                        key={key}
-                                                        onClick={() => setSelectedIndustry(key)}
-                                                        className={`relative p-6 rounded-lg text-left transition-all duration-300 bg-white/80 backdrop-blur-sm ${
-                                                            selectedIndustry === key
-                                                                ? 'ring-2 ring-[#7400B8] ring-offset-1 shadow-lg'
-                                                                : 'hover:ring-2 hover:ring-[#7400B8]/50 hover:ring-offset-1 hover:shadow-md'
-                                                        } bg-gradient-to-br ${category.color}`}
-                                                        whileHover={{ scale: 1.01, y: -1 }}
-                                                        whileTap={{ scale: 0.99 }}
-                                                    >
-                                                        <div className="flex items-start space-x-3">
-                                                            <div className={`p-2.5 rounded-lg bg-gradient-to-br ${category.iconColor} text-white shadow-sm`}>
-                                                                {category.icon}
-                                                            </div>
-                                                            <div>
-                                                                <h3 className="text-base font-medium text-gray-800 mb-1">{category.name}</h3>
-                                                                <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">{category.description}</p>
-                                    </div>
-                                </div>
-                                                        {selectedIndustry === key && (
-                                                            <motion.div
-                                                                className="absolute top-2 right-2"
-                                                                initial={{ scale: 0 }}
-                                                                animate={{ scale: 1 }}
-                                                                transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                                                            >
-                                                                <FiCheckCircle className="w-4 h-4 text-[#7400B8]" />
-                                                            </motion.div>
-                                                        )}
-                                                        <div className="mt-3 pt-2 border-t border-gray-100">
-                                                            <h4 className="text-xs font-medium text-gray-700 mb-1">Key Metrics:</h4>
-                                                            <ul className="space-y-0.5">
-                                                                {category.metrics.map((metric, idx) => (
-                                                                    <li key={`${key}-metric-${idx}`} className="text-xs text-gray-600 flex items-center">
-                                                                        <FiCheck className="w-3 h-3 text-[#7400B8] mr-1.5" />
-                                                                        {metric}
-                                                                    </li>
-                                                                ))}
-                                                            </ul>
-                                                        </div>
-                                                    </motion.button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="flex justify-between mt-8">
-                                            <motion.button
-                                                onClick={handleSkip}
-                                                className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium text-sm"
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
-                                            >
-                                                Skip Upload
-                                            </motion.button>
-                                            <div className="flex space-x-3">
+                                            {/* Action Buttons */}
+                                            <div className="flex justify-between pt-6">
                                                 <motion.button
-                                                    onClick={() => setUploadStep('select')}
-                                                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium text-sm"
+                                                    onClick={handleSkip}
+                                                    className="px-6 py-3 text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium"
                                                     whileHover={{ scale: 1.02 }}
                                                     whileTap={{ scale: 0.98 }}
                                                 >
-                                                    Back to Files
+                                                    Skip Upload
                                                 </motion.button>
-                                                <motion.button
-                                    onClick={uploadFiles}
-                                                    disabled={!selectedIndustry}
-                                                    className={`px-4 py-2 rounded-lg text-white font-medium text-sm ${
-                                                        selectedIndustry
-                                                            ? 'bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] hover:shadow-lg'
-                                                            : 'bg-gray-400 cursor-not-allowed'
-                                                    } transition-all duration-200 flex items-center space-x-2`}
-                                                    whileHover={selectedIndustry ? { scale: 1.02 } : {}}
-                                                    whileTap={selectedIndustry ? { scale: 0.98 } : {}}
-                                                >
-                                                    <FiUpload className="w-4 h-4" />
-                                                    <span>Upload & Analyze</span>
-                                                </motion.button>
-                            </div>
-                        </div>
-                                    </motion.div>
-                                )}
-
-                                {uploadStep === 'uploading' && (
-                                    <div className="space-y-8">
-                                        <motion.div
-                                            className="text-center py-12 bg-white/80 backdrop-blur-sm rounded-xl"
-                                            initial={{ opacity: 0, scale: 0.95 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            transition={{ duration: 0.3 }}
-                                        >
-                                            <div className="flex flex-col items-center justify-center space-y-6">
-                                    <div className="relative">
-                                                    <div className="w-24 h-24 border-4 border-[#7400B8] border-opacity-25 rounded-full"></div>
-                                                    <motion.div
-                                                        className="w-24 h-24 border-4 border-[#7400B8] rounded-full absolute top-0 left-0"
-                                                        animate={{ rotate: 360 }}
-                                                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                                            style={{
-                                                clipPath: `polygon(50% 50%, 50% 0%, ${uploadProgress}% 0%, ${uploadProgress}% 100%, 50% 100%)`,
-                                                transform: 'rotate(90deg)'
-                                            }}
-                                                    ></motion.div>
-                                        <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
-                                                        <span className="text-[#7400B8] font-bold text-2xl">{uploadProgress}%</span>
-                                                    </div>
-                                                </div>
-                                                <p className="text-xl font-medium text-gray-700">Uploading your files...</p>
-                                                <p className="text-gray-500">Please wait while we process your data</p>
-                                            </div>
-                                        </motion.div>
-
-                                        {/* API Logs Section */}
-                                        <motion.div
-                                            className="bg-white/80 backdrop-blur-sm rounded-xl border border-gray-100 overflow-hidden"
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.3 }}
-                                        >
-                                            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                                                <h3 className="text-lg font-medium text-gray-800">Upload Logs</h3>
-                                                <div className="flex items-center space-x-2">
-                                                    <div className="flex items-center space-x-1">
-                                                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                                        <span className="text-xs text-gray-600">Info</span>
-                                                    </div>
-                                                    <div className="flex items-center space-x-1">
-                                                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                                        <span className="text-xs text-gray-600">Success</span>
-                                                    </div>
-                                                    <div className="flex items-center space-x-1">
-                                                        <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                                                        <span className="text-xs text-gray-600">Error</span>
-                                                    </div>
+                                                <div className="flex gap-4">
+                                                    <motion.button
+                                                        onClick={() => navigate('/')}
+                                                        className="px-6 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium"
+                                                        whileHover={{ scale: 1.02 }}
+                                                        whileTap={{ scale: 0.98 }}
+                                                    >
+                                                        Cancel
+                                                    </motion.button>
+                                                    <motion.button
+                                                        onClick={handleContinue}
+                                                        disabled={files.length === 0}
+                                                        className={`px-6 py-3 rounded-xl text-white font-medium ${
+                                                            files.length > 0
+                                                                ? 'bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] hover:shadow-lg'
+                                                                : 'bg-gray-400 cursor-not-allowed'
+                                                        } transition-all duration-200 flex items-center gap-2`}
+                                                        whileHover={files.length > 0 ? { scale: 1.02 } : {}}
+                                                        whileTap={files.length > 0 ? { scale: 0.98 } : {}}
+                                                    >
+                                                        <FiUpload className="w-5 h-5" />
+                                                        <span>Continue</span>
+                                                    </motion.button>
                                                 </div>
                                             </div>
-                                            <div className="max-h-[200px] overflow-y-auto p-4 space-y-2">
-                                                <AnimatePresence>
-                                                    {apiLogs.map((log) => (
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-8">
+                                            <motion.div
+                                                className="text-center py-12 bg-white/60 backdrop-blur-sm rounded-3xl"
+                                                initial={{ opacity: 0, scale: 0.95 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                transition={{ duration: 0.3 }}
+                                            >
+                                                <div className="flex flex-col items-center justify-center gap-6">
+                                                    <div className="relative">
+                                                        <div className="w-24 h-24 border-4 border-[#7400B8] border-opacity-25 rounded-full"></div>
                                                         <motion.div
-                                                            key={log.id}
-                                                            initial={{ opacity: 0, x: -20 }}
-                                                            animate={{ opacity: 1, x: 0 }}
-                                                            exit={{ opacity: 0, x: 20 }}
-                                                            transition={{ duration: 0.2 }}
-                                                            className={`flex items-start space-x-3 p-2 rounded-lg ${
-                                                                log.type === 'error' ? 'bg-red-50' :
-                                                                log.type === 'success' ? 'bg-green-50' :
-                                                                'bg-blue-50'
-                                                            }`}
-                                                        >
-                                                            <div className={`mt-1 ${
-                                                                log.type === 'error' ? 'text-red-500' :
-                                                                log.type === 'success' ? 'text-green-500' :
-                                                                'text-blue-500'
-                                                            }`}>
-                                                                {log.type === 'error' ? <FiX className="w-4 h-4" /> :
-                                                                 log.type === 'success' ? <FiCheckCircle className="w-4 h-4" /> :
-                                                                 <FiDatabase className="w-4 h-4" />}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className={`text-sm ${
-                                                                    log.type === 'error' ? 'text-red-700' :
-                                                                    log.type === 'success' ? 'text-green-700' :
-                                                                    'text-blue-700'
-                                                                }`}>
-                                                                    {log.message}
-                                                                </p>
-                                                                <p className="text-xs text-gray-500 mt-0.5">
-                                                                    {new Date(log.timestamp).toLocaleTimeString()}
-                                                                </p>
-                                                            </div>
-                                                        </motion.div>
-                                                    ))}
-                                                </AnimatePresence>
-                                            </div>
-                                        </motion.div>
+                                                            className="w-24 h-24 border-4 border-[#7400B8] rounded-full absolute top-0 left-0"
+                                                            animate={{ rotate: 360 }}
+                                                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                                            style={{
+                                                                clipPath: `polygon(50% 50%, 50% 0%, ${uploadProgress}% 0%, ${uploadProgress}% 100%, 50% 100%)`,
+                                                                transform: 'rotate(90deg)'
+                                                            }}
+                                                        ></motion.div>
+                                                        <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
+                                                            <span className="text-[#7400B8] font-bold text-2xl">{uploadProgress}%</span>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-xl font-medium text-gray-700">Uploading your files...</p>
+                                                    <p className="text-gray-500">Please wait while we process your data</p>
+                                                </div>
+                                            </motion.div>
 
-                                        {/* File List During Upload */}
-                                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                                            {files.map((file) => (
-                                                <motion.div
-                                                    key={`upload-progress-${file.name}-${file.size}-${file.lastModified}`}
-                                                    className="flex items-center justify-between bg-white/80 backdrop-blur-sm p-4 rounded-lg border border-gray-100"
-                                                    initial={{ opacity: 0, x: -20 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ duration: 0.2 }}
+                                            {/* File List During Upload */}
+                                            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                                                {files.map((file) => (
+                                                    <motion.div
+                                                        key={`upload-${file.name}-${file.size}-${file.lastModified}`}
+                                                        className="flex items-center justify-between bg-white/60 backdrop-blur-sm p-4 rounded-2xl border border-gray-100"
+                                                        initial={{ opacity: 0, x: -20 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        transition={{ duration: 0.2 }}
+                                                    >
+                                                        <div className="flex items-center">
+                                                            <div className="bg-purple-100 p-2 rounded-xl mr-3">
+                                                                <FiFile className="w-5 h-5 text-[#7400B8]" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-medium text-gray-800">{file.name}</p>
+                                                                <div className="w-48 h-1.5 bg-gray-200 rounded-full mt-1 overflow-hidden">
+                                                                    <motion.div
+                                                                        className="h-1.5 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full"
+                                                                        initial={{ width: 0 }}
+                                                                        animate={{ width: `${uploadProgress}%` }}
+                                                                        transition={{ duration: 0.3 }}
+                                                                    ></motion.div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-sm font-medium text-[#7400B8]">{uploadProgress}%</div>
+                                                    </motion.div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {uploadStep === 'category' && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="w-full max-w-6xl mx-auto"
+                                >
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {/* First row - 3 columns */}
+                                        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                                            {Object.entries(INDUSTRY_CATEGORIES).slice(0, 3).map(([key, category]) => (
+                                                <motion.button
+                                                    key={key}
+                                                    onClick={() => setSelectedIndustry(key)}
+                                                    className={`relative p-6 rounded-2xl text-left transition-all duration-300 bg-white/60 backdrop-blur-sm ${
+                                                        selectedIndustry === key
+                                                            ? 'ring-2 ring-[#7400B8] ring-offset-1 shadow-lg'
+                                                            : 'hover:ring-2 hover:ring-[#7400B8]/50 hover:ring-offset-1 hover:shadow-md'
+                                                    } bg-gradient-to-br ${category.color}`}
+                                                    whileHover={{ scale: 1.01, y: -1 }}
+                                                    whileTap={{ scale: 0.99 }}
                                                 >
-                                                    <div className="flex items-center">
-                                                        <div className="bg-purple-100 p-2 rounded-lg mr-3">
-                                                            <FiFile className="w-5 h-5 text-[#7400B8]" />
+                                                    <div className="flex items-start gap-3">
+                                                        <div className={`p-2.5 rounded-xl bg-gradient-to-br ${category.iconColor} text-white shadow-sm`}>
+                                                            {category.icon}
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-medium text-gray-800">{file.name}</p>
-                                                            <div className="w-48 h-1.5 bg-gray-200 rounded-full mt-1 overflow-hidden">
-                                                                <motion.div
-                                                                    className="h-1.5 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full"
-                                                                    initial={{ width: 0 }}
-                                                                    animate={{ width: `${uploadProgress}%` }}
-                                                                    transition={{ duration: 0.3 }}
-                                                                ></motion.div>
-                                                            </div>
+                                                            <h3 className="text-base font-medium text-gray-800 mb-1">{category.name}</h3>
+                                                            <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">{category.description}</p>
                                                         </div>
                                                     </div>
-                                                    <div className="text-sm font-medium text-[#7400B8]">{uploadProgress}%</div>
-                                                </motion.div>
+                                                    {selectedIndustry === key && (
+                                                        <motion.div
+                                                            className="absolute top-2 right-2"
+                                                            initial={{ scale: 0 }}
+                                                            animate={{ scale: 1 }}
+                                                            transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                                                        >
+                                                            <FiCheckCircle className="w-4 h-4 text-[#7400B8]" />
+                                                        </motion.div>
+                                                    )}
+                                                    <div className="mt-3 pt-2 border-t border-gray-100">
+                                                        <h4 className="text-xs font-medium text-gray-700 mb-1">Key Metrics:</h4>
+                                                        <ul className="space-y-0.5">
+                                                            {category.metrics.map((metric, idx) => (
+                                                                <li key={`${key}-metric-${idx}`} className="text-xs text-gray-600 flex items-center">
+                                                                    <FiCheck className="w-3 h-3 text-[#7400B8] mr-1.5" />
+                                                                    {metric}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                </motion.button>
                                             ))}
                                         </div>
+                                        {/* Second row - 2 columns */}
+                                        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                            {Object.entries(INDUSTRY_CATEGORIES).slice(3).map(([key, category]) => (
+                                                <motion.button
+                                                    key={key}
+                                                    onClick={() => setSelectedIndustry(key)}
+                                                    className={`relative p-6 rounded-2xl text-left transition-all duration-300 bg-white/60 backdrop-blur-sm ${
+                                                        selectedIndustry === key
+                                                            ? 'ring-2 ring-[#7400B8] ring-offset-1 shadow-lg'
+                                                            : 'hover:ring-2 hover:ring-[#7400B8]/50 hover:ring-offset-1 hover:shadow-md'
+                                                    } bg-gradient-to-br ${category.color}`}
+                                                    whileHover={{ scale: 1.01, y: -1 }}
+                                                    whileTap={{ scale: 0.99 }}
+                                                >
+                                                    <div className="flex items-start gap-3">
+                                                        <div className={`p-2.5 rounded-xl bg-gradient-to-br ${category.iconColor} text-white shadow-sm`}>
+                                                            {category.icon}
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="text-base font-medium text-gray-800 mb-1">{category.name}</h3>
+                                                            <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">{category.description}</p>
+                                                        </div>
+                                                    </div>
+                                                    {selectedIndustry === key && (
+                                                        <motion.div
+                                                            className="absolute top-2 right-2"
+                                                            initial={{ scale: 0 }}
+                                                            animate={{ scale: 1 }}
+                                                            transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                                                        >
+                                                            <FiCheckCircle className="w-4 h-4 text-[#7400B8]" />
+                                                        </motion.div>
+                                                    )}
+                                                    <div className="mt-3 pt-2 border-t border-gray-100">
+                                                        <h4 className="text-xs font-medium text-gray-700 mb-1">Key Metrics:</h4>
+                                                        <ul className="space-y-0.5">
+                                                            {category.metrics.map((metric, idx) => (
+                                                                <li key={`${key}-metric-${idx}`} className="text-xs text-gray-600 flex items-center">
+                                                                    <FiCheck className="w-3 h-3 text-[#7400B8] mr-1.5" />
+                                                                    {metric}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                </motion.button>
+                                            ))}
+                                        </div>
+                                    </div>
 
-                                        {/* Skip button during upload */}
-                                        <div className="flex justify-center pt-6">
+                                    <div className="flex justify-between mt-8">
+                                        <motion.button
+                                            onClick={handleSkip}
+                                            className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium text-sm"
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                        >
+                                            Skip Upload
+                                        </motion.button>
+                                        <div className="flex gap-3">
                                             <motion.button
-                                                onClick={handleSkip}
-                                                className="px-6 py-3 text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium"
+                                                onClick={() => setUploadStep('select')}
+                                                className="px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium text-sm"
                                                 whileHover={{ scale: 1.02 }}
                                                 whileTap={{ scale: 0.98 }}
                                             >
-                                                Skip Upload
+                                                Back to Files
+                                            </motion.button>
+                                            <motion.button
+                                                onClick={uploadFiles}
+                                                disabled={!selectedIndustry}
+                                                className={`px-4 py-2 rounded-xl text-white font-medium text-sm ${
+                                                    selectedIndustry
+                                                        ? 'bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] hover:shadow-lg'
+                                                        : 'bg-gray-400 cursor-not-allowed'
+                                                } transition-all duration-200 flex items-center gap-2`}
+                                                whileHover={selectedIndustry ? { scale: 1.02 } : {}}
+                                                whileTap={selectedIndustry ? { scale: 0.98 } : {}}
+                                            >
+                                                <FiUpload className="w-4 h-4" />
+                                                <span>Upload & Analyze</span>
                                             </motion.button>
                                         </div>
                                     </div>
-                                )}
-                            </div>
+                                </motion.div>
+                            )}
 
-                            {/* Right side - Illustration (only show for initial file upload step) */}
-                            {uploadStep === 'select' && !selectedIndustry && (
-                                <div className="hidden lg:block">
+                            {uploadStep === 'uploading' && (
+                                <div className="space-y-8">
                                     <motion.div
-                                        className="relative h-full"
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ duration: 0.5, delay: 0.2 }}
+                                        className="text-center py-12 bg-white/60 backdrop-blur-sm rounded-3xl"
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ duration: 0.3 }}
                                     >
-                                        <img
-                                            src="/assets/upload.jpg"
-                                            alt="Data Upload Illustration"
-                                            className="w-full h-auto rounded-xl"
-                                            onError={(e) => {
-                                                e.target.onerror = null;
-                                                e.target.src = "https://placehold.co/600x400/purple/white?text=Upload+Your+Data";
-                                            }}
-                                        />
-
-                                    </motion.div>
-                                    <div className="mt-8 space-y-6">
-                                        <motion.div
-                                            className="flex items-start space-x-4 bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-gray-100 hover:border-[#7400B8]/50 transition-colors duration-200"
-                                            whileHover={{ scale: 1.02 }}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.3, delay: 0.4 }}
-                                        >
-                                            <div className="bg-gradient-to-br from-[#7400B8] to-[#9B4DCA] p-3 rounded-full text-white">
-                                                <FiFileText className="w-6 h-6" />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-lg font-medium text-gray-800">Secure Upload</h3>
-                                                <p className="text-gray-600">Your data is encrypted and securely processed</p>
+                                        <div className="flex flex-col items-center justify-center gap-6">
+                                            <div className="relative">
+                                                <div className="w-24 h-24 border-4 border-[#7400B8] border-opacity-25 rounded-full"></div>
+                                                <motion.div
+                                                    className="w-24 h-24 border-4 border-[#7400B8] rounded-full absolute top-0 left-0"
+                                                    animate={{ rotate: 360 }}
+                                                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                                    style={{
+                                                        clipPath: `polygon(50% 50%, 50% 0%, ${uploadProgress}% 0%, ${uploadProgress}% 100%, 50% 100%)`,
+                                                        transform: 'rotate(90deg)'
+                                                    }}
+                                                ></motion.div>
+                                                <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
+                                                    <span className="text-[#7400B8] font-bold text-2xl">{uploadProgress}%</span>
                                                 </div>
-                                        </motion.div>
-                                        <motion.div
-                                            className="flex items-start space-x-4 bg-white/80 backdrop-blur-sm p-6 rounded-xl border border-gray-100 hover:border-[#7400B8]/50 transition-colors duration-200"
-                                            whileHover={{ scale: 1.02 }}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.3, delay: 0.5 }}
-                                        >
-                                            <div className="bg-gradient-to-br from-[#7400B8] to-[#9B4DCA] p-3 rounded-full text-white">
-                                                <FiCpu className="w-6 h-6" />
                                             </div>
-                                            <div>
-                                                <h3 className="text-lg font-medium text-gray-800">AI-Powered Analysis</h3>
-                                                <p className="text-gray-600">Get instant insights with our advanced analytics engine</p>
+                                            <p className="text-xl font-medium text-gray-700">Uploading your files...</p>
+                                            <p className="text-gray-500">Please wait while we process your data</p>
                                         </div>
-                                        </motion.div>
+                                    </motion.div>
+
+                                    {/* API Logs Section */}
+                                    <motion.div
+                                        className="bg-white/60 backdrop-blur-sm rounded-3xl border border-gray-100 overflow-hidden"
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.3 }}
+                                    >
+                                        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                                            <h3 className="text-lg font-medium text-gray-800">Upload Logs</h3>
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-1">
+                                                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                                    <span className="text-xs text-gray-600">Info</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                                    <span className="text-xs text-gray-600">Success</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                                                    <span className="text-xs text-gray-600">Error</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="max-h-[200px] overflow-y-auto p-4 space-y-2">
+                                            <AnimatePresence>
+                                                {apiLogs.map((log) => (
+                                                    <motion.div
+                                                        key={log.id}
+                                                        initial={{ opacity: 0, x: -20 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        exit={{ opacity: 0, x: 20 }}
+                                                        transition={{ duration: 0.2 }}
+                                                        className={`flex items-start gap-3 p-2 rounded-xl ${
+                                                            log.type === 'error' ? 'bg-red-50' :
+                                                            log.type === 'success' ? 'bg-green-50' :
+                                                            'bg-blue-50'
+                                                        }`}
+                                                    >
+                                                        <div className={`mt-1 ${
+                                                            log.type === 'error' ? 'text-red-500' :
+                                                            log.type === 'success' ? 'text-green-500' :
+                                                            'text-blue-500'
+                                                        }`}>
+                                                            {log.type === 'error' ? <FiX className="w-4 h-4" /> :
+                                                             log.type === 'success' ? <FiCheckCircle className="w-4 h-4" /> :
+                                                             <FiDatabase className="w-4 h-4" />}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className={`text-sm ${
+                                                                log.type === 'error' ? 'text-red-700' :
+                                                                log.type === 'success' ? 'text-green-700' :
+                                                                'text-blue-700'
+                                                            }`}>
+                                                                {log.message}
+                                                            </p>
+                                                            <p className="text-xs text-gray-500 mt-0.5">
+                                                                {new Date(log.timestamp).toLocaleTimeString()}
+                                                            </p>
+                                                        </div>
+                                                    </motion.div>
+                                                ))}
+                                            </AnimatePresence>
+                                        </div>
+                                    </motion.div>
+
+                                    {/* File List During Upload */}
+                                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                                        {files.map((file) => (
+                                            <motion.div
+                                                key={`upload-progress-${file.name}-${file.size}-${file.lastModified}`}
+                                                className="flex items-center justify-between bg-white/60 backdrop-blur-sm p-4 rounded-2xl border border-gray-100"
+                                                initial={{ opacity: 0, x: -20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ duration: 0.2 }}
+                                            >
+                                                <div className="flex items-center">
+                                                    <div className="bg-purple-100 p-2 rounded-xl mr-3">
+                                                        <FiFile className="w-5 h-5 text-[#7400B8]" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-medium text-gray-800">{file.name}</p>
+                                                        <div className="w-48 h-1.5 bg-gray-200 rounded-full mt-1 overflow-hidden">
+                                                            <motion.div
+                                                                className="h-1.5 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full"
+                                                                initial={{ width: 0 }}
+                                                                animate={{ width: `${uploadProgress}%` }}
+                                                                transition={{ duration: 0.3 }}
+                                                            ></motion.div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-sm font-medium text-[#7400B8]">{uploadProgress}%</div>
+                                            </motion.div>
+                                        ))}
                                     </div>
-                            </div>
+
+                                    {/* Skip button during upload */}
+                                    <div className="flex justify-center pt-6">
+                                        <motion.button
+                                            onClick={handleSkip}
+                                            className="px-6 py-3 text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium"
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                        >
+                                            Skip Upload
+                                        </motion.button>
+                                    </div>
+                                </div>
                             )}
                         </div>
-                </motion.div>
+
+                        {/* Right side - Illustration (only show for initial file upload step) */}
+                        {uploadStep === 'select' && !selectedIndustry && (
+                            <div className="hidden lg:block">
+                                <motion.div
+                                    className="relative h-full"
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.5, delay: 0.2 }}
+                                >
+                                    <img
+                                        src="/assets/upload.jpg"
+                                        alt="Data Upload Illustration"
+                                        className="w-full h-auto rounded-3xl"
+                                        onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.src = "https://placehold.co/600x400/purple/white?text=Upload+Your+Data";
+                                        }}
+                                    />
+                                </motion.div>
+                                <div className="mt-8 space-y-6">
+                                    <motion.div
+                                        className="flex items-start gap-4 bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 hover:border-[#7400B8]/50 transition-colors duration-200"
+                                        whileHover={{ scale: 1.02 }}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.3, delay: 0.4 }}
+                                    >
+                                        <div className="bg-gradient-to-br from-[#7400B8] to-[#9B4DCA] p-3 rounded-full text-white">
+                                            <FiFileText className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-medium text-gray-800">Secure Upload</h3>
+                                            <p className="text-gray-600">Your data is encrypted and securely processed</p>
+                                        </div>
+                                    </motion.div>
+                                    <motion.div
+                                        className="flex items-start gap-4 bg-white/60 backdrop-blur-sm p-6 rounded-2xl border border-gray-100 hover:border-[#7400B8]/50 transition-colors duration-200"
+                                        whileHover={{ scale: 1.02 }}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.3, delay: 0.5 }}
+                                    >
+                                        <div className="bg-gradient-to-br from-[#7400B8] to-[#9B4DCA] p-3 rounded-full text-white">
+                                            <FiCpu className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-medium text-gray-800">AI-Powered Analysis</h3>
+                                            <p className="text-gray-600">Get instant insights with our advanced analytics engine</p>
+                                        </div>
+                                    </motion.div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </main>
+            </div>
         </div>
     );
 };
-
 
 export default DataUpload;

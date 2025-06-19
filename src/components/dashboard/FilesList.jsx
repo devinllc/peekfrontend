@@ -38,92 +38,114 @@ const FilesList = ({
         <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+            className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
         >
             <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-transparent bg-clip-text">Your Files</h2>
-                <button
+                <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-xl flex items-center justify-center">
+                        <FiDatabase className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800">Your Files</h2>
+                        <p className="text-gray-600 text-sm">Manage and analyze your data files</p>
+                    </div>
+                </div>
+                <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => navigate('/user/data-upload')}
-                    className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-lg hover:shadow-lg transition-all duration-300 transform hover:scale-105"
+                    className="px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:shadow-lg transition-all duration-200 flex items-center space-x-2"
                 >
                     <FiPlus className="w-4 h-4" />
-                    <span>Upload</span>
-                </button>
+                    <span className="font-medium">Upload</span>
+                </motion.button>
             </div>
 
             <div className="space-y-4">
                 {isLoadingFiles ? (
                     <div className="flex items-center justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7400B8]"></div>
+                        <div className="flex flex-col items-center space-y-4">
+                            <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full flex items-center justify-center">
+                                <div className="w-8 h-8 border-2 border-white rounded-full animate-spin border-t-transparent"></div>
+                            </div>
+                            <p className="text-gray-600 font-medium">Loading files...</p>
+                        </div>
                     </div>
                 ) : fileError ? (
-                    <div className="p-4 bg-red-50 rounded-lg text-red-600 text-sm">{fileError}</div>
+                    <div className="p-6 bg-red-50/80 backdrop-blur-sm rounded-xl text-red-600 text-sm border border-red-200">{fileError}</div>
                 ) : (
                     <div>
                         {userFiles.length > 0 ? (
                             <div className="space-y-4">
                                 <div className="max-h-[500px] overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                                    {userFiles.map((file) => (
+                                    {userFiles.map((file, index) => (
                                         <motion.div
                                             key={file._id}
-                                            whileHover={{ scale: 1.01 }}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.1 }}
+                                            whileHover={{ y: -2 }}
                                             onClick={() => setSelectedFile(file)}
-                                            className={`p-4 rounded-xl cursor-pointer transition-all ${
+                                            className={`p-6 rounded-2xl cursor-pointer transition-all duration-300 bg-white/60 backdrop-blur-sm border ${
                                                 selectedFile?._id === file._id
-                                                    ? 'bg-[#F9F4FF] border-2 border-[#7400B8]/30 shadow-md'
-                                                    : 'hover:bg-gray-50 border border-gray-100'
+                                                    ? 'border-[#7400B8]/50 shadow-lg bg-gradient-to-r from-[#F9F4FF] to-white'
+                                                    : 'border-white/30 hover:border-[#7400B8]/30 hover:shadow-md'
                                             }`}
                                         >
                                             <div className="flex items-start justify-between">
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center space-x-3">
-                                                        <div className="w-10 h-10 rounded-lg bg-[#7400B8]/10 flex items-center justify-center">
-                                                            <FiFile className="w-5 h-5 text-[#7400B8]" />
+                                                    <div className="flex items-center space-x-4">
+                                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] flex items-center justify-center">
+                                                            <FiFile className="w-6 h-6 text-white" />
                                                         </div>
-                                                        <div>
-                                                            <p className="text-sm font-semibold text-gray-800 truncate">
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-lg font-semibold text-gray-800 truncate mb-2">
                                                                 {file.originalName}
                                                             </p>
-                                                            <div className="flex items-center space-x-4 mt-1">
-                                                                <span className="flex items-center text-xs text-gray-500">
-                                                                    <FiDatabase className="w-3 h-3 mr-1" />
+                                                            <div className="flex items-center gap-6 text-sm">
+                                                                <span className="flex items-center text-gray-600">
+                                                                    <FiDatabase className="w-4 h-4 mr-2" />
                                                                     {file.fileCategory}
                                                                 </span>
-                                                                <span className="flex items-center text-xs text-gray-500">
-                                                                    <FiBarChart2 className="w-3 h-3 mr-1" />
+                                                                <span className="flex items-center text-gray-600">
+                                                                    <FiDownload className="w-4 h-4 mr-2" />
                                                                     {formatFileSize(file.sizeInBytes)}
                                                                 </span>
-                                                                <span className="flex items-center text-xs text-gray-500">
-                                                                    <FiCalendar className="w-3 h-3 mr-1" />
+                                                                <span className="flex items-center text-gray-600">
+                                                                    <FiCalendar className="w-4 h-4 mr-2" />
                                                                     {formatDate(file.uploadedAt)}
                                                                 </span>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center space-x-2">
+                                                <div className="flex items-center space-x-3">
                                                     {file.analysis ? (
-                                                        <button
+                                                        <motion.button
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 navigate(`/user/dashboard?fileId=${file._id}`);
                                                             }}
-                                                            className="px-3 py-1 text-xs bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors flex items-center space-x-1"
+                                                            className="px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all duration-200 flex items-center space-x-2 font-medium shadow-lg"
                                                         >
-                                                            <FiBarChart2 className="w-3 h-3" />
+                                                            <FiBarChart2 className="w-4 h-4" />
                                                             <span>View Analysis</span>
-                                                        </button>
+                                                        </motion.button>
                                                     ) : (
-                                                        <button
+                                                        <motion.button
+                                                            whileHover={{ scale: 1.05 }}
+                                                            whileTap={{ scale: 0.95 }}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleLoadFileAnalysis(file._id);
                                                             }}
-                                                            className="px-3 py-1 text-xs bg-[#7400B8] text-white rounded-full hover:bg-[#9B4DCA] transition-colors flex items-center space-x-1"
+                                                            className="px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:shadow-lg transition-all duration-200 flex items-center space-x-2 font-medium"
                                                         >
-                                                            <FiCpu className="w-3 h-3" />
+                                                            <FiCpu className="w-4 h-4" />
                                                             <span>Analyze</span>
-                                                        </button>
+                                                        </motion.button>
                                                     )}
                                                 </div>
                                             </div>
@@ -136,7 +158,7 @@ const FilesList = ({
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => handleLoadFileAnalysis(selectedFile._id)}
-                                        className="w-full bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-300 flex items-center justify-center space-x-3"
+                                        className="w-full bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-3 font-medium"
                                     >
                                         <FiCpu className="w-5 h-5" />
                                         <span>Analyze Data</span>
@@ -144,19 +166,26 @@ const FilesList = ({
                                 )}
                             </div>
                         ) : (
-                            <div className="text-center py-8">
-                                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#7400B8]/10 flex items-center justify-center">
-                                    <FiFile className="w-8 h-8 text-[#7400B8]" />
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="text-center py-16"
+                            >
+                                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 flex items-center justify-center">
+                                    <FiFile className="w-12 h-12 text-[#7400B8]" />
                                 </div>
-                                <p className="text-gray-500 mb-2">No files uploaded yet</p>
-                                <button
+                                <h3 className="text-xl font-semibold text-gray-800 mb-2">No files uploaded yet</h3>
+                                <p className="text-gray-600 mb-6">Upload your first data file to get started with analytics</p>
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
                                     onClick={() => navigate('/user/data-upload')}
-                                    className="text-[#7400B8] hover:text-[#9B4DCA] font-medium flex items-center space-x-2 mx-auto"
+                                    className="px-8 py-4 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl font-medium hover:shadow-lg transition-all duration-200 flex items-center space-x-2 mx-auto"
                                 >
-                                    <FiPlus className="w-4 h-4" />
+                                    <FiPlus className="w-5 h-5" />
                                     <span>Upload your first file</span>
-                                </button>
-                            </div>
+                                </motion.button>
+                            </motion.div>
                         )}
                     </div>
                 )}

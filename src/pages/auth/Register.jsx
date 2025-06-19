@@ -45,157 +45,179 @@ const Register = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#F9F4FF] via-white to-[#F9F4FF] flex items-center justify-center p-4">
-            <div className="w-full max-w-4xl">
+        <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-6">
+            <div className="max-w-6xl mx-auto">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-2xl shadow-xl overflow-hidden"
+                    transition={{ duration: 0.6 }}
+                    className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden"
                 >
-                    <div className="p-8">
-                        {/* Header */}
-                        <div className="mb-8">
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] p-8 text-white">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                                    <FiUser className="w-8 h-8" />
+                                </div>
+                                <div>
+                                    <h1 className="text-3xl font-bold">Create Your Account</h1>
+                                    <p className="text-white/80">Join PeekBI to start creating powerful data visualizations</p>
+                                </div>
+                            </div>
                             <Link
                                 to="/"
-                                className="inline-flex items-center text-gray-600 hover:text-[#7400B8] transition-colors mb-4"
+                                className="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-xl hover:bg-white/30 transition-all duration-200 flex items-center space-x-2 border border-white/30"
                             >
-                                <FiArrowLeft className="w-5 h-5 mr-2" />
-                                Back to Home
+                                <FiArrowLeft className="w-4 h-4" />
+                                <span>Back to Home</span>
                             </Link>
-                            <h1 className="text-3xl font-bold bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] bg-clip-text text-transparent">
-                                Create Your Account
-                            </h1>
-                            <p className="mt-2 text-gray-600">
-                                Join PeekBI to start creating powerful data visualizations
-                            </p>
                         </div>
+                    </div>
 
-                        {error && (
-                            <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-                                {error}
-                            </div>
-                        )}
-
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Name */}
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-600">Full Name</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <FiUser className="h-5 w-5 text-gray-400" />
-                                        </div>
-                                        <input
-                                            type="text"
-                                            name="name"
-                                            value={formData.name}
-                                            onChange={handleInputChange}
-                                            required
-                                            className="w-full pl-10 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent"
-                                            placeholder="John Doe"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Email */}
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-600">Email</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <FiMail className="h-5 w-5 text-gray-400" />
-                                        </div>
-                                        <input
-                                            type="email"
-                                            name="email"
-                                            value={formData.email}
-                                            onChange={handleInputChange}
-                                            required
-                                            className="w-full pl-10 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent"
-                                            placeholder="john@example.com"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Password */}
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-600">Password</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <FiLock className="h-5 w-5 text-gray-400" />
-                                        </div>
-                                        <input
-                                            type="password"
-                                            name="password"
-                                            value={formData.password}
-                                            onChange={handleInputChange}
-                                            required
-                                            className="w-full pl-10 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent"
-                                            placeholder="••••••••"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Phone */}
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-600">Phone Number</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <FiPhone className="h-5 w-5 text-gray-400" />
-                                        </div>
-                                        <input
-                                            type="tel"
-                                            name="phone"
-                                            value={formData.phone}
-                                            onChange={handleInputChange}
-                                            required
-                                            className="w-full pl-10 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent"
-                                            placeholder="+1 (555) 000-0000"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* User Type */}
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-600">Account Type</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <FiBriefcase className="h-5 w-5 text-gray-400" />
-                                        </div>
-                                        <select
-                                            name="userType"
-                                            value={formData.userType}
-                                            onChange={handleInputChange}
-                                            required
-                                            className="w-full pl-10 pr-10 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent appearance-none cursor-pointer"
-                                        >
-                                            <option value="individual">Individual</option>
-                                            <option value="business">Business</option>
-                                        </select>
-                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                            <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center justify-between pt-4">
-                                <p className="text-sm text-gray-600">
-                                    Already have an account?{' '}
-                                    <Link to="/login" className="text-[#7400B8] hover:text-[#9B4DCA] transition-colors">
-                                        Log in
-                                    </Link>
-                                </p>
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="px-6 py-2 bg-[#7400B8] text-white rounded-lg hover:bg-[#9B4DCA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    {/* Content */}
+                    <div className="p-8">
+                        <div className="max-w-4xl mx-auto">
+                            {error && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="mb-6 bg-red-50/80 backdrop-blur-sm border border-red-200 text-red-600 px-4 py-3 rounded-xl"
                                 >
-                                    {loading ? 'Creating Account...' : 'Create Account'}
-                                </button>
-                            </div>
-                        </form>
+                                    {error}
+                                </motion.div>
+                            )}
+
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Name */}
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-gray-600">Full Name</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <FiUser className="h-5 w-5 text-gray-400" />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                name="name"
+                                                value={formData.name}
+                                                onChange={handleInputChange}
+                                                required
+                                                className="w-full pl-10 px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent transition-all duration-200"
+                                                placeholder="John Doe"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Email */}
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-gray-600">Email</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <FiMail className="h-5 w-5 text-gray-400" />
+                                            </div>
+                                            <input
+                                                type="email"
+                                                name="email"
+                                                value={formData.email}
+                                                onChange={handleInputChange}
+                                                required
+                                                className="w-full pl-10 px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent transition-all duration-200"
+                                                placeholder="john@example.com"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Password */}
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-gray-600">Password</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <FiLock className="h-5 w-5 text-gray-400" />
+                                            </div>
+                                            <input
+                                                type="password"
+                                                name="password"
+                                                value={formData.password}
+                                                onChange={handleInputChange}
+                                                required
+                                                className="w-full pl-10 px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent transition-all duration-200"
+                                                placeholder="••••••••"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Phone */}
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-gray-600">Phone Number</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <FiPhone className="h-5 w-5 text-gray-400" />
+                                            </div>
+                                            <input
+                                                type="tel"
+                                                name="phone"
+                                                value={formData.phone}
+                                                onChange={handleInputChange}
+                                                required
+                                                className="w-full pl-10 px-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent transition-all duration-200"
+                                                placeholder="+1 (555) 000-0000"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* User Type */}
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-gray-600">Account Type</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <FiBriefcase className="h-5 w-5 text-gray-400" />
+                                            </div>
+                                            <select
+                                                name="userType"
+                                                value={formData.userType}
+                                                onChange={handleInputChange}
+                                                required
+                                                className="w-full pl-10 pr-10 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent appearance-none cursor-pointer transition-all duration-200"
+                                            >
+                                                <option value="individual">Individual</option>
+                                                <option value="business">Business</option>
+                                            </select>
+                                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                                <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between pt-6">
+                                    <p className="text-sm text-gray-600">
+                                        Already have an account?{' '}
+                                        <Link to="/login" className="text-[#7400B8] hover:text-[#9B4DCA] transition-colors font-medium">
+                                            Log in
+                                        </Link>
+                                    </p>
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        type="submit"
+                                        disabled={loading}
+                                        className={`px-8 py-3 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:shadow-lg transition-all duration-200 font-medium ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                    >
+                                        {loading ? (
+                                            <div className="flex items-center space-x-2">
+                                                <div className="w-5 h-5 border-2 border-white rounded-full border-t-transparent animate-spin"></div>
+                                                <span>Creating Account...</span>
+                                            </div>
+                                        ) : (
+                                            'Create Account'
+                                        )}
+                                    </motion.button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </motion.div>
             </div>

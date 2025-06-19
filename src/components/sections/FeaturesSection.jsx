@@ -118,37 +118,6 @@ const FeaturesSection = forwardRef((props, ref) => {
                     <h2 className="text-4xl font-bold mb-4 text-gray-800">Powerful Features</h2>
                     <p className="text-xl text-gray-600 max-w-2xl mx-auto">Everything you need to transform your data into actionable insights</p>
                 </motion.div>
-
-                {/* Who is it for section - New */}
-                <motion.div
-                    className="mb-20"
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true, margin: "50px" }}
-                    transition={{ duration: 0.3 }}
-                >
-                    <h3 className="text-2xl font-bold mb-8 text-center text-gray-800">Who PeekBI Is For</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {audiences.map((audience, index) => (
-                            <motion.div
-                                key={index}
-                                className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-purple-100"
-                                initial={{ opacity: 0 }}
-                                whileInView={{ opacity: 1 }}
-                                viewport={{ once: true, margin: "50px" }}
-                                transition={{ duration: 0.3 }}
-                                whileHover={{ y: -5, transition: { duration: 0.2 } }}
-                            >
-                                <div className="bg-purple-50 rounded-full p-3 inline-block mb-4">
-                                    {audience.icon}
-                                </div>
-                                <h4 className="text-lg font-bold mb-2 text-gray-800">{audience.title}</h4>
-                                <p className="text-gray-600 text-sm">{audience.description}</p>
-                            </motion.div>
-                        ))}
-                    </div>
-                </motion.div>
-
                 {/* Features grid - Existing */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {features.map((feature, index) => (
