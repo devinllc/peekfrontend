@@ -19,3 +19,5 @@ it is taking time before all content loads
 updated frontend
 okaysss
 almost done v.1.1.1
+-v1.0.0 done
+
