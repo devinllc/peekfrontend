@@ -66,7 +66,6 @@ export const AuthProvider = ({ children }) => {
         try {
             // Try localStorage first
             const token = localStorage.getItem('token');
-            console.log('LocalStorage token:', token); // Debug log
 
             if (token) {
                 // If token exists in localStorage, ensure it's also in cookie
@@ -518,7 +517,7 @@ export const AuthProvider = ({ children }) => {
                 },
             });
 
-            console.log("✅ Response from /files/all:", response.data);
+        
 
             if (response.data.files) {
                 return {

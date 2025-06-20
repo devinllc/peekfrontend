@@ -141,23 +141,9 @@ const DataUpload = () => {
                 message: `Preparing file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`,
                 timestamp: new Date().toISOString()
             }]);
-        // Debug: Log the category being sent
-        console.log('Selected industry:', selectedIndustry);
-        console.log('Formatted industry:', category);
-        console.log('Formatted industry length:', category.length);
-            // Log the upload request
-            console.log('Uploading file:', {
-                fileName: file.name,
-                fileSize: file.size,
-                fileType: file.type,
-                industry: category
-            });
 
             const response = await uploadFile(user._id, file, category);
             
-            // Log the raw upload response for debugging
-            console.log('Raw upload response:', response);
-
             // Normalize the response to handle the confusing API response
             const isSuccessful = response.success === true || 
                                (response.success === false && response.error === "File uploaded successfully.");
@@ -202,23 +188,20 @@ const DataUpload = () => {
                     timestamp: new Date().toISOString()
                 }]);
 
-                // Log the normalized response
-                console.log('Normalized upload response:', normalizedResponse);
-
                 setTimeout(() => {
                     setUploading(false);
                     navigate('/user/dashboard', {
                         state: { 
                             uploadedFiles: files.map(f => f.name),
                             responses: responses,
-                            industry: selectedIndustry
+                            industry: selectedIndustry,
+                            refreshFiles: true // Add flag to trigger file refresh
                         }
                     });
                 }, 500);
             } else {
                 // Handle actual error case
                 const errorMessage = response.error || 'Upload failed';
-                console.error('Upload failed with error:', errorMessage);
                 throw new Error(errorMessage);
             }
         } catch (err) {

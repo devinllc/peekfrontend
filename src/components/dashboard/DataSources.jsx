@@ -2,42 +2,40 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiPlus, FiCpu, FiDownload, FiCalendar, FiFile, FiDatabase, FiBarChart2, FiCheck, FiLoader, FiFileText, FiActivity } from 'react-icons/fi';
 import { motion } from 'framer-motion';
-import { useAuth } from '../../contexts/AuthContext';
 import Header from './Header';
 
-const DataSources = () => {
+const DataSources = ({ userFiles = [], isLoading = true, handleLoadFileAnalysis, isLoadingAnalysis = false }) => {
     const navigate = useNavigate();
-    const { user, getAllUserFiles } = useAuth();
-    const [files, setFiles] = useState([]);
     const [selectedFile, setSelectedFile] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [previouslyAnalyzing, setPreviouslyAnalyzing] = useState(false);
 
-    const fetchFiles = async () => {
-        if (!user?._id) return;
-        
-        setIsLoading(true);
-        setError(null);
-        try {
-            const result = await getAllUserFiles(user._id);
-            if (result.success && result.data?.files) {
-                const sortedFiles = result.data.files.sort((a, b) => 
-                    new Date(b.uploadedAt) - new Date(a.uploadedAt)
-                );
-                setFiles(sortedFiles);
-            } else {
-                setError(result.error || "Error fetching files");
-            }
-        } catch (err) {
-            setError(err.message || "Error fetching files");
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
+    // Track when analysis completes (isLoadingAnalysis changes from true to false)
     useEffect(() => {
-        fetchFiles();
-    }, [user?._id, getAllUserFiles]);
+        // If we were analyzing but now we're not, analysis just completed
+        if (previouslyAnalyzing && !isLoadingAnalysis && selectedFile) {
+            // Find the updated file with analysis data
+            const updatedFile = userFiles.find(file => file._id === selectedFile._id);
+            if (updatedFile && updatedFile.analysis) {
+                // Update the selected file with the latest data
+                setSelectedFile(updatedFile);
+            }
+        }
+        
+        // Update the previous analyzing state
+        setPreviouslyAnalyzing(isLoadingAnalysis);
+    }, [isLoadingAnalysis, selectedFile, userFiles]);
+
+    // Update selected file when userFiles changes (to get latest analysis data)
+    useEffect(() => {
+        if (selectedFile && userFiles.length > 0) {
+            // Find the updated version of the selected file
+            const updatedFile = userFiles.find(file => file._id === selectedFile._id);
+            if (updatedFile) {
+                setSelectedFile(updatedFile);
+            }
+        }
+    }, [userFiles]);
 
     const formatFileSize = (bytes) => {
         if (bytes === 0) return '0 Bytes';
@@ -60,13 +58,75 @@ const DataSources = () => {
 
     const handleFileSelect = (file) => {
         setSelectedFile(file);
-        if (file.analysis) {
-            navigate(`/user/dashboard?fileId=${file._id}`);
-        }
+    };
+
+    // Handle analysis button click
+    const handleAnalyzeClick = (e, fileId) => {
+        e.stopPropagation();
+        // Find the file to analyze
+        const fileToAnalyze = userFiles.find(f => f._id === fileId);
+        setSelectedFile(fileToAnalyze);
+        // Call the parent component's analysis handler
+        handleLoadFileAnalysis(fileId);
+    };
+
+    // Check if a file has analysis data
+    const hasAnalysis = (file) => {
+        // Check if file has analysis directly
+        if (file.analysis) return true;
+        
+        // Check if it's the currently selected file and analysis just completed
+        if (selectedFile && selectedFile._id === file._id && selectedFile.analysis) return true;
+        
+        // Check if the updated version in userFiles has analysis
+        const updatedFile = userFiles.find(f => f._id === file._id);
+        return updatedFile && updatedFile.analysis;
+    };
+
+    // Show loading analysis UI for selected file
+    const renderAnalysisLoading = () => {
+        if (!selectedFile || !isLoadingAnalysis) return null;
+        
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            >
+                <div className="bg-white rounded-3xl p-8 max-w-lg w-full">
+                    <div className="text-center">
+                        <div className="w-20 h-20 mx-auto mb-6 relative">
+                            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] opacity-20 animate-pulse"></div>
+                            <div className="absolute inset-2 rounded-full bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] animate-spin"></div>
+                            <div className="absolute inset-4 rounded-full bg-white flex items-center justify-center">
+                                <FiCpu className="w-8 h-8 text-[#7400B8]" />
+                            </div>
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Analyzing Your Data</h2>
+                        <p className="text-gray-600 mb-6">Processing {selectedFile.originalName}...</p>
+                        
+                        <div className="w-full max-w-md mx-auto">
+                            <div className="relative">
+                                <div className="flex mb-3 items-center justify-between">
+                                    <span className="text-sm font-medium text-[#7400B8]">Processing</span>
+                                    <span className="text-sm text-gray-500">Please wait...</span>
+                                </div>
+                                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                                    <div className="h-full bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full animate-progress"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
+        );
     };
 
     return (
         <div className="h-full flex flex-col">
+            {/* Show analysis loading overlay if analyzing */}
+            {renderAnalysisLoading()}
+            
             {/* Header */}
             <Header
                 title="Data Sources"
@@ -76,7 +136,7 @@ const DataSources = () => {
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => navigate('/user/data-upload')}
+                    onClick={() => navigate('/user/data-upload')}
                         className="px-6 py-3 bg-white/20 backdrop-blur-sm rounded-xl hover:bg-white/30 transition-all duration-200 flex items-center space-x-2 border border-white/30"
                     >
                         <FiPlus className="w-5 h-5" />
@@ -102,7 +162,7 @@ const DataSources = () => {
                                 <h2 className="text-xl font-bold text-gray-800">Dashboard Summary</h2>
                                 <p className="text-gray-600 text-sm">Quick overview of your data and analytics</p>
                             </div>
-                        </div>
+            </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
                             <motion.div
@@ -115,9 +175,9 @@ const DataSources = () => {
                                         <FiFileText className="w-4 h-4 lg:w-5 lg:h-5 text-[#7400B8]" />
                                     </div>
                                 </div>
-                                <p className="text-2xl lg:text-3xl font-bold text-[#7400B8]">{files?.length || 0}</p>
+                                <p className="text-2xl lg:text-3xl font-bold text-[#7400B8]">{userFiles?.length || 0}</p>
                                 <p className="text-xs lg:text-sm text-gray-500 mt-2">
-                                    {files?.length === 1 ? '1 file uploaded' : `${files?.length || 0} files uploaded`}
+                                    {userFiles?.length === 1 ? '1 file uploaded' : `${userFiles?.length || 0} files uploaded`}
                                 </p>
                             </motion.div>
 
@@ -132,10 +192,10 @@ const DataSources = () => {
                                     </div>
                                 </div>
                                 <p className="text-2xl lg:text-3xl font-bold text-[#7400B8]">
-                                    {files?.filter(file => file.analysis)?.length || 0}
+                                    {userFiles?.filter(file => file.analysis)?.length || 0}
                                 </p>
                                 <p className="text-xs lg:text-sm text-gray-500 mt-2">
-                                    {Math.round(((files?.filter(file => file.analysis)?.length || 0) / (files?.length || 1)) * 100)}% analyzed
+                                    {Math.round(((userFiles?.filter(file => file.analysis)?.length || 0) / (userFiles?.length || 1)) * 100)}% analyzed
                                 </p>
                             </motion.div>
 
@@ -150,7 +210,7 @@ const DataSources = () => {
                                     </div>
                                 </div>
                                 <p className="text-2xl lg:text-3xl font-bold text-[#7400B8]">
-                                    {formatFileSize(files?.reduce((acc, file) => acc + (file.sizeInBytes || 0), 0) || 0)}
+                                    {formatFileSize(userFiles?.reduce((acc, file) => acc + (file.sizeInBytes || 0), 0) || 0)}
                                 </p>
                                 <p className="text-xs lg:text-sm text-gray-500 mt-2">
                                     Used storage space
@@ -167,9 +227,9 @@ const DataSources = () => {
                                         <FiActivity className="w-4 h-4 lg:w-5 lg:h-5 text-[#7400B8]" />
                                     </div>
                                 </div>
-                                <p className="text-2xl lg:text-3xl font-bold text-[#7400B8]">0</p>
+                                <p className="text-2xl lg:text-3xl font-bold text-[#7400B8]">{isLoadingAnalysis ? '1' : '0'}</p>
                                 <p className="text-xs lg:text-sm text-gray-500 mt-2">
-                                    No active analysis
+                                    {isLoadingAnalysis ? 'Analysis in progress' : 'No active analysis'}
                                 </p>
                             </motion.div>
                         </div>
@@ -193,7 +253,7 @@ const DataSources = () => {
                                 <p className="text-gray-600 font-medium">Loading your data sources...</p>
                             </div>
                         </motion.div>
-                    ) : error ? (
+            ) : error ? (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -209,19 +269,19 @@ const DataSources = () => {
                         </motion.div>
                     ) : (
                         <div className="h-full">
-                            {files.length > 0 ? (
+                            {userFiles.length > 0 ? (
                                 <div className="h-full">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 h-full overflow-y-auto custom-scrollbar pr-0 sm:pr-2">
-                                        {files.map((file, index) => (
-                                            <motion.div
-                                                key={file._id}
+                                        {userFiles.map((file, index) => (
+                                    <motion.div
+                                        key={file._id}
                                                 initial={{ opacity: 0, y: 20 }}
                                                 animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: index * 0.1 }}
+                                                transition={{ delay: index * 0.05 }}
                                                 whileHover={{ y: -5, scale: 1.02 }}
-                                                onClick={() => handleFileSelect(file)}
+                                        onClick={() => handleFileSelect(file)}
                                                 className={`bg-gradient-to-br from-[#F9F4FF] to-white p-3 sm:p-4 lg:p-6 rounded-2xl cursor-pointer transition-all duration-300 border flex flex-col justify-between h-40 sm:h-48 lg:h-52 ${
-                                                    selectedFile?._id === file._id
+                                            selectedFile?._id === file._id
                                                         ? 'border-[#7400B8]/50 shadow-lg'
                                                         : 'border-[#7400B8]/10 hover:border-[#7400B8]/30 hover:shadow-md'
                                                 }`}
@@ -231,7 +291,7 @@ const DataSources = () => {
                                                         <div className="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-xl bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] flex items-center justify-center">
                                                             <FiFile className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-white" />
                                                         </div>
-                                                        <div className="flex-1 min-w-0">
+                                            <div className="flex-1 min-w-0">
                                                             <p className="text-xs sm:text-sm lg:text-base font-semibold text-gray-800 truncate">
                                                                 {file.originalName}
                                                             </p>
@@ -239,7 +299,7 @@ const DataSources = () => {
                                                     </div>
                                                     <div className="space-y-1 sm:space-y-2 lg:space-y-3">
                                                         <div className="flex items-center text-xs text-gray-600">
-                                                            <FiDatabase className="w-3 h-3 mr-1" />
+                                                                <FiDatabase className="w-3 h-3 mr-1" />
                                                             <span className="truncate">{file.fileCategory}</span>
                                                         </div>
                                                         <div className="flex items-center text-xs text-gray-600">
@@ -253,37 +313,35 @@ const DataSources = () => {
                                                     </div>
                                                 </div>
                                                 <div className="mt-2 sm:mt-3 lg:mt-4">
-                                                    {file.analysis ? (
+                                                    {hasAnalysis(file) ? (
                                                         <motion.button
                                                             whileHover={{ scale: 1.05 }}
                                                             whileTap={{ scale: 0.95 }}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                navigate(`/user/dashboard?fileId=${file._id}`);
-                                                            }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                                // Navigate to dashboard with this file's analysis
+                                                                navigate(`/user/dashboard?fileId=${file._id}&analysisComplete=true`);
+                                                        }}
                                                             className="w-full px-2 sm:px-3 lg:px-3 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all duration-200 flex items-center justify-center space-x-1 sm:space-x-2 text-xs sm:text-sm font-medium shadow-lg"
-                                                        >
+                                                    >
                                                             <FiBarChart2 className="w-3 h-3 sm:w-4 sm:h-4 lg:w-4 lg:h-4" />
-                                                            <span>View Analysis</span>
+                                                        <span>View Analysis</span>
                                                         </motion.button>
                                                     ) : (
                                                         <motion.button
                                                             whileHover={{ scale: 1.05 }}
                                                             whileTap={{ scale: 0.95 }}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                navigate(`/user/dashboard?fileId=${file._id}`);
-                                                            }}
+                                                            onClick={(e) => handleAnalyzeClick(e, file._id)}
                                                             className="w-full px-2 sm:px-3 lg:px-3 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-1 sm:space-x-2 text-xs sm:text-sm font-medium"
                                                         >
                                                             <FiCpu className="w-3 h-3 sm:w-4 sm:h-4 lg:w-4 lg:h-4" />
-                                                            <span>Analyze</span>
+                                                        <span>Analyze</span>
                                                         </motion.button>
-                                                    )}
-                                                </div>
-                                            </motion.div>
-                                        ))}
-                                    </div>
+                                                )}
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
                                 </div>
                             ) : (
                                 <motion.div
@@ -307,10 +365,10 @@ const DataSources = () => {
                                     </motion.button>
                                 </motion.div>
                             )}
-                        </div>
-                    )}
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
 
             <style>{`
                 .custom-scrollbar::-webkit-scrollbar {
@@ -326,6 +384,14 @@ const DataSources = () => {
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
                     background: #9B4DCA;
+                }
+                
+                @keyframes progress {
+                    0% { width: 0%; }
+                    100% { width: 100%; }
+                }
+                .animate-progress {
+                    animation: progress 2s ease-in-out infinite;
                 }
             `}</style>
         </div>

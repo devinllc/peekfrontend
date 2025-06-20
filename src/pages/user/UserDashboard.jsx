@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
-import { FiBarChart2, FiCpu, FiActivity } from 'react-icons/fi';
+import { FiBarChart2, FiCpu, FiActivity, FiFile, FiDownload, FiCalendar, FiDatabase } from 'react-icons/fi';
 import axios from 'axios';
 
 // Import components
@@ -10,7 +10,6 @@ import Sidebar from '../../components/dashboard/Sidebar';
 import Header from '../../components/dashboard/Header';
 import DashboardOverview from '../../components/dashboard/DashboardOverview';
 import Analysis from '../../components/dashboard/Analysis';
-import ApiLogs from '../../components/dashboard/ApiLogs';
 import DataUpload from '../../components/dashboard/DataUpload';
 import Profile from '../../components/dashboard/Profile';
 import DataSources from '../../components/dashboard/DataSources';
@@ -29,9 +28,10 @@ const UserDashboard = () => {
     const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
     const [fileError, setFileError] = useState('');
     const [analysisError, setAnalysisError] = useState('');
-    const [apiLogs, setApiLogs] = useState([]);
     const [showAnalysis, setShowAnalysis] = useState(false);
-    const logIdRef = useRef(0);
+    const filesFetchedRef = useRef(false);
+    const initialAnalysisHandledRef = useRef(false);
+    const handledFileIdsRef = useRef(new Set());
 
     const formatFileSize = (bytes) => {
         if (bytes === 0) return '0 Bytes';
@@ -41,6 +41,15 @@ const UserDashboard = () => {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    };
+
     useEffect(() => {
         if (location.state) {
             if (location.state.selectedIndustry) {
@@ -48,6 +57,20 @@ const UserDashboard = () => {
             }
             if (location.state.uploadedFiles) {
                 setUploadedFiles(location.state.uploadedFiles);
+                // Trigger file fetch when new files are uploaded
+                filesFetchedRef.current = false;
+                
+                // Immediately fetch files after upload
+                fetchUserFiles();
+                
+                // Clear the location state to prevent duplicate fetches on navigation
+                window.history.replaceState({}, document.title);
+            }
+            // Check for refreshFiles flag
+            if (location.state.refreshFiles === true) {
+                filesFetchedRef.current = false;
+                // Immediately fetch files when refresh flag is present
+                fetchUserFiles();
             }
         }
     }, [location]);
@@ -56,83 +79,174 @@ const UserDashboard = () => {
     useEffect(() => {
         const params = new URLSearchParams(location.search);
         const fileId = params.get('fileId');
+        const analysisComplete = params.get('analysisComplete') === 'true';
+        
         if (fileId) {
             const file = userFiles.find(f => f._id === fileId);
+            
             if (file) {
                 setSelectedFile(file);
-                if (file.analysis) {
+                
+                // If the file has analysis data or the analysisComplete flag is set, just show it
+                if (file.analysis || analysisComplete) {
                     setAnalysis(file.analysis);
                     setShowAnalysis(true);
-                    // Add log entry for viewing analysis
-                    setApiLogs(prevLogs => [
-                        ...prevLogs,
-                        {
-                            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                            timestamp: new Date().toISOString(),
-                            message: `Viewing analysis for file: ${file.originalName}`,
-                            type: 'info'
-                        }
-                    ]);
+                    
+                    // If we have analysisComplete flag but no analysis data yet, 
+                    // the analysis might have just completed but the userFiles state hasn't updated
+                    // Force a refresh of the files to get the latest analysis data
+                    if (analysisComplete && !file.analysis) {
+                        fetchUserFiles();
+                    }
+                } else {
+                    // If file has no analysis yet, start analysis automatically
+                    handleLoadFileAnalysis(fileId);
+                }
+            } else {
+                // If we can't find the file, try refreshing the files
+                if (userFiles.length === 0 || analysisComplete) {
+                    fetchUserFiles();
                 }
             }
         }
     }, [location.search, userFiles]);
 
-    // Fetch user files
+    // Special effect to handle navigation from DataSources with analysis results
     useEffect(() => {
-        const fetchFiles = async () => {
-            if (!user?._id) return;
+        const params = new URLSearchParams(location.search);
+        const fileId = params.get('fileId');
+        const analysisComplete = params.get('analysisComplete') === 'true';
+        
+        if (fileId && analysisComplete && !handledFileIdsRef.current.has(fileId)) {
+            handledFileIdsRef.current.add(fileId); // Mark this fileId as handled
             
-            setIsLoadingFiles(true);
-            setFileError('');
-            try {
-                const result = await getAllUserFiles(user._id);
-                if (result.success && result.data?.files) {
-                    const files = result.data.files.map(file => ({
-                        ...file,
-                        displayName: file.originalName || 'Unnamed File',
-                        fileSize: file.sizeInBytes ? `${(file.sizeInBytes / (1024 * 1024)).toFixed(2)} MB` : 'Unknown Size',
-                        category: file.fileCategory || 'General',
-                        uploadDate: new Date(file.uploadedAt).toLocaleDateString()
-                    }));
-                    setUserFiles(files);
-                    if (files.length > 0) {
-                        setSelectedFile(files[0]);
-                    }
-                } else {
-                    setFileError(result.error || "Error fetching files");
-                }
-            } catch (err) {
-                setFileError(err.message || "Error fetching files");
-            } finally {
-                setIsLoadingFiles(false);
+            // First check if we already have the file with analysis in userFiles
+            const existingFile = userFiles.find(f => f._id === fileId);
+            if (existingFile && existingFile.analysis) {
+                setSelectedFile(existingFile);
+                setAnalysis(existingFile.analysis);
+                setShowAnalysis(true);
+                return;
             }
-        };
+            
+            // If not, force a refresh of files to get the latest data
+            filesFetchedRef.current = false;
+            
+            // Make a direct API call to get the file with analysis
+            const getFileWithAnalysis = async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    if (!token) {
+                        throw new Error('No authentication token found');
+                    }
+                    
+                    const response = await axios.get(`https://api.peekbi.com/files/${user._id}/${fileId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    if (response.data && response.data.file) {
+                        const file = response.data.file;
+                        setSelectedFile(file);
+                        setAnalysis(file.analysis);
+                        setShowAnalysis(true);
+                        
+                        // Also update the file in userFiles
+                        setUserFiles(prev => 
+                            prev.map(f => f._id === fileId ? file : f)
+                        );
+                    } else {
+                        // Fall back to refreshing all files
+                        fetchUserFiles();
+                    }
+                } catch (err) {
+                    // Fall back to refreshing all files
+                    fetchUserFiles();
+                }
+            };
+            
+            getFileWithAnalysis();
+        }
+    }, [location.search, userFiles]);
 
-            fetchFiles();
+    // Function to fetch user files
+    const fetchUserFiles = async () => {
+        if (!user?._id) return;
+            
+        setIsLoadingFiles(true);
+        setFileError('');
+        try {
+            const result = await getAllUserFiles(user._id);
+            if (result.success && result.data?.files) {
+                const files = result.data.files.map(file => ({
+                    ...file,
+                    displayName: file.originalName || 'Unnamed File',
+                    fileSize: file.sizeInBytes ? `${(file.sizeInBytes / (1024 * 1024)).toFixed(2)} MB` : 'Unknown Size',
+                    category: file.fileCategory || 'General',
+                    uploadDate: new Date(file.uploadedAt).toLocaleDateString()
+                }));
+                
+                // Sort files by upload date (newest first)
+                const sortedFiles = [...files].sort((a, b) => 
+                    new Date(b.uploadedAt) - new Date(a.uploadedAt)
+                );
+                
+                setUserFiles(sortedFiles);
+                filesFetchedRef.current = true;
+                
+                if (sortedFiles.length > 0 && !selectedFile) {
+                    setSelectedFile(sortedFiles[0]);
+                }
+            } else {
+                setFileError(result.error || "Error fetching files");
+            }
+        } catch (err) {
+            setFileError(err.message || "Error fetching files");
+        } finally {
+            setIsLoadingFiles(false);
+        }
+    };
+
+    // Fetch user files immediately when component mounts or when triggered by file upload
+    useEffect(() => {
+        if (!user?._id || filesFetchedRef.current) return;
+        fetchUserFiles();
     }, [user?._id, getAllUserFiles]);
 
     const handleLoadFileAnalysis = async (fileId) => {
         try {
-            setSelectedFile(userFiles.find(f => f._id === fileId));
+            // Check if the file already has analysis data
+            const fileToAnalyze = userFiles.find(f => f._id === fileId);
+            
+            // If file already has analysis data, just show it without re-analyzing
+            if (fileToAnalyze?.analysis) {
+                setSelectedFile(fileToAnalyze);
+                setAnalysis(fileToAnalyze.analysis);
+                setShowAnalysis(true);
+                
+                // Navigate to dashboard to show analysis if not already there
+                if (location.pathname !== '/user/dashboard' && location.pathname !== '/user') {
+                    navigate(`/user/dashboard?fileId=${fileId}`);
+                }
+                
+                return;
+            }
+            
+            // Start new analysis
+            setSelectedFile(fileToAnalyze);
             setIsLoadingAnalysis(true);
             setAnalysis(null);
             setAnalysisError(null);
             setShowAnalysis(false);
 
-            // Add initial log entry
-            const logId = Date.now().toString();
-            setApiLogs(prev => [...prev, {
-                id: logId,
-                timestamp: new Date().toISOString(),
-                message: `Starting analysis for file: ${userFiles.find(f => f._id === fileId)?.originalName}`,
-                type: 'info'
-            }]);
-
             const token = localStorage.getItem('token');
             if (!token) {
                 throw new Error('No authentication token found');
             }
+
+            // Track the source page for proper navigation after analysis
+            const sourcePage = location.pathname;
 
             const response = await axios.get(`https://api.peekbi.com/files/analyse/${user._id}/${fileId}`, {
                 headers: {
@@ -140,37 +254,179 @@ const UserDashboard = () => {
                 }
             });
 
-            // Add success log entry
-            setApiLogs(prev => [...prev, {
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString(),
-                message: 'Analysis completed successfully',
-                type: 'success'
-            }]);
-
+            // Update the file in userFiles with the analysis data
+            const updatedFiles = userFiles.map(file => {
+                if (file._id === fileId) {
+                    return { ...file, analysis: response.data.analysis };
+                }
+                return file;
+            });
+            
+            setUserFiles(updatedFiles);
             setAnalysis(response.data.analysis);
             setShowAnalysis(true);
-        } catch (err) {
-            console.error('Error loading analysis:', err);
-            setAnalysisError(err.response?.data?.message || 'Failed to load analysis');
             
-            // Add error log entry
-            setApiLogs(prev => [...prev, {
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString(),
-                message: `Analysis failed: ${err.response?.data?.message || 'Unknown error'}`,
-                type: 'error'
-            }]);
+            // Always navigate to dashboard to show analysis
+            // Add analysisComplete=true flag to prevent re-analysis
+            navigate(`/user/dashboard?fileId=${fileId}&analysisComplete=true`);
+            
+        } catch (err) {
+            setAnalysisError(err.response?.data?.message || 'Failed to load analysis');
         } finally {
             setIsLoadingAnalysis(false);
         }
     };
 
+    // Function to manually trigger file refresh
+    const refreshFiles = () => {
+        filesFetchedRef.current = false;
+        setIsLoadingFiles(true);
+    };
+
     const handleBackToDashboard = () => {
         setShowAnalysis(false);
-                                    setSelectedFile(null);
-                                    setAnalysis(null);
-                                    navigate('/user/dashboard');
+        setSelectedFile(null);
+        setAnalysis(null);
+        navigate('/user/dashboard');
+    };
+
+    // Recent Files Component
+    const RecentFiles = () => {
+        const recentFiles = userFiles.slice(0, 5); // Get 5 most recent files
+        
+        if (isLoadingFiles) {
+            return (
+                <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-bold text-gray-800">Recent Files</h2>
+                    </div>
+                    <div className="flex justify-center py-8">
+                        <div className="w-10 h-10 border-2 border-[#7400B8] border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                </div>
+            );
+        }
+        
+        if (recentFiles.length === 0) {
+            return (
+                <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-xl font-bold text-gray-800">Recent Files</h2>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => navigate('/user/data-upload')}
+                            className="px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl text-sm"
+                        >
+                            Upload File
+                        </motion.button>
+                    </div>
+                    <div className="text-center py-8">
+                        <p className="text-gray-600">No files uploaded yet</p>
+                    </div>
+                </div>
+            );
+        }
+        
+        return (
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold text-gray-800">Recent Files</h2>
+                    <div className="flex space-x-2">
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => navigate('/user/data-sources')}
+                            className="px-4 py-2 bg-white/80 text-[#7400B8] border border-[#7400B8] rounded-xl text-sm"
+                        >
+                            View All
+                        </motion.button>
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => navigate('/user/data-upload')}
+                            className="px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl text-sm"
+                        >
+                            Upload File
+                        </motion.button>
+                    </div>
+                </div>
+                <div className="space-y-3">
+                    {recentFiles.map((file) => (
+                        <motion.div
+                            key={file._id}
+                            whileHover={{ y: -2 }}
+                            className={`p-4 rounded-2xl cursor-pointer transition-all duration-300 bg-white/60 backdrop-blur-sm border ${
+                                selectedFile?._id === file._id
+                                    ? 'border-[#7400B8]/50 shadow-lg bg-gradient-to-r from-[#F9F4FF] to-white'
+                                    : 'border-white/30 hover:border-[#7400B8]/30 hover:shadow-md'
+                            }`}
+                            onClick={() => setSelectedFile(file)}
+                        >
+                            <div className="flex items-start justify-between">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] flex items-center justify-center">
+                                            <FiFile className="w-5 h-5 text-white" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-base font-semibold text-gray-800 truncate mb-1">
+                                                {file.originalName}
+                                            </p>
+                                            <div className="flex items-center gap-4 text-xs">
+                                                <span className="flex items-center text-gray-600">
+                                                    <FiDatabase className="w-3 h-3 mr-1" />
+                                                    {file.fileCategory}
+                                                </span>
+                                                <span className="flex items-center text-gray-600">
+                                                    <FiDownload className="w-3 h-3 mr-1" />
+                                                    {formatFileSize(file.sizeInBytes)}
+                                                </span>
+                                                <span className="flex items-center text-gray-600">
+                                                    <FiCalendar className="w-3 h-3 mr-1" />
+                                                    {formatDate(file.uploadedAt)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    {file.analysis ? (
+                                        <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedFile(file);
+                                                setAnalysis(file.analysis);
+                                                setShowAnalysis(true);
+                                            }}
+                                            className="px-3 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all duration-200 flex items-center space-x-2 text-xs font-medium shadow-lg"
+                                        >
+                                            <FiBarChart2 className="w-4 h-4" />
+                                            <span>View Analysis</span>
+                                        </motion.button>
+                                    ) : (
+                                        <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleLoadFileAnalysis(file._id);
+                                            }}
+                                            className="px-3 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:shadow-lg transition-all duration-200 flex items-center space-x-2 text-xs font-medium"
+                                        >
+                                            <FiCpu className="w-4 h-4" />
+                                            <span>Analyze</span>
+                                        </motion.button>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            </div>
+        );
     };
 
     const DashboardContent = () => {
@@ -194,14 +450,14 @@ const UserDashboard = () => {
                     className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
                 >
                     <div className="space-y-8">
-                            <div className="text-center">
+                        <div className="text-center">
                             <div className="w-20 h-20 mx-auto mb-6 relative">
                                 <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] opacity-20 animate-pulse"></div>
                                 <div className="absolute inset-2 rounded-full bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] animate-spin"></div>
                                 <div className="absolute inset-4 rounded-full bg-white flex items-center justify-center">
                                     <FiCpu className="w-8 h-8 text-[#7400B8]" />
-                                            </div>
-                                        </div>
+                                </div>
+                            </div>
                             <h2 className="text-2xl font-bold text-gray-800 mb-2">Analyzing Your Data</h2>
                             <p className="text-gray-600 mb-6">Processing your file to extract valuable insights...</p>
                             
@@ -210,45 +466,11 @@ const UserDashboard = () => {
                                     <div className="flex mb-3 items-center justify-between">
                                         <span className="text-sm font-medium text-[#7400B8]">Processing</span>
                                         <span className="text-sm text-gray-500">Analyzing...</span>
-                                        </div>
+                                    </div>
                                     <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
                                         <div className="h-full bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full animate-progress"></div>
                                     </div>
                                 </div>
-                            </div>
-                            </div>
-
-                            {/* API Logs during analysis */}
-                            <div className="mt-8">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                                <FiActivity className="w-5 h-5 text-[#7400B8]" />
-                                Analysis Progress
-                            </h3>
-                            <div className="bg-gray-50/50 rounded-2xl p-6 max-h-60 overflow-y-auto space-y-3">
-                                    {apiLogs.slice(-5).map((log) => (
-                                    <motion.div
-                                        key={log.id}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        className={`flex items-start gap-3 p-3 rounded-xl ${
-                                            log.type === 'error' ? 'bg-red-50/50 text-red-600' :
-                                            log.type === 'success' ? 'bg-green-50/50 text-green-600' :
-                                            'bg-blue-50/50 text-blue-600'
-                                        }`}
-                                    >
-                                            <div className="flex-shrink-0 mt-1">
-                                            {log.type === 'error' ? '❌' :
-                                             log.type === 'success' ? '✅' :
-                                             '⏳'}
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-medium">{log.message}</p>
-                                            <p className="text-xs opacity-75 mt-1">
-                                                {new Date(log.timestamp).toLocaleTimeString()}
-                                            </p>
-                                        </div>
-                                    </motion.div>
-                                ))}
                             </div>
                         </div>
                     </div>
@@ -257,18 +479,49 @@ const UserDashboard = () => {
         }
 
         return (
-            <>
-                <DashboardOverview
-                    userFiles={userFiles}
-                            selectedFile={selectedFile}
-                    setSelectedFile={setSelectedFile}
-                            isLoadingAnalysis={isLoadingAnalysis}
-                    analysis={analysis}
-                            analysisError={analysisError}
-                    handleLoadFileAnalysis={handleLoadFileAnalysis}
-                    navigate={navigate}
-                        />
-                    </>
+            <div className="space-y-8">
+                <RecentFiles />
+                
+                {/* Additional dashboard content */}
+                <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">Quick Analytics</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="bg-gradient-to-br from-[#F9F4FF] to-white p-4 rounded-2xl border border-[#7400B8]/10 shadow-md">
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="font-semibold text-gray-700">Files</h3>
+                                <div className="w-10 h-10 bg-[#7400B8]/10 rounded-xl flex items-center justify-center">
+                                    <FiFile className="w-5 h-5 text-[#7400B8]" />
+                                </div>
+                            </div>
+                            <p className="text-2xl font-bold text-[#7400B8]">{userFiles.length}</p>
+                        </div>
+                        
+                        <div className="bg-gradient-to-br from-[#F9F4FF] to-white p-4 rounded-2xl border border-[#7400B8]/10 shadow-md">
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="font-semibold text-gray-700">Analyzed</h3>
+                                <div className="w-10 h-10 bg-[#7400B8]/10 rounded-xl flex items-center justify-center">
+                                    <FiBarChart2 className="w-5 h-5 text-[#7400B8]" />
+                                </div>
+                            </div>
+                            <p className="text-2xl font-bold text-[#7400B8]">
+                                {userFiles.filter(file => file.analysis).length}
+                            </p>
+                        </div>
+                        
+                        <div className="bg-gradient-to-br from-[#F9F4FF] to-white p-4 rounded-2xl border border-[#7400B8]/10 shadow-md">
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="font-semibold text-gray-700">Storage</h3>
+                                <div className="w-10 h-10 bg-[#7400B8]/10 rounded-xl flex items-center justify-center">
+                                    <FiDatabase className="w-5 h-5 text-[#7400B8]" />
+                                </div>
+                            </div>
+                            <p className="text-2xl font-bold text-[#7400B8]">
+                                {formatFileSize(userFiles.reduce((acc, file) => acc + (file.sizeInBytes || 0), 0))}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         );
     };
 
@@ -277,8 +530,8 @@ const UserDashboard = () => {
             <div className="flex h-screen overflow-hidden">
                 <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
                 <main className={`flex-1 overflow-y-auto transition-all duration-300 w-full ml-0 ${sidebarOpen ? 'lg:ml-72' : 'lg:ml-20'}`}>
-                            <Routes>
-                                <Route index element={
+                    <Routes>
+                        <Route index element={
                             <div className="h-full flex flex-col">
                                 {/* Header */}
                                 <Header
@@ -291,16 +544,11 @@ const UserDashboard = () => {
                                 <div className="flex-1 p-8 overflow-y-auto">
                                     <div className="max-w-7xl mx-auto">
                                         <DashboardContent />
-                                        {!showAnalysis && (
-                                            <div className="mt-8">
-                                            <ApiLogs logs={apiLogs} />
-                                        </div>
-                                        )}
                                     </div>
                                 </div>
                             </div>
-                                } />
-                                <Route path="dashboard" element={
+                        } />
+                        <Route path="dashboard" element={
                             <div className="h-full flex flex-col">
                                 {/* Header */}
                                 <Header
@@ -313,20 +561,22 @@ const UserDashboard = () => {
                                 <div className="flex-1 p-8 overflow-y-auto">
                                     <div className="max-w-7xl mx-auto">
                                         <DashboardContent />
-                                        {!showAnalysis && (
-                                            <div className="mt-8">
-                                            <ApiLogs logs={apiLogs} />
-                                        </div>
-                                        )}
                                     </div>
                                 </div>
                             </div>
-                                } />
-                                <Route path="data-sources" element={<DataSources />} />
-                                <Route path="data-upload" element={<DataUpload />} />
-                                <Route path="profile" element={<Profile />} />
-                                <Route path="*" element={<Navigate to="dashboard" replace />} />
-                            </Routes>
+                        } />
+                        <Route path="data-sources" element={
+                            <DataSources 
+                                userFiles={userFiles}
+                                isLoading={isLoadingFiles}
+                                handleLoadFileAnalysis={handleLoadFileAnalysis}
+                                isLoadingAnalysis={isLoadingAnalysis}
+                            />
+                        } />
+                        <Route path="data-upload" element={<DataUpload />} />
+                        <Route path="profile" element={<Profile />} />
+                        <Route path="*" element={<Navigate to="dashboard" replace />} />
+                    </Routes>
                 </main>
             </div>
         </div>
