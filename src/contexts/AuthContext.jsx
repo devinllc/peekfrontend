@@ -78,7 +78,6 @@ export const AuthProvider = ({ children }) => {
 
             // Try cookie if localStorage is empty
             const cookieToken = getCookie('token');
-            console.log('Cookie token:', cookieToken); // Debug log
 
             if (cookieToken) {
                 // If token exists in cookie but not in localStorage, sync it
@@ -101,24 +100,19 @@ export const AuthProvider = ({ children }) => {
         }
         
         try {
-            console.log('Saving token to storage...'); // Debug log
             
             // Store in localStorage
             localStorage.setItem('token', token);
-            console.log('Token saved to localStorage'); // Debug log
             
             // Store in cookie with 7 days expiry
             const date = new Date();
             date.setTime(date.getTime() + (7 * 24 * 60 * 60 * 1000));
             const expires = `expires=${date.toUTCString()}`;
             document.cookie = `token=${token};${expires};path=/;SameSite=Strict;secure`;
-            console.log('Token saved to cookie'); // Debug log
             
             // Verify the token was saved
             const savedToken = localStorage.getItem('token');
             const savedCookie = getCookie('token');
-            console.log('Verification - localStorage:', savedToken); // Debug log
-            console.log('Verification - cookie:', savedCookie); // Debug log
         } catch (error) {
             console.error('Error saving token:', error);
         }
@@ -468,10 +462,7 @@ export const AuthProvider = ({ children }) => {
                 throw new Error('Industry category is required');
             }
 
-        // Debug: Log what we're sending
-        console.log('Sending category:', category);
-        console.log('Category type:', typeof category);
-        console.log('Category length:', category.length);
+        
             const formData = new FormData();
             formData.append('file', file);
             formData.append('category', category); 

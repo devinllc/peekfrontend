@@ -93,9 +93,9 @@ const PricingSection = () => {
 
                 <div className="flex card flex-col gap-[20vh] md:w-[30%] pb-[20vh] items-center">
                     {pricingPlans.map((plan, index) => (
-                        <div 
+                        <motion.div 
                             key={index}
-                            className={`pricingCard  sticky top-[15vh] rounded-2xl overflow-hidden shadow-lg relative ${plan.highlighted ? 'border-2 border-[#7400B8] transform scale-105' : 'border border-gray-200'}`}
+                            className={`pricingCard sticky top-[15vh] rounded-2xl overflow-hidden shadow-lg relative ${plan.highlighted ? 'border-2 border-[#7400B8] transform scale-105' : 'border border-gray-200'}`}
                             initial={{ opacity: 0, y: 30 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
@@ -106,7 +106,7 @@ const PricingSection = () => {
                                     Most Popular
                                 </div>
                             )}
-                            <div className="p-8 bg-white content-center  sticky top-[15vh] items-center relative group overflow-hidden">
+                            <div className="p-8 bg-white content-center sticky top-[15vh] items-center relative group overflow-hidden">
                                 {/* Gradient Background - matching hero card design */}
                                 <div className="absolute inset-0 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] opacity-10 group-hover:opacity-20 transition-opacity duration-300"></div>
                                 <div className="relative z-10">
@@ -128,13 +128,13 @@ const PricingSection = () => {
                                         className={`w-full py-3 px-6 rounded-full font-medium transition-all duration-300 ${plan.highlighted ? 'bg-[#7400B8] text-white hover:bg-[#8B2CD9]' : 'bg-white text-[#7400B8] border-2 border-[#7400B8] hover:bg-[#7400B8] hover:text-white'
                                             
                                         }` }     
-                                          onClick={() => navigate('/register')}
+                                        onClick={() => navigate('/register')}
                                     >
                                         {plan.buttonText}
                                     </button>
                                 </div>
                             </div>
-                        </div>
+                        </motion.div>
                     ))}
                 </div>
             </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { FiBarChart2, FiCpu, FiActivity, FiFile, FiDownload, FiCalendar, FiDatabase } from 'react-icons/fi';
 import axios from 'axios';
@@ -13,6 +13,11 @@ import Analysis from '../../components/dashboard/Analysis';
 import DataUpload from '../../components/dashboard/DataUpload';
 import Profile from '../../components/dashboard/Profile';
 import DataSources from '../../components/dashboard/DataSources';
+import RetailDashboard from '../../components/dashboard/RetailDashboard';
+import FinanceDashboard from '../../components/dashboard/FinanceDashboard';
+import EducationDashboard from '../../components/dashboard/EducationDashboard';
+import ManufacturingDashboard from '../../components/dashboard/ManufacturingDashboard';
+import HealthcareDashboard from '../../components/dashboard/HealthcareDashboard';
 
 const UserDashboard = () => {
     const location = useLocation();
@@ -172,20 +177,20 @@ const UserDashboard = () => {
 
     // Function to fetch user files
     const fetchUserFiles = async () => {
-        if (!user?._id) return;
+            if (!user?._id) return;
             
-        setIsLoadingFiles(true);
-        setFileError('');
-        try {
-            const result = await getAllUserFiles(user._id);
-            if (result.success && result.data?.files) {
-                const files = result.data.files.map(file => ({
-                    ...file,
-                    displayName: file.originalName || 'Unnamed File',
-                    fileSize: file.sizeInBytes ? `${(file.sizeInBytes / (1024 * 1024)).toFixed(2)} MB` : 'Unknown Size',
-                    category: file.fileCategory || 'General',
-                    uploadDate: new Date(file.uploadedAt).toLocaleDateString()
-                }));
+            setIsLoadingFiles(true);
+            setFileError('');
+            try {
+                const result = await getAllUserFiles(user._id);
+                if (result.success && result.data?.files) {
+                    const files = result.data.files.map(file => ({
+                        ...file,
+                        displayName: file.originalName || 'Unnamed File',
+                        fileSize: file.sizeInBytes ? `${(file.sizeInBytes / (1024 * 1024)).toFixed(2)} MB` : 'Unknown Size',
+                        category: file.fileCategory || 'General',
+                        uploadDate: new Date(file.uploadedAt).toLocaleDateString()
+                    }));
                 
                 // Sort files by upload date (newest first)
                 const sortedFiles = [...files].sort((a, b) => 
@@ -197,16 +202,16 @@ const UserDashboard = () => {
                 
                 if (sortedFiles.length > 0 && !selectedFile) {
                     setSelectedFile(sortedFiles[0]);
+                    }
+                } else {
+                    setFileError(result.error || "Error fetching files");
                 }
-            } else {
-                setFileError(result.error || "Error fetching files");
+            } catch (err) {
+                setFileError(err.message || "Error fetching files");
+            } finally {
+                setIsLoadingFiles(false);
             }
-        } catch (err) {
-            setFileError(err.message || "Error fetching files");
-        } finally {
-            setIsLoadingFiles(false);
-        }
-    };
+        };
 
     // Fetch user files immediately when component mounts or when triggered by file upload
     useEffect(() => {
@@ -287,6 +292,7 @@ const UserDashboard = () => {
         setShowAnalysis(false);
         setSelectedFile(null);
         setAnalysis(null);
+        // Navigate to the base dashboard URL without any query params
         navigate('/user/dashboard');
     };
 
@@ -424,21 +430,50 @@ const UserDashboard = () => {
                             </div>
                         </motion.div>
                     ))}
-                </div>
-            </div>
+                        </div>
+                    </div>
         );
     };
 
-    const DashboardContent = () => {
-        if (showAnalysis && selectedFile && analysis) {
+    // This component will render the correct dashboard based on the file category
+    const AnalysisDashboard = ({ file, analysisData, onBack }) => {
+        if (!file || !analysisData) {
             return (
-                <div className="space-y-8">
-                    <Analysis 
-                        selectedFile={selectedFile} 
-                        analysis={analysis} 
-                        onBack={handleBackToDashboard}
-                    />
+                <div className="flex justify-center items-center h-full">
+                    <p>No analysis data available.</p>
                 </div>
+            );
+        }
+
+        const category = file.fileCategory || 'General';
+        
+        switch(category) {
+            case 'Retail':
+                return <RetailDashboard file={file} analysis={analysisData} onBack={onBack} />;
+            case 'Finance':
+                return <FinanceDashboard file={file} analysis={analysisData} onBack={onBack} />;
+            case 'Education':
+                return <EducationDashboard file={file} analysis={analysisData} onBack={onBack} />;
+            case 'Manufacturing':
+                return <ManufacturingDashboard file={file} analysis={analysisData} onBack={onBack} />;
+            case 'Healthcare':
+                return <HealthcareDashboard file={file} analysis={analysisData} onBack={onBack} />;
+            default:
+                // Fallback to a general analysis component if it exists, or show a message
+                return <Analysis file={file} analysis={analysisData} onBack={onBack} />;
+        }
+    };
+    
+    const DashboardContent = () => {
+        const fileToDisplay = selectedFile || (userFiles.length > 0 ? userFiles[0] : null);
+
+        if (showAnalysis && analysis && fileToDisplay) {
+            return (
+                <AnalysisDashboard 
+                    file={fileToDisplay} 
+                    analysisData={analysis} 
+                    onBack={handleBackToDashboard}
+                />
             );
         }
 
@@ -471,73 +506,84 @@ const UserDashboard = () => {
                                         <div className="h-full bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full animate-progress"></div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
+                                        </div>
+                                    </div>
+                                </div>
                 </motion.div>
             );
         }
 
+        // Main Dashboard View
         return (
-            <div className="space-y-8">
-                <RecentFiles />
-                
-                {/* Additional dashboard content */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">Quick Analytics</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-gradient-to-br from-[#F9F4FF] to-white p-4 rounded-2xl border border-[#7400B8]/10 shadow-md">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="font-semibold text-gray-700">Files</h3>
-                                <div className="w-10 h-10 bg-[#7400B8]/10 rounded-xl flex items-center justify-center">
-                                    <FiFile className="w-5 h-5 text-[#7400B8]" />
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{userFiles.length}</p>
+            <div className="p-4 sm:p-6 lg:p-8 space-y-8">
+                <AnimatePresence>
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex flex-col space-y-4"
+                    >
+                        <div className="flex flex-col space-y-2">
+                            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Recent Files</h2>
+                            <p className="text-gray-500 mt-1">Here are the latest files you've uploaded.</p>
                         </div>
-                        
-                        <div className="bg-gradient-to-br from-[#F9F4FF] to-white p-4 rounded-2xl border border-[#7400B8]/10 shadow-md">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="font-semibold text-gray-700">Analyzed</h3>
-                                <div className="w-10 h-10 bg-[#7400B8]/10 rounded-xl flex items-center justify-center">
-                                    <FiBarChart2 className="w-5 h-5 text-[#7400B8]" />
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">
-                                {userFiles.filter(file => file.analysis).length}
-                            </p>
-                        </div>
-                        
-                        <div className="bg-gradient-to-br from-[#F9F4FF] to-white p-4 rounded-2xl border border-[#7400B8]/10 shadow-md">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="font-semibold text-gray-700">Storage</h3>
-                                <div className="w-10 h-10 bg-[#7400B8]/10 rounded-xl flex items-center justify-center">
-                                    <FiDatabase className="w-5 h-5 text-[#7400B8]" />
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">
-                                {formatFileSize(userFiles.reduce((acc, file) => acc + (file.sizeInBytes || 0), 0))}
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                        <RecentFiles />
+                    </motion.div>
+
+                    {/* Placeholder for more dashboard widgets */}
+                </AnimatePresence>
             </div>
         );
     };
+
+    const getHeaderInfo = () => {
+        const path = location.pathname;
+        
+        // If showing analysis, the header should have a back button
+        if (showAnalysis && selectedFile) {
+            const category = selectedFile.fileCategory || 'General';
+            return {
+                title: `${category} Analysis`,
+                description: `Analysis for ${selectedFile.displayName}`,
+                icon: FiCpu,
+                onBack: handleBackToDashboard // Pass the back handler to the header
+            };
+        }
+
+        if (path.includes('/datasources')) {
+            return {
+                title: 'Data Sources',
+                description: 'Manage and analyze your data sources',
+                icon: FiDatabase,
+                onBack: handleBackToDashboard
+            };
+        }
+
+        return {
+            title: 'Dashboard',
+            description: 'Welcome back! Here\'s your data overview',
+            icon: FiBarChart2,
+            onBack: null
+        };
+    };
+
+    const { title, description, icon, onBack } = getHeaderInfo();
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5">
             <div className="flex h-screen overflow-hidden">
                 <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
                 <main className={`flex-1 overflow-y-auto transition-all duration-300 w-full ml-0 ${sidebarOpen ? 'lg:ml-72' : 'lg:ml-20'}`}>
-                    <Routes>
-                        <Route index element={
+                            <Routes>
+                                <Route index element={
                             <div className="h-full flex flex-col">
                                 {/* Header */}
                                 <Header
-                                    title="Dashboard"
-                                    description="Welcome back! Here's your data overview"
-                                    icon={FiBarChart2}
+                                    title={title}
+                                    description={description}
+                                    icon={icon}
+                                    setSidebarOpen={setSidebarOpen}
+                                    sidebarOpen={sidebarOpen}
+                                    onBack={onBack}
                                 />
 
                                 {/* Content */}
@@ -546,15 +592,18 @@ const UserDashboard = () => {
                                         <DashboardContent />
                                     </div>
                                 </div>
-                            </div>
-                        } />
-                        <Route path="dashboard" element={
+                                        </div>
+                                } />
+                                <Route path="dashboard" element={
                             <div className="h-full flex flex-col">
                                 {/* Header */}
                                 <Header
-                                    title="Dashboard"
-                                    description="Welcome back! Here's your data overview"
-                                    icon={FiBarChart2}
+                                    title={title}
+                                    description={description}
+                                    icon={icon}
+                                    setSidebarOpen={setSidebarOpen}
+                                    sidebarOpen={sidebarOpen}
+                                    onBack={onBack}
                                 />
 
                                 {/* Content */}
@@ -563,7 +612,7 @@ const UserDashboard = () => {
                                         <DashboardContent />
                                     </div>
                                 </div>
-                            </div>
+                                        </div>
                         } />
                         <Route path="data-sources" element={
                             <DataSources 
@@ -573,10 +622,10 @@ const UserDashboard = () => {
                                 isLoadingAnalysis={isLoadingAnalysis}
                             />
                         } />
-                        <Route path="data-upload" element={<DataUpload />} />
-                        <Route path="profile" element={<Profile />} />
-                        <Route path="*" element={<Navigate to="dashboard" replace />} />
-                    </Routes>
+                                <Route path="data-upload" element={<DataUpload />} />
+                                <Route path="profile" element={<Profile />} />
+                                <Route path="*" element={<Navigate to="dashboard" replace />} />
+                            </Routes>
                 </main>
             </div>
         </div>

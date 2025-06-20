@@ -238,7 +238,7 @@ const DataUpload = () => {
     return (
         <div className="h-full">
             {/* Header */}
-            <div className="bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] p-8 text-white shadow-xl">
+            <div className="bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] p-4 sm:p-8 text-white shadow-xl">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                         <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
@@ -253,15 +253,15 @@ const DataUpload = () => {
             </div>
 
             {/* Content */}
-            <div className="p-8">
+            <div className="p-4 sm:p-8">
                 <div className="max-w-7xl mx-auto">
-                    <div className="text-center mb-12">
-                        <h2 className="text-2xl font-bold text-gray-800 mb-3">
+                    <div className="text-center mb-6 sm:mb-12">
+                        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2 sm:mb-3">
                             {uploadStep === 'select' ? 'Upload Your Data' :
                              uploadStep === 'category' ? 'Select Industry Category' :
                              'Uploading Files'}
                         </h2>
-                        <p className="text-lg text-gray-600">
+                        <p className="text-base sm:text-lg text-gray-600">
                             {uploadStep === 'select' ? 'Upload your data files to get started with PeekBI analytics' :
                              uploadStep === 'category' ? 'Choose your industry to get relevant insights' :
                              'Please wait while we process your data'}
@@ -277,7 +277,7 @@ const DataUpload = () => {
                                     {!uploading ? (
                                         <div className="space-y-8">
                                             <motion.div
-                                                className={`border-2 border-dashed rounded-3xl p-12 text-center transition-all duration-300 bg-white/60 backdrop-blur-sm ${
+                                                className={`border-2 border-dashed rounded-3xl p-6 sm:p-12 text-center transition-all duration-300 bg-white/60 backdrop-blur-sm ${
                                                     dragActive ? 'border-[#7400B8] bg-purple-50/80 scale-105' : 'border-gray-300 hover:border-[#7400B8] hover:bg-purple-50/50'
                                                 }`}
                                                 onDragEnter={handleDrag}
@@ -372,14 +372,14 @@ const DataUpload = () => {
 
                                             {/* Action Buttons */}
                                             <div className="flex justify-between pt-6">
-                                                <motion.button
+                                                {/* <motion.button
                                                     onClick={handleSkip}
                                                     className="px-6 py-3 text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium"
                                                     whileHover={{ scale: 1.02 }}
                                                     whileTap={{ scale: 0.98 }}
                                                 >
                                                     Skip Upload
-                                                </motion.button>
+                                                </motion.button> */}
                                                 <div className="flex gap-4">
                                                     <motion.button
                                                         onClick={() => navigate('/')}
@@ -477,14 +477,14 @@ const DataUpload = () => {
                                     transition={{ duration: 0.3 }}
                                     className="w-full max-w-6xl mx-auto"
                                 >
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {/* First row - 3 columns */}
-                                        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                                    <div className="grid grid-cols-1 gap-6">
+                                        {/* First row - 1 column on mobile, 3 columns on larger screens */}
+                                        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                                             {Object.entries(INDUSTRY_CATEGORIES).slice(0, 3).map(([key, category]) => (
                                                 <motion.button
                                                     key={key}
                                                     onClick={() => setSelectedIndustry(key)}
-                                                    className={`relative p-6 rounded-2xl text-left transition-all duration-300 bg-white/60 backdrop-blur-sm ${
+                                                    className={`relative p-4 sm:p-6 rounded-2xl text-left transition-all duration-300 bg-white/60 backdrop-blur-sm ${
                                                         selectedIndustry === key
                                                             ? 'ring-2 ring-[#7400B8] ring-offset-1 shadow-lg'
                                                             : 'hover:ring-2 hover:ring-[#7400B8]/50 hover:ring-offset-1 hover:shadow-md'
@@ -492,8 +492,8 @@ const DataUpload = () => {
                                                     whileHover={{ scale: 1.01, y: -1 }}
                                                     whileTap={{ scale: 0.99 }}
                                                 >
-                                                    <div className="flex items-start gap-3">
-                                                        <div className={`p-2.5 rounded-xl bg-gradient-to-br ${category.iconColor} text-white shadow-sm`}>
+                                                    <div className="flex items-start gap-2 sm:gap-3">
+                                                        <div className={`p-2 sm:p-2.5 rounded-xl bg-gradient-to-br ${category.iconColor} text-white shadow-sm`}>
                                                             {category.icon}
                                                         </div>
                                                         <div>
@@ -526,12 +526,12 @@ const DataUpload = () => {
                                             ))}
                                         </div>
                                         {/* Second row - 2 columns */}
-                                        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
                                             {Object.entries(INDUSTRY_CATEGORIES).slice(3).map(([key, category]) => (
                                                 <motion.button
                                                     key={key}
                                                     onClick={() => setSelectedIndustry(key)}
-                                                    className={`relative p-6 rounded-2xl text-left transition-all duration-300 bg-white/60 backdrop-blur-sm ${
+                                                    className={`relative p-4 sm:p-6 rounded-2xl text-left transition-all duration-300 bg-white/60 backdrop-blur-sm ${
                                                         selectedIndustry === key
                                                             ? 'ring-2 ring-[#7400B8] ring-offset-1 shadow-lg'
                                                             : 'hover:ring-2 hover:ring-[#7400B8]/50 hover:ring-offset-1 hover:shadow-md'
@@ -539,8 +539,8 @@ const DataUpload = () => {
                                                     whileHover={{ scale: 1.01, y: -1 }}
                                                     whileTap={{ scale: 0.99 }}
                                                 >
-                                                    <div className="flex items-start gap-3">
-                                                        <div className={`p-2.5 rounded-xl bg-gradient-to-br ${category.iconColor} text-white shadow-sm`}>
+                                                    <div className="flex items-start gap-2 sm:gap-3">
+                                                        <div className={`p-2 sm:p-2.5 rounded-xl bg-gradient-to-br ${category.iconColor} text-white shadow-sm`}>
                                                             {category.icon}
                                                         </div>
                                                         <div>
@@ -574,10 +574,10 @@ const DataUpload = () => {
                                         </div>
                                     </div>
 
-                                    <div className="flex justify-between mt-8">
+                                    <div className="flex flex-col sm:flex-row justify-between mt-8">
                                         <motion.button
                                             onClick={handleSkip}
-                                            className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium text-sm"
+                                            className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium text-sm mb-4 sm:mb-0"
                                             whileHover={{ scale: 1.02 }}
                                             whileTap={{ scale: 0.98 }}
                                         >
@@ -738,7 +738,7 @@ const DataUpload = () => {
                                     </div>
 
                                     {/* Skip button during upload */}
-                                    <div className="flex justify-center pt-6">
+                                    {/* <div className="flex justify-center pt-6">
                                         <motion.button
                                             onClick={handleSkip}
                                             className="px-6 py-3 text-gray-600 hover:text-gray-900 transition-colors duration-200 font-medium"
@@ -747,7 +747,7 @@ const DataUpload = () => {
                                         >
                                             Skip Upload
                                         </motion.button>
-                                    </div>
+                                    </div> */}
                                 </div>
                             )}
                         </div>

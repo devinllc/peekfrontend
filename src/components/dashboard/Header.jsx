@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiMenu, FiX } from 'react-icons/fi';
+import { FiMenu, FiX, FiArrowLeft } from 'react-icons/fi';
 
 const Header = ({ 
     title, 
@@ -9,14 +9,24 @@ const Header = ({
     actionButton = null,
     className = "",
     sidebarOpen = false,
-    setSidebarOpen = null
+    setSidebarOpen = null,
+    onBack = null
 }) => {
     return (
         <div className={`bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] p-4 sm:p-8 text-white shadow-xl ${className}`}>
             <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-0">
                 <div className="flex items-center space-x-2 sm:space-x-4 ml-2 sm:ml-0">
-                    {/* Sidebar Toggle Button (mobile only) */}
-                    {setSidebarOpen && (
+                    {/* Sidebar Toggle Button (mobile only) or Back Button */}
+                    {onBack ? (
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={onBack}
+                            className="bg-white/20 p-3 rounded-xl text-white hover:bg-white/30 transition-all duration-200 focus:outline-none mr-2"
+                        >
+                            <FiArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+                        </motion.button>
+                    ) : setSidebarOpen && (
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
