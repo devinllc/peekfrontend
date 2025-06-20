@@ -21,4 +21,4 @@ okaysss
 almost done v.1.1.1
 -v1.0.0 done
 v1.0.0 bugs fixes
-
+ask to ai
