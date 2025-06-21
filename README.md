@@ -23,3 +23,4 @@ almost done v.1.1.1
 v1.0.0 bugs fixes
 ask to aiss
 
+v1.0.0 soft lauch 
