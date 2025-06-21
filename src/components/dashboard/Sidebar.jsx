@@ -93,8 +93,17 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
                                 animate={{ opacity: 1 }}
                                 className="flex items-center space-x-3"
                             >
-                                <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center shadow-lg backdrop-blur-sm">
-                                    <FiBarChart2 className="w-6 h-6 text-white" />
+                                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shadow-lg backdrop-blur-sm overflow-hidden">
+                                    <img 
+                                        src="/assets/logo.svg" 
+                                        alt="PeekBI Logo" 
+                                        style={{ width: '52px', height: '52px' }}
+                                        className="object-cover"
+                                        onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.src = "/assets/logo.png";
+                                        }}
+                                    />
                                 </div>
                                 <div>
                                     <h1 className="text-xl font-bold text-white">
@@ -107,9 +116,18 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center shadow-lg backdrop-blur-sm mx-auto"
+                                className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shadow-lg backdrop-blur-sm mx-auto overflow-hidden"
                             >
-                                <FiBarChart2 className="w-6 h-6 text-white" />
+                                <img 
+                                    src="/assets/logo.svg" 
+                                    alt="PeekBI Logo" 
+                                    style={{ width: '52px', height: '52px' }}
+                                    className="object-cover"
+                                    onError={(e) => {
+                                        e.target.onerror = null;
+                                        e.target.src = "/assets/logo.png";
+                                    }}
+                                />
                             </motion.div>
                         )}
                         <motion.button
@@ -180,8 +198,14 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
                                         : 'hover:bg-white/10 hover:text-white text-white/80'
                                 } ${!sidebarOpen ? 'justify-center' : ''}`}
                             >
-                                <div className="w-12 h-12 rounded-2xl bg-white/20 text-white flex items-center justify-center font-bold shadow-lg backdrop-blur-sm text-lg flex-shrink-0">
-                                    {user?.name?.charAt(0) || 'U'}
+                                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shadow-lg backdrop-blur-sm overflow-hidden">
+                                    {user?.name ? (
+                                        <span className="text-white font-bold text-lg">
+                                            {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                        </span>
+                                    ) : (
+                                        <FiUser className="w-6 h-6 text-white" />
+                                    )}
                                 </div>
                                 {sidebarOpen && (
                                     <div className="ml-4 flex-1">
@@ -199,15 +223,15 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.5 }}
                             >
-                                <a
-                                    href="#"
-                                    className={`flex items-center px-4 py-3 text-sm text-white/80 rounded-2xl hover:bg-white/10 hover:text-white transition-all duration-300 ${!sidebarOpen ? 'justify-center' : ''}`}
+                                <Link
+                                    to="/user/settings"
+                                    className={`flex items-center px-4 py-3 text-sm text-white/80 rounded-2xl hover:bg-white/10 hover:text-white transition-all duration-300 ${!sidebarOpen ? 'justify-center' : ''} ${isActive('/user/settings') ? 'bg-white/20' : ''}`}
                                 >
                                     <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
                                         <FiSettings className="w-5 h-5" />
                                     </div>
                                     {sidebarOpen && <span className="ml-4 font-medium">Settings</span>}
-                                </a>
+                                </Link>
                             </motion.div>
                             
                             <motion.div

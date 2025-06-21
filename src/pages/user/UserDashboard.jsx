@@ -18,6 +18,7 @@ import FinanceDashboard from '../../components/dashboard/FinanceDashboard';
 import EducationDashboard from '../../components/dashboard/EducationDashboard';
 import ManufacturingDashboard from '../../components/dashboard/ManufacturingDashboard';
 import HealthcareDashboard from '../../components/dashboard/HealthcareDashboard';
+import Settings from '../../components/dashboard/Settings';
 
 const UserDashboard = () => {
     const location = useLocation();
@@ -333,7 +334,7 @@ const UserDashboard = () => {
                 </div>
             );
         }
-        
+
         return (
             <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20">
                 <div className="flex items-center justify-between mb-4">
@@ -441,7 +442,7 @@ const UserDashboard = () => {
             return (
                 <div className="flex justify-center items-center h-full">
                     <p>No analysis data available.</p>
-                </div>
+                                        </div>
             );
         }
 
@@ -624,6 +625,7 @@ const UserDashboard = () => {
                         } />
                                 <Route path="data-upload" element={<DataUpload />} />
                                 <Route path="profile" element={<Profile />} />
+                                <Route path="settings" element={<Settings />} />
                                 <Route path="*" element={<Navigate to="dashboard" replace />} />
                             </Routes>
                 </main>

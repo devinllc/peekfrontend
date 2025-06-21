@@ -36,8 +36,16 @@ const Header = ({
                             {sidebarOpen ? <FiX className="w-5 h-5 sm:w-6 sm:h-6" /> : <FiMenu className="w-5 h-5 sm:w-6 sm:h-6" />}
                         </motion.button>
                     )}
-                    <div className="w-10 h-10 sm:w-16 sm:h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                        <Icon className="w-6 h-6 sm:w-8 sm:h-8" />
+                    <div className="w-10 h-10 sm:w-16 sm:h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm overflow-hidden">
+                        <img 
+                            src="/assets/logo.svg" 
+                            alt="PeekBI Logo" 
+                            className="w-11 h-11 sm:w-[70px] sm:h-[70px] object-cover"
+                            onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "/assets/logo.png";
+                            }}
+                        />
                     </div>
                     <div>
                         <h1 className="text-lg sm:text-3xl font-bold">{title}</h1>

@@ -62,15 +62,18 @@ const FooterSection = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 md:gap-8">
                     {/* Brand Column */}
                     <div className="col-span-2 md:col-span-3 lg:col-span-2">
-                        <img
-                            src="/assets/logos.png"
-                            alt="PeekBI Logo"
-                            className="h-8 sm:h-10 md:h-12 mb-4 md:mb-6"
-                            onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = "/assets/logo.png";
-                            }}
-                        />
+                        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center shadow-lg backdrop-blur-sm overflow-hidden">
+                            <img
+                                src="/assets/logo.svg"
+                                alt="PeekBI Logo"
+                                style={{ width: '68px', height: '68px' }}
+                                className="object-cover"
+                                onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = "/assets/logo.png";
+                                }}
+                            />
+                        </div>
                         <p className="text-gray-400 mb-4 md:mb-6 max-w-md text-sm sm:text-base">
                             Transform your data into actionable insights with our advanced analytics platform. Make smarter decisions and drive business growth with PeekBI.
                         </p>
