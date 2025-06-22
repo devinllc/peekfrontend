@@ -199,13 +199,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
                                 } ${!sidebarOpen ? 'justify-center' : ''}`}
                             >
                                 <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shadow-lg backdrop-blur-sm overflow-hidden">
-                                    {user?.name ? (
-                                        <span className="text-white font-bold text-lg">
-                                            {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                        </span>
-                                    ) : (
-                                        <FiUser className="w-6 h-6 text-white" />
-                                    )}
+                                    <FiUser className="w-6 h-6 text-white" />
                                 </div>
                                 {sidebarOpen && (
                                     <div className="ml-4 flex-1">
