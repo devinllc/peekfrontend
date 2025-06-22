@@ -24,3 +24,4 @@ v1.0.0 bugs fixes
 ask to aiss
 
 v1.0.0 soft lauch 
+v1.0.0 ai fila 
