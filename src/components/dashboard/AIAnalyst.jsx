@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiSend, FiMessageSquare, FiTrendingUp, FiBarChart2, FiPieChart, FiActivity, FiTarget, FiZap, FiChevronRight, FiTrendingDown, FiUsers, FiDollarSign, FiCalendar, FiArrowUp, FiArrowDown } from 'react-icons/fi';
+import { FiX, FiSend, FiMessageSquare, FiTrendingUp, FiBarChart2, FiPieChart, FiActivity, FiTarget, FiZap, FiChevronRight, FiTrendingDown, FiUsers, FiDollarSign, FiCalendar, FiArrowUp, FiArrowDown, FiEye } from 'react-icons/fi';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import {
     BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-    ResponsiveContainer, ComposedChart, Cell, Area, AreaChart, PieChart, Pie
+    ResponsiveContainer, ComposedChart, Cell, Area, AreaChart, PieChart, Pie, ScatterChart, Scatter
 } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -20,6 +20,7 @@ const AIAnalyst = ({ analysis, file, onClose }) => {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [suggestedKeywords, setSuggestedKeywords] = useState([]);
     const messagesEndRef = useRef(null);
 
     const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
@@ -27,23 +28,18 @@ const AIAnalyst = ({ analysis, file, onClose }) => {
     // Enhanced color palette for charts
     const chartColors = [
         '#7400B8', '#9B4DCA', '#C77DFF', '#E0AAFF', '#F8F4FF',
-        '#8B5CF6', '#A855F7', '#C084FC', '#DDD6FE', '#F3E8FF'
+        '#8B5CF6', '#A855F7', '#C084FC', '#DDD6FE', '#F3E8FF',
+        '#06B6D4', '#0891B2', '#0E7490', '#155E75', '#164E63'
     ];
 
     useEffect(() => {
         if (!API_KEY) {
             console.error('Gemini API key is not configured. Please add it to your .env file.');
         }
-        // Initial message from AI
-        setMessages([
-            {
-                id: Date.now(),
-                type: 'ai',
-                content: `Hi there! 👋 I'm your AI data analyst. I've analyzed your ${file.originalName} file and I'm here to help you understand what the data is telling us. What would you like to explore?`,
-                timestamp: new Date()
-            },
-        ]);
-    }, [file.originalName]);
+        
+        // Generate initial insights and suggested keywords
+        generateInitialInsights();
+    }, [file.originalName, analysis]);
     
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -56,6 +52,105 @@ const AIAnalyst = ({ analysis, file, onClose }) => {
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    const generateInitialInsights = async () => {
+        if (!analysis || !genAI) return;
+
+        try {
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const formattedAnalysis = formatAnalysisData();
+            const { category } = analysis.insights;
+            
+            const prompt = `
+Based on this data analysis, provide:
+1. A brief overview of the key insights (2-3 sentences)
+2. 6-10 suggested questions/keywords that users might want to explore (mix of basic and advanced questions)
+3. 2-3 visual suggestions for charts that would be most insightful
+
+Data: ${file.originalName}
+Category: ${category}
+Analysis: ${formattedAnalysis}
+
+For suggested keywords, include:
+- Basic analysis questions (e.g., "What are the top performers?")
+- Trend analysis questions (e.g., "How have sales changed over time?")
+- Comparative questions (e.g., "Which categories perform best?")
+- Actionable insight questions (e.g., "What should we focus on to improve?")
+- Industry-specific questions relevant to ${category}
+
+Respond in this exact JSON format:
+{
+  "overview": "Brief overview of key insights",
+  "suggestedKeywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5", "keyword6", "keyword7", "keyword8"],
+  "visualSuggestions": [
+    {
+      "type": "chart_type",
+      "title": "Chart title",
+      "description": "Why this chart would be useful"
+    }
+  ]
+}
+`;
+
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const text = response.text();
+            
+            try {
+                // The AI might wrap the JSON in ```json ... ```. We need to extract it.
+                const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+                const jsonString = jsonMatch ? jsonMatch[1] : text;
+                const parsed = JSON.parse(jsonString);
+                
+                // Set initial message with insights
+                setMessages([
+                    {
+                        id: Date.now(),
+                        type: 'ai',
+                        content: `Hi there! 👋 I'm your AI data analyst. I've analyzed your ${file.originalName} file and here's what I found:
+
+**📊 Key Insights:**
+${parsed.overview}
+
+**💡 You can ask me about:**
+${parsed.suggestedKeywords.map(keyword => `• ${keyword}`).join('\n')}
+
+**📈 Suggested Visualizations:**
+${parsed.visualSuggestions.map(viz => `• ${viz.title}: ${viz.description}`).join('\n')}
+
+**🎯 Industry Focus:** Since this is ${category} data, I can provide industry-specific insights and recommendations.
+
+What would you like to explore first?`,
+                        timestamp: new Date()
+                    },
+                ]);
+                
+                setSuggestedKeywords(parsed.suggestedKeywords);
+            } catch (parseError) {
+                console.error('Error parsing initial insights:', parseError);
+                // Fallback to basic message
+                setMessages([
+                    {
+                        id: Date.now(),
+                        type: 'ai',
+                        content: `Hi there! 👋 I'm your AI data analyst. I've analyzed your ${file.originalName} file and I'm here to help you understand what the data is telling us. What would you like to explore?`,
+                        timestamp: new Date()
+                    },
+                ]);
+            }
+        } catch (error) {
+            console.error('Error generating initial insights:', error);
+            // Fallback to basic message
+            setMessages([
+                {
+                    id: Date.now(),
+                    type: 'ai',
+                    content: `Hi there! 👋 I'm your AI data analyst. I've analyzed your ${file.originalName} file and I'm here to help you understand what the data is telling us. What would you like to explore?`,
+                    timestamp: new Date()
+                },
+            ]);
+        }
+    };
 
     const formatAnalysisData = () => {
         if (!analysis) return '';
@@ -118,32 +213,54 @@ const AIAnalyst = ({ analysis, file, onClose }) => {
     const createEnhancedPrompt = (userMessage) => {
         const formattedAnalysis = formatAnalysisData();
         const { category } = analysis.insights;
-        const userType = user?.userType || 'user';
 
         return `
-You are a helpful AI data analyst assistant. You have access to analysis results from a ${category} dataset.
+You are an expert AI data analyst with access to comprehensive data analysis results. Your role is to:
 
-Dataset: ${file.originalName}
-Analysis Summary:
-${formattedAnalysis}
+1. **Provide insightful analysis** based on the available data
+2. **Suggest relevant visualizations** when appropriate
+3. **Answer questions naturally** while staying focused on the data context
+4. **Generate actionable insights** that help users understand their data
+5. **Provide context-aware recommendations** based on the industry/category
 
-User Question: "${userMessage}"
+**Available Data Context:**
+- File: ${file.originalName}
+- Category: ${category}
+- Analysis Results: ${formattedAnalysis}
 
-Please provide a helpful, conversational response that:
-- Directly addresses the user's question
-- Uses the analysis data to provide relevant insights
-- Suggests a visualization if it would be helpful (include JSON data if suggesting a chart)
-- Gives practical advice when appropriate
+**User Question:** "${userMessage}"
 
-Be natural and conversational. Don't follow a rigid template. If the user asks something unrelated to the data, politely redirect them or ask for clarification.
+**Response Guidelines:**
+- Be conversational but professional
+- Provide specific insights based on the data
+- When suggesting visualizations, include them in JSON format
+- If the question is off-topic, gently redirect to data-related topics
+- Always provide value and actionable insights
+- Use industry-specific terminology when relevant
+- Suggest follow-up questions that might be interesting
 
-If suggesting a chart, include the data in this format:
+**For Visualizations, use this format:**
 \`\`\`json
 {
-  "type": "bar|line|pie",
-  "data": [{"name": "Label", "value": 123}]
+  "type": "chart_type",
+  "title": "Chart Title",
+  "description": "Why this visualization is useful and what insights it provides",
+  "data": [
+    {"name": "Category A", "value": 100},
+    {"name": "Category B", "value": 150}
+  ]
 }
 \`\`\`
+
+**Supported chart types:** bar, line, pie, area, scatter
+
+**Industry-specific insights for ${category}:**
+- Focus on relevant KPIs and metrics for this industry
+- Suggest actionable recommendations based on industry best practices
+- Consider seasonal trends and industry-specific patterns
+- Provide benchmarking insights when possible
+
+Provide a comprehensive, helpful response that addresses the user's question while leveraging the available data insights and industry context.
 `;
     };
 
@@ -156,7 +273,9 @@ If suggesting a chart, include the data in this format:
 
         if (match && match[1]) {
             try {
-                chartData = JSON.parse(match[1]);
+                // Remove comments from the JSON string before parsing
+                const jsonString = match[1].replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+                chartData = JSON.parse(jsonString);
                 content = text.replace(jsonRegex, '').trim();
             } catch (error) {
                 console.error('Error parsing chart JSON from AI response:', error);
@@ -171,7 +290,19 @@ If suggesting a chart, include the data in this format:
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.*?)\*/g, '<em>$1</em>')
             .replace(/\n/g, '<br>')
-            .replace(/- (.*)/g, '• $1');
+            .replace(/- (.*)/g, '• $1')
+            .replace(/📊/g, '<span class="text-blue-600">📊</span>')
+            .replace(/💡/g, '<span class="text-yellow-600">💡</span>')
+            .replace(/📈/g, '<span class="text-green-600">📈</span>')
+            .replace(/🔍/g, '<span class="text-purple-600">🔍</span>')
+            .replace(/✅/g, '<span class="text-green-600">✅</span>')
+            .replace(/❌/g, '<span class="text-red-600">❌</span>')
+            .replace(/⚠️/g, '<span class="text-yellow-600">⚠️</span>')
+            .replace(/🎯/g, '<span class="text-purple-600">🎯</span>')
+            .replace(/📋/g, '<span class="text-blue-600">📋</span>')
+            .replace(/💰/g, '<span class="text-green-600">💰</span>')
+            .replace(/👥/g, '<span class="text-blue-600">👥</span>')
+            .replace(/📅/g, '<span class="text-purple-600">📅</span>');
     };
 
     const handleSendMessage = async (promptText = input) => {
@@ -221,6 +352,10 @@ If suggesting a chart, include the data in this format:
         }
     };
 
+    const handleKeywordClick = (keyword) => {
+        setInput(keyword);
+    };
+
     const handleKeyPress = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -229,84 +364,147 @@ If suggesting a chart, include the data in this format:
     };
 
     const renderChart = (suggestion) => {
-        const { type, data } = suggestion;
+        const { type, data, title } = suggestion;
         
         if (!data || data.length === 0) return null;
 
         switch (type) {
             case 'bar':
                 return (
-                    <ResponsiveContainer width="100%" height={200}>
-                        <BarChart data={data}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                            <XAxis dataKey="name" />
-                            <YAxis />
-                            <Tooltip 
-                                formatter={(value) => [value, 'Value']}
-                                contentStyle={{
-                                    backgroundColor: 'white',
-                                    border: '1px solid #f0f0f0',
-                                    borderRadius: '12px',
-                                    padding: '12px'
-                                }}
-                            />
-                            <Bar dataKey="value" fill="#7400B8" radius={[4, 4, 0, 0]}>
-                                {data.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
-                                ))}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
+                    <div className="space-y-2">
+                        {title && <h4 className="text-sm font-semibold text-gray-700">{title}</h4>}
+                        <ResponsiveContainer width="100%" height={200}>
+                            <BarChart data={data}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                <Tooltip 
+                                    formatter={(value) => [value, 'Value']}
+                                    contentStyle={{
+                                        backgroundColor: 'white',
+                                        border: '1px solid #f0f0f0',
+                                        borderRadius: '12px',
+                                        padding: '12px'
+                                    }}
+                                />
+                                <Bar dataKey="value" fill="#7400B8" radius={[4, 4, 0, 0]}>
+                                    {data.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                 );
             
             case 'pie':
                 return (
-                    <ResponsiveContainer width="100%" height={200}>
-                        <PieChart>
-                            <Pie
-                                data={data}
-                                dataKey="value"
-                                nameKey="name"
-                                cx="50%"
-                                cy="50%"
-                                outerRadius={80}
-                                fill="#8884d8"
-                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                            >
-                                {data.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip />
-                        </PieChart>
-                    </ResponsiveContainer>
+                    <div className="space-y-2">
+                        {title && <h4 className="text-sm font-semibold text-gray-700">{title}</h4>}
+                        <ResponsiveContainer width="100%" height={200}>
+                            <PieChart>
+                                <Pie
+                                    data={data}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    outerRadius={80}
+                                    fill="#8884d8"
+                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                >
+                                    {data.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
                 );
             
             case 'line':
                 return (
-                    <ResponsiveContainer width="100%" height={200}>
-                        <LineChart data={data}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                            <XAxis dataKey="name" />
-                            <YAxis />
-                            <Tooltip 
-                                formatter={(value) => [value, 'Value']}
-                                contentStyle={{
-                                    backgroundColor: 'white',
-                                    border: '1px solid #f0f0f0',
-                                    borderRadius: '12px',
-                                    padding: '12px'
-                                }}
-                            />
-                            <Line 
-                                type="monotone" 
-                                dataKey="value" 
-                                stroke="#7400B8" 
-                                strokeWidth={3}
-                                dot={{ fill: '#7400B8', strokeWidth: 2, r: 6 }}
-                            />
-                        </LineChart>
-                    </ResponsiveContainer>
+                    <div className="space-y-2">
+                        {title && <h4 className="text-sm font-semibold text-gray-700">{title}</h4>}
+                        <ResponsiveContainer width="100%" height={200}>
+                            <LineChart data={data}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                <Tooltip 
+                                    formatter={(value) => [value, 'Value']}
+                                    contentStyle={{
+                                        backgroundColor: 'white',
+                                        border: '1px solid #f0f0f0',
+                                        borderRadius: '12px',
+                                        padding: '12px'
+                                    }}
+                                />
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="value" 
+                                    stroke="#7400B8" 
+                                    strokeWidth={3}
+                                    dot={{ fill: '#7400B8', strokeWidth: 2, r: 6 }}
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                );
+
+            case 'area':
+                return (
+                    <div className="space-y-2">
+                        {title && <h4 className="text-sm font-semibold text-gray-700">{title}</h4>}
+                        <ResponsiveContainer width="100%" height={200}>
+                            <AreaChart data={data}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                <Tooltip 
+                                    formatter={(value) => [value, 'Value']}
+                                    contentStyle={{
+                                        backgroundColor: 'white',
+                                        border: '1px solid #f0f0f0',
+                                        borderRadius: '12px',
+                                        padding: '12px'
+                                    }}
+                                />
+                                <Area 
+                                    type="monotone" 
+                                    dataKey="value" 
+                                    stroke="#7400B8" 
+                                    fill="#7400B8"
+                                    fillOpacity={0.3}
+                                />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                );
+
+            case 'scatter':
+                return (
+                    <div className="space-y-2">
+                        {title && <h4 className="text-sm font-semibold text-gray-700">{title}</h4>}
+                        <ResponsiveContainer width="100%" height={200}>
+                            <ScatterChart>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                <XAxis dataKey="x" type="number" />
+                                <YAxis dataKey="y" type="number" />
+                                <Tooltip 
+                                    formatter={(value, name) => [value, name === 'x' ? 'X Value' : 'Y Value']}
+                                    contentStyle={{
+                                        backgroundColor: 'white',
+                                        border: '1px solid #f0f0f0',
+                                        borderRadius: '12px',
+                                        padding: '12px'
+                                    }}
+                                />
+                                <Scatter data={data} fill="#7400B8" />
+                            </ScatterChart>
+                        </ResponsiveContainer>
+                    </div>
                 );
             
             default:
@@ -325,7 +523,7 @@ If suggesting a chart, include the data in this format:
                 initial={{ y: 50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 50, opacity: 0 }}
-                className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 w-full max-w-4xl h-full max-h-[90vh] flex flex-col overflow-hidden"
+                className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 w-full max-w-5xl h-full max-h-[90vh] flex flex-col overflow-hidden"
             >
                 {/* Header */}
                 <div className="bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] p-3 sm:p-4 lg:p-6 text-white flex items-center justify-between">
@@ -376,9 +574,13 @@ If suggesting a chart, include the data in this format:
                                                 <div className="mt-4 space-y-3">
                                                     {message.chartSuggestions.map((suggestion, index) => (
                                                         <div key={index} className="bg-white/10 rounded-xl p-3 sm:p-4">
-                                                            <div className="text-xs sm:text-sm font-medium text-white/90 mb-2">
-                                                                Suggested Visualization
+                                                            <div className="text-xs sm:text-sm font-medium text-white/90 mb-2 flex items-center">
+                                                                <FiEye className="w-4 h-4 mr-2" />
+                                                                {suggestion.title || 'Suggested Visualization'}
                                                             </div>
+                                                            {suggestion.description && (
+                                                                <p className="text-xs text-white/80 mb-3">{suggestion.description}</p>
+                                                            )}
                                                             <div className="h-48 sm:h-56 lg:h-64">
                                                                 {renderChart(suggestion)}
                                                             </div>
@@ -413,6 +615,29 @@ If suggesting a chart, include the data in this format:
                         
                         <div ref={messagesEndRef} />
                     </div>
+
+                    {/* Suggested Keywords */}
+                    {suggestedKeywords.length > 0 && (
+                        <div className="border-t border-gray-200/50 p-3 sm:p-4">
+                            <div className="flex items-center space-x-2 mb-3">
+                                <FiZap className="w-4 h-4 text-yellow-600" />
+                                <span className="text-sm font-medium text-gray-700">Quick Questions:</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {suggestedKeywords.map((keyword, index) => (
+                                    <motion.button
+                                        key={index}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => handleKeywordClick(keyword)}
+                                        className="px-3 py-1.5 bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 text-[#7400B8] rounded-full text-xs font-medium hover:from-[#7400B8]/20 hover:to-[#9B4DCA]/20 transition-all duration-200 border border-[#7400B8]/20"
+                                    >
+                                        {keyword}
+                                    </motion.button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Input */}
                     <div className="border-t border-gray-200/50 p-3 sm:p-4 lg:p-6">
