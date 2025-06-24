@@ -10,6 +10,7 @@ import AIAnalyst from './AIAnalyst';
 const FinanceDashboard = ({ file, analysis }) => {
     const [selectedPeriod, setSelectedPeriod] = useState('all');
     const [selectedMetric, setSelectedMetric] = useState('revenue');
+    const [showSummary, setShowSummary] = useState(false);
 
     if (!file || !analysis) {
         return (
@@ -67,66 +68,62 @@ const FinanceDashboard = ({ file, analysis }) => {
     // Create trend data
     const trendData = trends || [];
 
+    // --- Trends Section Logic ---
+    const renderTrends = (trends) => {
+        if (!Array.isArray(trends) || trends.length === 0) return null;
+        if (trends.length < 3) {
+            return (
+                <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8 text-center text-gray-500">
+                    Not enough data to display trends graph.
+                </div>
+            );
+        }
+        // Find numeric keys for plotting
+        const numericKeys = Object.keys(trends[0] || {}).filter(k => typeof trends[0][k] === 'number');
+        const mainKey = numericKeys[0] || Object.keys(trends[0])[1];
     return (
-        <>
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-8 p-4 sm:p-6 lg:p-8"
-            >
-                {/* Key Performance Indicators */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8 w-full">
                     <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                        <FiTrendingUp className="w-6 h-6 text-[#7400B8]" />
-                        Key Performance Indicators
+                    <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Trends
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
-                            className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 hover:shadow-lg"
-                        >
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-xl bg-[#7400B8]/10 flex items-center justify-center">
-                                    <FiDollarSign className="w-5 h-5 text-[#7400B8]" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                                </div>
+                <div className="h-[350px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={trends} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#7400B8" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="#7400B8" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                            <XAxis dataKey={Object.keys(trends[0])[0]} />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Area type="monotone" dataKey={mainKey} stroke="#7400B8" fill="url(#colorTrend)" strokeWidth={3} />
+                        </AreaChart>
+                    </ResponsiveContainer>
                             </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{formatCurrency(kpis?.total_revenue || 0)}</p>
-                            <p className="text-xs text-green-600 mt-2 flex items-center">
-                                <FiArrowUp className="w-3 h-3 mr-1" />
-                                {formatPercentage(kpis?.revenue_growth_rate_avg || 0)} growth
-                            </p>
                         </motion.div>
+        );
+    };
 
+    // --- Section Renderers (conditional, dynamic) ---
+    // KPIs
+    const renderKPIs = (kpis) => {
+        if (!kpis || Object.keys(kpis).length === 0) return null;
+        return (
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20 mb-8">
+                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                    <FiTrendingUp className="w-6 h-6 text-[#7400B8]" /> Key Performance Indicators
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {Object.entries(kpis).map(([key, value], idx) => (
                         <motion.div
+                            key={key}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
-                            className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 hover:shadow-lg"
-                        >
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-xl bg-[#7400B8]/10 flex items-center justify-center">
-                                    <FiTarget className="w-5 h-5 text-[#7400B8]" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Net Profit</p>
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{formatCurrency(kpis?.net_profit || 0)}</p>
-                            <p className="text-xs text-blue-600 mt-2 flex items-center">
-                                <FiArrowUp className="w-3 h-3 mr-1" />
-                                {((kpis?.net_profit / kpis?.total_revenue) * 100).toFixed(1)}% margin
-                            </p>
-                        </motion.div>
-
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
+                            transition={{ delay: idx * 0.1 }}
                             className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 hover:shadow-lg"
                         >
                             <div className="flex items-center gap-3 mb-3">
@@ -134,442 +131,253 @@ const FinanceDashboard = ({ file, analysis }) => {
                                     <FiBarChart2 className="w-5 h-5 text-[#7400B8]" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">Avg Revenue</p>
+                                    <p className="text-sm font-medium text-gray-600">
+                                        {key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                    </p>
                                 </div>
                             </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{formatCurrency(kpis?.avg_revenue || 0)}</p>
-                            <p className="text-xs text-purple-600 mt-2 flex items-center">
-                                <FiArrowUp className="w-3 h-3 mr-1" />
-                                {formatPercentage(kpis?.revenue_growth_rate_median || 0)} median
-                            </p>
+                            <p className="text-2xl font-bold text-[#7400B8]">{typeof value === 'number' || (!isNaN(Number(value)) && value !== null && value !== undefined) ? round4(value) : String(value)}</p>
                         </motion.div>
-
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.4 }}
-                            className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 hover:shadow-lg"
-                        >
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-xl bg-[#7400B8]/10 flex items-center justify-center">
-                                    <FiActivity className="w-5 h-5 text-[#7400B8]" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Total Expenses</p>
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{formatCurrency(kpis?.total_expenses || 0)}</p>
-                            <p className="text-xs text-orange-600 mt-2 flex items-center">
-                                <FiArrowDown className="w-3 h-3 mr-1" />
-                                {((kpis?.total_expenses / kpis?.total_revenue) * 100).toFixed(1)}% of revenue
-                            </p>
-                        </motion.div>
-                    </div>
+                    ))}
                 </div>
+            </div>
+        );
+    };
 
-                {/* Revenue Forecast */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                >
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-2xl flex items-center justify-center">
-                                <FiTrendingUp className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-800">Revenue Forecast</h2>
-                                <p className="text-gray-600">Next period projection and growth analysis</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {/* Forecast Metrics */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div className="text-center p-4 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10">
-                            <p className="text-sm text-gray-600 mb-2">Current Period</p>
-                            <p className="text-2xl font-bold text-gray-800">{formatCurrency(kpis?.total_revenue || 0)}</p>
-                            <p className="text-xs text-gray-500 mt-1">Total revenue this period</p>
-                        </div>
-                        <div className="text-center p-4 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10">
-                            <p className="text-sm text-gray-600 mb-2">Growth Rate</p>
-                            <p className="text-2xl font-bold text-green-600">{formatPercentage(kpis?.revenue_growth_rate_avg || 0)}</p>
-                            <p className="text-xs text-gray-500 mt-1">Average growth trend</p>
-                        </div>
-                        <div className="text-center p-4 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10">
-                            <p className="text-sm text-gray-600 mb-2">Next Period Forecast</p>
-                            <p className="text-2xl font-bold text-[#7400B8]">{formatCurrency(kpis?.revenue_forecast_next_period || 0)}</p>
-                            <p className="text-xs text-gray-500 mt-1">Projected revenue</p>
-                        </div>
-                    </div>
-
-                
-                </motion.div>
-
-
-                {/* Revenue by Division Chart */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                >
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-2xl flex items-center justify-center">
-                                <FiPieChart className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-800">Revenue Distribution</h2>
-                                <p className="text-gray-600">Revenue breakdown across all divisions</p>
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-2xl font-bold text-[#7400B8]">{formatCurrency(kpis?.total_revenue || 0)}</p>
-                            <p className="text-sm text-gray-600">Total Revenue</p>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Pie Chart */}
-                        <div className="h-[400px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={divisionChartData.map((division, index) => ({
-                                            name: division.Division,
-                                            value: division.Total_Amount_Received
-                                        }))}
-                                        cx="50%"
-                                        cy="50%"
-                                        labelLine={false}
-                                        label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
-                                            const RADIAN = Math.PI / 180;
-                                            const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
+    // High/Low Performers
+    const renderPerformerSection = (title, data, labelKey, valueKey, color) => {
+        if (!data || !Array.isArray(data) || data.length === 0) return null;
                                             return (
-                                                <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-                                                    {`${(percent * 100).toFixed(0)}%`}
-                                                </text>
-                                            );
-                                        }}
-                                        outerRadius={120}
-                                        fill="#8884d8"
-                                        dataKey="value"
-                                    >
-                                        {divisionChartData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip 
-                                        formatter={(value, name) => [formatCurrency(value), name]}
-                                        contentStyle={{
-                                            backgroundColor: 'white',
-                                            border: '1px solid #f0f0f0',
-                                            borderRadius: '12px',
-                                            padding: '12px',
-                                            boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                        }}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-
-                        {/* Division Details */}
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Division Breakdown</h3>
-                            <div className="space-y-3 max-h-[320px] overflow-y-auto">
-                                {divisionChartData.map((division, index) => (
-                                    <motion.div
-                                        key={division.Division}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.1 * index }}
-                                        className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white rounded-2xl border border-gray-200/50 hover:border-[#7400B8]/20 transition-all duration-200"
-                                    >
-                                        <div className="flex items-center space-x-3">
-                                            <div 
-                                                className="w-4 h-4 rounded-full"
-                                                style={{ backgroundColor: pieColors[index % pieColors.length] }}
-                                            ></div>
-                                            <div>
-                                                <p className="font-semibold text-gray-800">{division.Division}</p>
-                                                <p className="text-sm text-gray-600">
-                                                    {((division.Total_Amount_Received / (kpis?.total_revenue || 1)) * 100).toFixed(1)}% of total
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-bold text-gray-800">{formatCurrency(division.Total_Amount_Received)}</p>
-                                            <p className="text-xs text-gray-500">Revenue</p>
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </motion.div>
-
-                {/* Charts Grid */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                    {/* Revenue by Division - Bar Chart */}
-                    {divisionChartData.length > 0 && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                        >
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 flex flex-col items-start mb-8 w-full">
                             <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                <FiBarChart2 className="w-6 h-6 text-[#7400B8]" />
-                                Revenue by Division
+                    <FiTrendingUp className="w-6 h-6 text-[#7400B8]" /> {title}
                             </h3>
-                            <div className="h-[350px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart
-                                        data={divisionChartData.map((division, index) => ({
-                                            name: division.Division,
-                                            revenue: division.Total_Amount_Received,
-                                            trend: division.Total_Amount_Received * 0.8
-                                        }))}
-                                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                                    >
+                <div className="w-full">
+                    <ResponsiveContainer width="100%" height={220}>
+                        <BarChart data={data} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                        <XAxis dataKey="name" />
-                                        <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                                        <Tooltip 
-                                            formatter={(value, name) => [
-                                                formatCurrency(value),
-                                                name === 'revenue' ? 'Revenue' : 'Trend'
-                                            ]}
-                                            labelStyle={{ color: '#7400B8' }}
-                                            contentStyle={{
-                                                backgroundColor: 'white',
-                                                border: '1px solid #f0f0f0',
-                                                borderRadius: '12px',
-                                                padding: '12px',
-                                                boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                            }}
-                                        />
+                            <XAxis type="number" />
+                            <YAxis dataKey={labelKey} type="category" width={120} />
+                            <Tooltip />
                                         <Legend />
-                                        <Bar 
-                                            dataKey="revenue" 
-                                            fill="#7400B8" 
-                                            radius={[8, 8, 0, 0]}
-                                            barSize={40}
-                                        >
-                                            {divisionChartData.map((_, index) => (
-                                                <Cell key={`cell-${index}`} fill={`rgba(116, 0, 184, ${0.3 + (index * 0.15)})`} />
-                                            ))}
-                                        </Bar>
-                                        <Line 
-                                            type="monotone" 
-                                            dataKey="trend" 
-                                            stroke="#9B4DCA" 
-                                            strokeWidth={3}
-                                            dot={{ fill: '#9B4DCA', strokeWidth: 2, r: 6 }}
-                                            activeDot={{ r: 10 }}
-                                        />
-                                    </ComposedChart>
+                            <Bar dataKey={valueKey} fill={color} radius={[0, 8, 8, 0]} barSize={28} />
+                        </BarChart>
                                 </ResponsiveContainer>
                             </div>
                         </motion.div>
-                    )}
+        );
+    };
 
-                    {/* Performance Comparison */}
-                    {highPerformers?.top_Division && lowPerformers?.bottom_Division && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                        >
+    // Totals (show as chart or table if possible)
+    const renderTotals = (totals) => {
+        if (!totals || Object.keys(totals).length === 0) return null;
+        return (
+            <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8">
                             <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                <FiTrendingUp className="w-6 h-6 text-[#7400B8]" />
-                                Performance Comparison
+                    <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Totals
                             </h3>
-                            <div className="h-[350px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart
-                                        data={[
-                                            ...highPerformers.top_Division.map((div, index) => ({
-                                                name: div.Division,
-                                                revenue: div.Total_Amount_Received,
-                                                type: 'Top Performer',
-                                                rank: index + 1
-                                            })),
-                                            ...lowPerformers.bottom_Division.map((div, index) => ({
-                                                name: div.Division,
-                                                revenue: div.Total_Amount_Received,
-                                                type: 'Bottom Performer',
-                                                rank: -(index + 1)
-                                            }))
-                                        ]}
-                                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                                    >
+                <div className="flex flex-col gap-8 w-full">
+                    {Object.entries(totals).map(([key, value], idx) => {
+                        if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && Object.keys(value[0]).length === 2) {
+                            const [labelKey, valueKey] = Object.keys(value[0]);
+                            return (
+                                <div key={key} className="w-full flex flex-col items-center justify-center h-full flex-1 overflow-visible">
+                                    <h4 className="font-bold mb-2 text-center w-full break-words">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                    <div className="w-full flex items-center justify-center h-full overflow-visible">
+                                        <ResponsiveContainer width="100%" height={300}>
+                                            <LineChart data={value} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                        <XAxis dataKey="name" />
-                                        <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                                        <Tooltip 
-                                            formatter={(value, name) => [
-                                                formatCurrency(value),
-                                                name === 'revenue' ? 'Revenue' : name
-                                            ]}
-                                            labelStyle={{ color: '#7400B8' }}
-                                            contentStyle={{
-                                                backgroundColor: 'white',
-                                                border: '1px solid #f0f0f0',
-                                                borderRadius: '12px',
-                                                padding: '12px',
-                                                boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                            }}
-                                        />
+                                                <XAxis dataKey={labelKey} tick={{ fontSize: 12 }} interval={0} angle={value.length > 8 ? -30 : 0} textAnchor={value.length > 8 ? 'end' : 'middle'} height={value.length > 8 ? 60 : 30} />
+                                                <YAxis />
+                                                <Tooltip />
                                         <Legend />
-                                        <Bar 
-                                            dataKey="revenue" 
-                                            fill="#7400B8" 
-                                            radius={[8, 8, 0, 0]}
-                                            barSize={40}
-                                        >
-                                            {[...highPerformers.top_Division, ...lowPerformers.bottom_Division].map((_, index) => (
-                                                <Cell 
-                                                    key={`cell-${index}`} 
-                                                    fill={index < highPerformers.top_Division.length ? '#7400B8' : '#9B4DCA'} 
-                                                />
-                                            ))}
-                                        </Bar>
-                                    </ComposedChart>
+                                                <Line type="monotone" dataKey={valueKey} stroke="#7400B8" strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 8 }} />
+                                            </LineChart>
                                 </ResponsiveContainer>
-                            </div>
-                        </motion.div>
-                    )}
-                </div>
+                                    </div>
+                                </div>
+                            );
+                        }
+                        // Fallback: table or primitive
+                        return (
+                            <div key={key} className="w-full">
+                                <h4 className="font-bold mb-2">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                <p>{JSON.stringify(value)}</p>
+                                    </div>
+                        );
+                    })}
+                                    </div>
+                                </div>
+        );
+    };
 
-            
-                {/* Data Summary */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 1.2 }}
-                    className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
+    // Summary
+    const renderSummary = (summary) => {
+        if (!summary || Object.keys(summary).length === 0) return null;
+        return (
+            <div className="mb-8">
+                <button
+                    className="mb-4 px-4 py-2 bg-[#7400B8] text-white rounded-lg shadow hover:bg-[#5a0091] transition"
+                    onClick={() => setShowSummary(s => !s)}
                 >
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-2xl flex items-center justify-center">
-                                <FiActivity className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-800">Data Analytics Summary</h2>
-                                <p className="text-gray-600">Statistical overview of financial metrics</p>
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-2xl font-bold text-[#7400B8]">{summaryFields.length}</p>
-                            <p className="text-sm text-gray-600">Metrics Analyzed</p>
-                        </div>
-                    </div>
-
+                    {showSummary ? 'Hide Summary' : 'Show Summary'}
+                </button>
+                {showSummary && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {summaryFields.map((field, index) => (
-                            <motion.div
-                                key={field.name}
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.1 * index }}
-                                className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200"
-                            >
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="font-semibold text-gray-800 capitalize">{field.name.replace(/_/g, ' ')}</h3>
-                                    <div className="w-8 h-8 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-lg flex items-center justify-center">
-                                        <FiBarChart2 className="w-4 h-4 text-white" />
-                                    </div>
-                                </div>
-                                
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">Minimum</span>
-                                        <span className="font-semibold text-gray-800">{formatCurrency(field.min)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">Maximum</span>
-                                        <span className="font-semibold text-[#7400B8]">{formatCurrency(field.max)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">Average</span>
-                                        <span className="font-semibold text-green-600">{formatCurrency(field.mean)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">Median</span>
-                                        <span className="font-semibold text-blue-600">{formatCurrency(field.median)}</span>
-                                    </div>
-                                </div>
-                                
-                                <div className="mt-4 pt-3 border-t border-gray-200">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs text-gray-500">Range</span>
-                                        <span className="text-xs font-medium text-gray-700">
-                                            {formatCurrency(field.max - field.min)}
-                                        </span>
-                                    </div>
-                                </div>
-                            </motion.div>
+                        {Object.entries(summary).map(([field, details]) => (
+                            <div key={field} className="bg-[#F9F4FF] rounded-2xl p-4 border border-[#7400B8]/10">
+                                <h4 className="font-bold mb-2">{field}</h4>
+                                {/* Numeric summary */}
+                                {details.type === 'numeric' && (
+                                    <ul className="text-sm space-y-1">
+                                        <li><span className="font-semibold">Count:</span> {round4(details.count)}</li>
+                                        <li><span className="font-semibold">Min:</span> {round4(details.min)}</li>
+                                        <li><span className="font-semibold">Max:</span> {round4(details.max)}</li>
+                                        <li><span className="font-semibold">Mean:</span> {round4(details.mean)}</li>
+                                        <li><span className="font-semibold">Median:</span> {round4(details.median)}</li>
+                                        <li><span className="font-semibold">Stddev:</span> {round4(details.stddev)}</li>
+                                    </ul>
+                                )}
+                                {/* Categorical summary */}
+                                {details.type === 'categorical' && (
+                                    <>
+                                        <div className="mb-2 text-sm"><span className="font-semibold">Unique Count:</span> {round4(details.unique_count)}</div>
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full text-xs">
+                                                <thead>
+                                                    <tr>
+                                                        <th className="px-2 py-1 border-b text-left">Value</th>
+                                                        <th className="px-2 py-1 border-b text-left">Count</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {details.top_values && details.top_values.map((v, i) => (
+                                                        <tr key={i}>
+                                                            <td className="px-2 py-1 border-b">{v.value}</td>
+                                                            <td className="px-2 py-1 border-b">{round4(v.count)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         ))}
                     </div>
-                </motion.div>
+                )}
+            </div>
+        );
+    };
 
-                {/* AI Insights */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 1.1 }}
-                    className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                >
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-2xl flex items-center justify-center">
-                                <FiCpu className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-800">AI-Powered Insights</h2>
-                                <p className="text-gray-600">Key findings and recommendations</p>
-                            </div>
-                        </div>
-                    </div>
-                </motion.div>
-
-                {/* Hypothesis */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 1.2 }}
-                    className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                >
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-2xl flex items-center justify-center">
-                                <FiInfo className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-800">Hypothesis</h2>
-                                <p className="text-gray-600">Key insights and recommendations</p>
-                            </div>
-                        </div>
-                    </div>
-                    {hypothesis && hypothesis.length > 0 && (
-                        <div className="text-gray-700 space-y-4 prose prose-purple max-w-none">
-                            <h4 className="font-bold text-lg">Key Insights:</h4>
-                            <ul className="list-disc list-inside space-y-2">
-                                {hypothesis.map((insight, index) => (
-                                    <li key={index} className="text-gray-700">{insight}</li>
-                                ))}
+    // Hypotheses
+    const renderHypotheses = (hypothesis) => {
+        if (!Array.isArray(hypothesis) || hypothesis.length === 0) return null;
+        return (
+            <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8">
+                <h4 className="font-bold mb-2">Hypotheses</h4>
+                <ul className="list-disc list-inside">
+                    {hypothesis.map((h, i) => <li key={i}>{h}</li>)}
                             </ul>
                         </div>
-                    )}
-                </motion.div>
+        );
+    };
+
+    // Forecast, Segments, Variance (simple fallback rendering)
+    const renderSection = (title, data) => {
+        if (!data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && Object.keys(data).length === 0)) return null;
+        return (
+            <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8">
+                <h4 className="font-bold mb-2">{title}</h4>
+                <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
+            </div>
+        );
+    };
+
+    // Helper: round to 4 decimals
+    const round4 = (v) => {
+        if (typeof v === 'number') return Number(v.toFixed(4));
+        if (typeof v === 'string' && !isNaN(Number(v))) return Number(Number(v).toFixed(4));
+        return v;
+    };
+
+    // Variance Section (styled, chart/table fallback, numbers rounded)
+    const renderVariance = (variance) => {
+        if (!variance || Object.keys(variance).length === 0) return null;
+        return (
+            <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8">
+                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                    <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Variance
+                </h3>
+                <div className="flex flex-col gap-8 w-full">
+                    {Object.entries(variance).map(([key, value], idx) => {
+                        // Chart for array of objects with two keys
+                        if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && Object.keys(value[0]).length === 2) {
+                            const [labelKey, valueKey] = Object.keys(value[0]);
+                            return (
+                                <div key={key} className="w-full flex flex-col items-center justify-center h-full flex-1 overflow-visible">
+                                    <h4 className="font-bold mb-2 text-center w-full break-words">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                    <div className="w-full flex items-center justify-center h-full overflow-visible">
+                                        <ResponsiveContainer width="100%" height={300}>
+                                            <LineChart data={value.map(d => ({ ...d, [valueKey]: round4(d[valueKey]) }))} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                                <XAxis dataKey={labelKey} tick={{ fontSize: 12 }} interval={0} angle={value.length > 8 ? -30 : 0} textAnchor={value.length > 8 ? 'end' : 'middle'} height={value.length > 8 ? 60 : 30} />
+                                                <YAxis tickFormatter={round4} />
+                                                <Tooltip formatter={round4} />
+                                                <Legend formatter={v => v.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} />
+                                                <Line type="monotone" dataKey={valueKey} stroke="#7400B8" strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 8 }} />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            );
+                        }
+                        // Fallback: table or primitive
+                        return (
+                            <div key={key} className="w-full">
+                                <h4 className="font-bold mb-2">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                {typeof value === 'object' && value !== null && Array.isArray(Object.values(value)[0]) ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full text-xs">
+                                            <thead>
+                                                <tr>
+                                                    {Object.keys(value).map((col, i) => <th key={i} className="px-2 py-1 border-b text-left">{col}</th>)}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {value[Object.keys(value)[0]].map((_, rowIdx) => (
+                                                    <tr key={rowIdx}>
+                                                        {Object.keys(value).map((col, i) => <td key={i} className="px-2 py-1 border-b">{round4(value[col][rowIdx])}</td>)}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(value, null, 2)}</pre>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
+    // --- Render ---
+    return (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 p-4 sm:p-6 lg:p-8">
+            {renderKPIs(insights.kpis)}
+            {insights.highPerformers?.top_Month && renderPerformerSection('Top Months', insights.highPerformers.top_Month, 'Month', 'Revenue', '#7400B8')}
+            {insights.lowPerformers?.bottom_Month && renderPerformerSection('Bottom Months', insights.lowPerformers.bottom_Month, 'Month', 'Revenue', '#C084FC')}
+            {renderTotals(insights.totals)}
+            {renderTrends(insights.trends)}
+            {renderSummary(summary)}
+            {renderHypotheses(insights.hypothesis)}
+            {renderSection('Forecast', insights.forecast)}
+            {renderSection('Segments', insights.segments)}
+            {renderVariance(insights.variance)}
             </motion.div>
-        </>
     );
 };
 

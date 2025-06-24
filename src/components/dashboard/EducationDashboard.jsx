@@ -53,422 +53,165 @@ const EducationDashboard = ({ file, analysis }) => {
         };
     });
 
+    const [showSummary, setShowSummary] = useState(false);
+
+    // Helper: Render KPIs
+    const renderKPIs = (kpis) => {
+        if (!kpis || Object.keys(kpis).length === 0) return null;
     return (
-        <>
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-8 p-4 sm:p-6 lg:p-8"
-            >
-                {/* Key Performance Indicators */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20">
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20 mb-8">
                     <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                         <FiTrendingUp className="w-6 h-6 text-[#7400B8]" />
                         Key Performance Indicators
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {Object.entries(kpis).map(([key, value], idx) => (
                         <motion.div
+                            key={key}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
+                            transition={{ delay: idx * 0.1 }}
                             className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 hover:shadow-lg"
                         >
                             <div className="flex items-center gap-3 mb-3">
                                 <div className="w-10 h-10 rounded-xl bg-[#7400B8]/10 flex items-center justify-center">
-                                    <FiAward className="w-5 h-5 text-[#7400B8]" />
+                                    <FiBarChart2 className="w-5 h-5 text-[#7400B8]" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">Avg Score</p>
+                                    <p className="text-sm font-medium text-gray-600">
+                                        {key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                    </p>
                                 </div>
                             </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{formatNumber(kpis?.avg_score || 0)}</p>
-                            <p className="text-xs text-green-600 mt-2 flex items-center">
-                                <FiArrowUp className="w-3 h-3 mr-1" />
-                                {formatNumber(kpis?.max_score || 0)} max
-                            </p>
+                            <p className="text-2xl font-bold text-[#7400B8]">{String(value)}</p>
                         </motion.div>
-
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
-                            className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 hover:shadow-lg"
-                        >
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-xl bg-[#7400B8]/10 flex items-center justify-center">
-                                    <FiUsers className="w-5 h-5 text-[#7400B8]" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Attendance Rate</p>
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{kpis?.attendance_rate_avg || '0%'}</p>
-                            <p className="text-xs text-blue-600 mt-2 flex items-center">
-                                <FiArrowUp className="w-3 h-3 mr-1" />
-                                Average attendance
-                            </p>
-                        </motion.div>
-
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
-                            className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 hover:shadow-lg"
-                        >
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-xl bg-[#7400B8]/10 flex items-center justify-center">
-                                    <FiBookOpen className="w-5 h-5 text-[#7400B8]" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Completion Rate</p>
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{kpis?.avg_completion_rate || '0%'}</p>
-                            <p className="text-xs text-purple-600 mt-2 flex items-center">
-                                <FiArrowUp className="w-3 h-3 mr-1" />
-                                Course completion
-                            </p>
-                        </motion.div>
-
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.4 }}
-                            className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 hover:shadow-lg"
-                        >
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-xl bg-[#7400B8]/10 flex items-center justify-center">
-                                    <FiActivity className="w-5 h-5 text-[#7400B8]" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Resource Usage</p>
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{formatNumber(kpis?.avg_resource_usage || 0)} hrs</p>
-                            <p className="text-xs text-orange-600 mt-2 flex items-center">
-                                <FiArrowUp className="w-3 h-3 mr-1" />
-                                {formatNumber(kpis?.max_resource_usage || 0)} max hours
-                            </p>
-                        </motion.div>
-                    </div>
+                    ))}
                 </div>
+                                        </div>
+        );
+    };
 
-                {/* Performance Analysis */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Top Performers */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                    >
+    // Helper: Render High/Low Performers
+    const renderPerformerSection = (title, data, labelKey, valueKey, color) => {
+        if (!data || !data[labelKey] || !data[valueKey] || !Array.isArray(data[labelKey]) || !Array.isArray(data[valueKey]) || data[labelKey].length === 0) return null;
+        return (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 flex flex-col items-start mb-8 w-full">
                         <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                            <FiTrendingUp className="w-6 h-6 text-[#7400B8]" />
-                            Top Performing Students
+                    <FiTrendingUp className="w-6 h-6 text-[#7400B8]" /> {title}
                         </h3>
-                        <div className="space-y-4">
-                            {highPerformers?.top_students?.Student?.map((student, index) => (
-                                <motion.div
-                                    key={student}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-white rounded-2xl border border-green-200"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                            {index + 1}
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-800">{student}</p>
-                                            <p className="text-sm text-gray-600">{highPerformers.top_students.Score[index]} score</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-lg font-bold text-green-600">{highPerformers.top_students.Score[index]}</p>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </motion.div>
-
-                    {/* Low Performers */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                    >
-                        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                            <FiTrendingDown className="w-6 h-6 text-[#7400B8]" />
-                            Students Needing Support
-                        </h3>
-                        <div className="space-y-4">
-                            {lowPerformers?.bottom_students?.Student?.map((student, index) => (
-                                <motion.div
-                                    key={student}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    className="flex items-center justify-between p-4 bg-gradient-to-r from-red-50 to-white rounded-2xl border border-red-200"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                            {index + 1}
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-800">{student}</p>
-                                            <p className="text-sm text-gray-600">{lowPerformers.bottom_students.Score[index]} score</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-lg font-bold text-red-600">{lowPerformers.bottom_students.Score[index]}</p>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </motion.div>
-                </div>
-
-                {/* Charts Grid */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                    {/* Performance by Student Chart */}
-                    {totals?.performance_by_student?.Student && Array.isArray(totals.performance_by_student.Student) && totals.performance_by_student.Student.length > 0 && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                        >
-                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                <FiAward className="w-6 h-6 text-[#7400B8]" />
-                                Performance by Student
-                            </h3>
-                            <div className="h-[350px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart
-                                        data={totals.performance_by_student.Student.map((student, index) => ({
-                                            name: student,
-                                            score: totals.performance_by_student.Score[index]
-                                        }))}
-                                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                                    >
+                <div className="w-full">
+                    <ResponsiveContainer width="100%" height={220}>
+                        <BarChart data={data[labelKey].map((label, i) => ({ [labelKey]: label, [valueKey]: data[valueKey][i] }))} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                        <XAxis dataKey="name" />
-                                        <YAxis />
-                                        <Tooltip 
-                                            formatter={(value) => [value.toLocaleString(), 'Score']}
-                                            labelStyle={{ color: '#7400B8' }}
-                                            contentStyle={{
-                                                backgroundColor: 'white',
-                                                border: '1px solid #f0f0f0',
-                                                borderRadius: '12px',
-                                                padding: '12px',
-                                                boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                            }}
-                                        />
+                            <XAxis type="number" />
+                            <YAxis dataKey={labelKey} type="category" width={120} />
+                            <Tooltip formatter={(value) => [value, valueKey]} />
                                         <Legend />
-                                        <Bar 
-                                            dataKey="score" 
-                                            fill="#7400B8" 
-                                            radius={[8, 8, 0, 0]}
-                                            barSize={40}
-                                        >
-                                            {totals.performance_by_student.Student.map((_, index) => (
-                                                <Cell key={`cell-${index}`} fill={`rgba(116, 0, 184, ${0.3 + (index * 0.15)})`} />
+                            <Bar dataKey={valueKey} fill={color} radius={[0, 8, 8, 0]} barSize={28}>
+                                {data[labelKey].map((_, idx) => (
+                                    <Cell key={`cell-${idx}`} fill={pieColors[idx % pieColors.length]} />
                                             ))}
                                         </Bar>
-                                    </ComposedChart>
+                        </BarChart>
                                 </ResponsiveContainer>
                             </div>
                         </motion.div>
-                    )}
+        );
+    };
 
-                    {/* Performance by Subject Chart */}
-                    {totals?.performance_by_subject?.Subject && Array.isArray(totals.performance_by_subject.Subject) && totals.performance_by_subject.Subject.length > 0 && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                        >
+    // Helper: Render Totals (line chart or table style)
+    const renderTotals = (totals) => {
+        if (!totals || Object.keys(totals).length === 0) return null;
+        return (
+            <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8">
                             <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                <FiBookOpen className="w-6 h-6 text-[#7400B8]" />
-                                Performance by Subject
+                    <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Totals
                             </h3>
-                            <div className="h-[350px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={totals.performance_by_subject.Subject.map((subject, index) => ({
-                                                name: subject,
-                                                value: totals.performance_by_subject.Score[index]
-                                            }))}
-                                            dataKey="value"
-                                            nameKey="name"
-                                            cx="50%"
-                                            cy="50%"
-                                            outerRadius={120}
-                                            fill="#8884d8"
-                                            labelLine={false}
-                                            label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
-                                                const RADIAN = Math.PI / 180;
-                                                const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                                                const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                                                const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
+                <div className="flex flex-col gap-8 w-full">
+                    {Object.entries(totals).map(([key, value], idx) => {
+                        // Line chart for object with two arrays of equal length
+                        if (
+                            typeof value === 'object' && value !== null &&
+                            Array.isArray(Object.values(value)[0]) &&
+                            Array.isArray(Object.values(value)[1]) &&
+                            Object.values(value)[0].length > 0 &&
+                            Object.values(value)[0].length === Object.values(value)[1].length
+                        ) {
+                            const [labelKey, valueKey] = Object.keys(value);
+                            const data = value[labelKey].map((label, i) => ({
+                                [labelKey]: label,
+                                [valueKey]: value[valueKey][i]
+                            }));
                                                 return (
-                                                    <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-                                                        {`${(percent * 100).toFixed(0)}%`}
-                                                    </text>
-                                                );
-                                            }}
-                                        >
-                                            {totals.performance_by_subject.Subject.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip 
-                                            formatter={(value, name) => [value.toLocaleString(), name]}
-                                            contentStyle={{
-                                                backgroundColor: 'white',
-                                                border: '1px solid #f0f0f0',
-                                                borderRadius: '12px',
-                                                padding: '12px',
-                                                boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                            }}
-                                        />
+                                <div key={key} className="w-full flex flex-col items-center justify-center h-full flex-1 overflow-visible">
+                                    <h4 className="font-bold mb-2 text-center w-full break-words">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                    <div className="w-full flex items-center justify-center h-full overflow-visible">
+                                        <ResponsiveContainer width="100%" height={300}>
+                                            <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                                <XAxis dataKey={labelKey} tick={{ fontSize: 12 }} interval={0} angle={data.length > 8 ? -30 : 0} textAnchor={data.length > 8 ? 'end' : 'middle'} height={data.length > 8 ? 60 : 30} />
+                                                <YAxis />
+                                                <Tooltip formatter={(v) => v} />
                                         <Legend />
-                                    </PieChart>
+                                                <Line type="monotone" dataKey={valueKey} stroke="#7400B8" strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 8 }} />
+                                            </LineChart>
                                 </ResponsiveContainer>
                             </div>
-                        </motion.div>
-                    )}
                 </div>
-
-                {/* Additional Charts */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                    {/* Attendance by Subject */}
-                    {totals?.attendance_by_subject?.Subject && Array.isArray(totals.attendance_by_subject.Subject) && totals.attendance_by_subject.Subject.length > 0 && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                        >
-                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                <FiUsers className="w-6 h-6 text-[#7400B8]" />
-                                Attendance by Subject
-                            </h3>
-                            <div className="h-[350px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart
-                                        data={totals.attendance_by_subject.Subject.map((subject, index) => ({
-                                            name: subject,
-                                            attendance: totals.attendance_by_subject.Attendance[index]
-                                        }))}
-                                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                                    >
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                        <XAxis dataKey="name" />
-                                        <YAxis />
-                                        <Tooltip 
-                                            formatter={(value) => [`${value}%`, 'Attendance']}
-                                            labelStyle={{ color: '#7400B8' }}
-                                            contentStyle={{
-                                                backgroundColor: 'white',
-                                                border: '1px solid #f0f0f0',
-                                                borderRadius: '12px',
-                                                padding: '12px',
-                                                boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                            }}
-                                        />
-                                        <Legend />
-                                        <Bar 
-                                            dataKey="attendance" 
-                                            fill="#9B4DCA" 
-                                            radius={[8, 8, 0, 0]}
-                                            barSize={40}
-                                        >
-                                            {totals.attendance_by_subject.Subject.map((_, index) => (
-                                                <Cell key={`cell-${index}`} fill={`rgba(155, 77, 202, ${0.3 + (index * 0.15)})`} />
-                                            ))}
-                                        </Bar>
-                                    </ComposedChart>
-                                </ResponsiveContainer>
+                            );
+                        }
+                        // Fallback: table or primitive
+                        return (
+                            <div key={key} className="w-full">
+                                <h4 className="font-bold mb-2">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                {typeof value === 'object' && value !== null && Array.isArray(Object.values(value)[0]) ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full text-xs">
+                                            <thead>
+                                                <tr>
+                                                    {Object.keys(value).map((col, i) => <th key={i} className="px-2 py-1 border-b text-left">{col}</th>)}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {value[Object.keys(value)[0]].map((_, rowIdx) => (
+                                                    <tr key={rowIdx}>
+                                                        {Object.keys(value).map((col, i) => <td key={i} className="px-2 py-1 border-b">{value[col][rowIdx]}</td>)}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                             </div>
-                        </motion.div>
-                    )}
-
-                    {/* Resource Usage by Student */}
-                    {totals?.resource_usage_by_student?.Student && Array.isArray(totals.resource_usage_by_student.Student) && totals.resource_usage_by_student.Student.length > 0 && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                        >
-                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                <FiActivity className="w-6 h-6 text-[#7400B8]" />
-                                Resource Usage by Student
-                            </h3>
-                            <div className="h-[350px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart
-                                        data={totals.resource_usage_by_student.Student.map((student, index) => ({
-                                            name: student,
-                                            hours: totals.resource_usage_by_student.ResourceHours[index]
-                                        }))}
-                                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                                    >
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                        <XAxis dataKey="name" />
-                                        <YAxis />
-                                        <Tooltip 
-                                            formatter={(value) => [`${value} hours`, 'Resource Usage']}
-                                            labelStyle={{ color: '#7400B8' }}
-                                            contentStyle={{
-                                                backgroundColor: 'white',
-                                                border: '1px solid #f0f0f0',
-                                                borderRadius: '12px',
-                                                padding: '12px',
-                                                boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                            }}
-                                        />
-                                        <Legend />
-                                        <Bar 
-                                            dataKey="hours" 
-                                            fill="#C77DFF" 
-                                            radius={[8, 8, 0, 0]}
-                                            barSize={40}
-                                        >
-                                            {totals.resource_usage_by_student.Student.map((_, index) => (
-                                                <Cell key={`cell-${index}`} fill={`rgba(199, 125, 255, ${0.3 + (index * 0.15)})`} />
-                                            ))}
-                                        </Bar>
-                                    </ComposedChart>
-                                </ResponsiveContainer>
+                                ) : (
+                                    <p>{JSON.stringify(value)}</p>
+                                )}
                             </div>
-                        </motion.div>
-                    )}
+                        );
+                    })}
                 </div>
+            </div>
+        );
+    };
 
-                {/* Trends Analysis */}
-                {trends && Array.isArray(trends) && trends.length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                    >
+    // Helper: Render Trends
+    const renderTrends = (trends) => {
+        if (!Array.isArray(trends) || trends.length === 0) return null;
+        if (trends.length < 3) {
+            return (
+                <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8 text-center text-gray-500">
+                    Not enough data to display trends graph.
+                </div>
+            );
+        }
+        return (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8 w-full">
                         <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                            <FiTrendingUp className="w-6 h-6 text-[#7400B8]" />
-                            Academic Performance Trends
+                    <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Trends
                         </h3>
-                        <div className="h-[400px] w-full">
+                <div className="h-[350px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart
-                                    data={trends}
-                                    margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
-                                >
+                        <AreaChart data={trends} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
                                     <defs>
-                                        <linearGradient id="colorPerformance" x1="0" y1="0" x2="0" y2="1">
+                                <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#7400B8" stopOpacity={0.8}/>
                                             <stop offset="95%" stopColor="#7400B8" stopOpacity={0}/>
                                         </linearGradient>
@@ -476,119 +219,137 @@ const EducationDashboard = ({ file, analysis }) => {
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                     <XAxis dataKey="date" />
                                     <YAxis />
-                                    <Tooltip 
-                                        formatter={(value) => [value.toLocaleString(), 'Performance']}
-                                        labelStyle={{ color: '#7400B8' }}
-                                        contentStyle={{
-                                            backgroundColor: 'white',
-                                            border: '1px solid #f0f0f0',
-                                            borderRadius: '12px',
-                                            padding: '12px',
-                                            boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                        }}
-                                    />
-                                    <Area 
-                                        type="monotone" 
-                                        dataKey="total" 
-                                        stroke="#7400B8" 
-                                        fill="url(#colorPerformance)" 
-                                        strokeWidth={3}
-                                    />
+                            <Tooltip />
+                            <Legend />
+                            <Area type="monotone" dataKey="total" stroke="#7400B8" fill="url(#colorTrend)" strokeWidth={3} />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </motion.div>
-                )}
+        );
+    };
 
-                {/* Data Summary */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
+    // Helper: Render Summary
+    const renderSummary = (summary) => {
+        if (!summary || Object.keys(summary).length === 0) return null;
+        return (
+            <div className="mb-8">
+                <button
+                    className="mb-4 px-4 py-2 bg-[#7400B8] text-white rounded-lg shadow hover:bg-[#5a0091] transition"
+                    onClick={() => setShowSummary(s => !s)}
                 >
-                    <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                        <FiCalendar className="w-6 h-6 text-[#7400B8]" />
-                        Data Analytics Summary
-                    </h3>
-                    <p className="text-gray-600 mb-6">Statistical overview of educational metrics</p>
-                    
-                    <div className="mb-6">
-                        <p className="text-sm text-gray-600">Metrics analyzed: <span className="font-semibold text-[#7400B8]">{summaryFields.length}</span></p>
+                    {showSummary ? 'Hide Summary' : 'Show Summary'}
+                </button>
+                {showSummary && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {Object.entries(summary).map(([field, details]) => (
+                            <div key={field} className="bg-[#F9F4FF] rounded-2xl p-4 border border-[#7400B8]/10">
+                                <h4 className="font-bold mb-2">{field}</h4>
+                                {/* Numeric summary */}
+                                {details.type === 'numeric' && (
+                                    <ul className="text-sm space-y-1">
+                                        <li><span className="font-semibold">Count:</span> {details.count}</li>
+                                        <li><span className="font-semibold">Min:</span> {details.min}</li>
+                                        <li><span className="font-semibold">Max:</span> {details.max}</li>
+                                        <li><span className="font-semibold">Mean:</span> {details.mean}</li>
+                                        <li><span className="font-semibold">Median:</span> {details.median}</li>
+                                        <li><span className="font-semibold">Stddev:</span> {details.stddev}</li>
+                                    </ul>
+                                )}
+                                {/* Categorical summary */}
+                                {details.type === 'categorical' && (
+                                    <>
+                                        <div className="mb-2 text-sm"><span className="font-semibold">Unique Count:</span> {details.unique_count}</div>
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full text-xs">
+                                                <thead>
+                                                    <tr>
+                                                        <th className="px-2 py-1 border-b text-left">Value</th>
+                                                        <th className="px-2 py-1 border-b text-left">Count</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {details.top_values && details.top_values.map((v, i) => (
+                                                        <tr key={i}>
+                                                            <td className="px-2 py-1 border-b">{v.value}</td>
+                                                            <td className="px-2 py-1 border-b">{v.count}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {summaryFields.map((field, index) => (
-                            <motion.div
-                                key={field.name}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                className="p-4 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200"
-                            >
-                                <h4 className="font-semibold text-gray-800 mb-3 capitalize">
-                                    {field.name.replace(/([A-Z])/g, ' $1').trim()}
-                                </h4>
-                                <div className="space-y-2 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Min:</span>
-                                        <span className="font-medium text-[#7400B8]">
-                                            {field.name.includes('Rate') || field.name.includes('Score') ? formatPercentage(field.min) : formatNumber(field.min)}
-                                        </span>
+                                    </>
+                                )}
+                                {/* Boolean summary */}
+                                {details.type === 'boolean' && (
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full text-xs">
+                                            <thead>
+                                                <tr>
+                                                    <th className="px-2 py-1 border-b text-left">Value</th>
+                                                    <th className="px-2 py-1 border-b text-left">Count</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {details.counts && details.counts.map((v, i) => (
+                                                    <tr key={i}>
+                                                        <td className="px-2 py-1 border-b">{String(v.value)}</td>
+                                                        <td className="px-2 py-1 border-b">{v.count}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Max:</span>
-                                        <span className="font-medium text-[#7400B8]">
-                                            {field.name.includes('Rate') || field.name.includes('Score') ? formatPercentage(field.max) : formatNumber(field.max)}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Mean:</span>
-                                        <span className="font-medium text-[#7400B8]">
-                                            {field.name.includes('Rate') || field.name.includes('Score') ? formatPercentage(field.mean) : formatNumber(field.mean)}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Median:</span>
-                                        <span className="font-medium text-[#7400B8]">
-                                            {field.name.includes('Rate') || field.name.includes('Score') ? formatPercentage(field.median) : formatNumber(field.median)}
-                                        </span>
-                                    </div>
+                                )}
                                 </div>
-                            </motion.div>
                         ))}
                     </div>
-                </motion.div>
+                )}
+            </div>
+        );
+    };
 
-                {/* Hypothesis Section */}
+    // Helper: Render Hypotheses
+    const renderHypotheses = (hypothesis) => {
+        if (!Array.isArray(hypothesis) || hypothesis.length === 0) return null;
+        return (
+            <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8">
+                <h4 className="font-bold mb-2">Hypotheses</h4>
+                <ul className="list-disc list-inside">
+                    {hypothesis.map((h, i) => <li key={i}>{h}</li>)}
+                </ul>
+            </div>
+        );
+    };
+
+    return (
+        <>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                >
-                    <div className="flex items-center space-x-3 mb-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-2xl flex items-center justify-center">
-                            <FiInfo className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-bold text-gray-800">Analysis Summary</h3>
-                            <p className="text-gray-600">Key insights and recommendations</p>
-                        </div>
-                    </div>
-                    
-                    {/* Hypothesis */}
-                    {hypothesis && Array.isArray(hypothesis) && (
-                        <div className="space-y-2">
-                            {hypothesis.map((item, index) => (
-                                <div key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                                    <span className="text-[#7400B8] mt-0.5">•</span>
-                                    <span>{item}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </motion.div>
+                className="space-y-8 p-4 sm:p-6 lg:p-8"
+            >
+                {renderKPIs(kpis)}
+                {/* High Performers */}
+                {highPerformers && (
+                    <>
+                        {renderPerformerSection('Top Students', highPerformers.top_students, 'StudentID', 'Grade', '#7400B8')}
+                        {renderPerformerSection('Top Subjects', highPerformers.top_subjects, 'Subject', 'Grade', '#8B5CF6')}
+                        {renderPerformerSection('Top Resource Users', highPerformers.top_resource_users, 'StudentID', 'LibraryUsage (hrs/month)', '#C084FC')}
+                    </>
+                )}
+                {/* Low Performers */}
+                {lowPerformers && (
+                    <>
+                        {renderPerformerSection('Bottom Students', lowPerformers.bottom_students, 'StudentID', 'Grade', '#C084FC')}
+                        {renderPerformerSection('Bottom Subjects', lowPerformers.bottom_subjects, 'Subject', 'Grade', '#F59E42')}
+                        {renderPerformerSection('Bottom Resource Users', lowPerformers.bottom_resource_users, 'StudentID', 'LibraryUsage (hrs/month)', '#F87171')}
+                    </>
+                )}
+                {renderTotals(totals)}
+                {renderTrends(trends)}
+                {renderSummary(summary)}
+                {renderHypotheses(hypothesis)}
             </motion.div>
         </>
     );

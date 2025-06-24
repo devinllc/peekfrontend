@@ -5,7 +5,6 @@ import {
     BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
     ResponsiveContainer, ComposedChart, Cell, Area, AreaChart, PieChart, Pie
 } from 'recharts';
-import AIAnalyst from './AIAnalyst';
 
 const HealthcareDashboard = ({ file, analysis }) => {
     if (!file || !analysis) {
@@ -26,7 +25,17 @@ const HealthcareDashboard = ({ file, analysis }) => {
     ];
 
     const { summary, insights } = analysis;
-    const { kpis, highPerformers, lowPerformers, hypothesis, totals, trends } = insights;
+    const {
+        kpis = {},
+        highPerformers = {},
+        lowPerformers = {},
+        hypothesis = [],
+        totals = {},
+        trends = {},
+        breakdowns = {},
+        correlations = [],
+        forecasts = {},
+    } = insights || {};
 
     // Helper function to format numbers
     const formatNumber = (value) => {
@@ -42,16 +51,283 @@ const HealthcareDashboard = ({ file, analysis }) => {
     };
 
     // Get summary fields dynamically
-    const summaryFields = Object.keys(summary || {}).map(fieldName => {
-        const fieldData = summary[fieldName];
-        return {
-            name: fieldName,
-            min: fieldData?.min || 0,
-            max: fieldData?.max || 0,
-            mean: fieldData?.mean || 0,
-            median: fieldData?.median || 0
+    const summaryFields = Object.entries(summary || {}).map(([name, field]) => ({
+        name,
+        ...field,
+    }));
+
+    // Helper to render summary field
+    const renderSummaryField = (field) => {
+        if (field.type === 'numeric') {
+            return (
+                <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                        <span className="text-gray-600">Min:</span>
+                        <span className="font-medium text-[#7400B8]">{formatNumber(field.min)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-600">Max:</span>
+                        <span className="font-medium text-[#7400B8]">{formatNumber(field.max)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-600">Mean:</span>
+                        <span className="font-medium text-[#7400B8]">{formatNumber(field.mean)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-600">Median:</span>
+                        <span className="font-medium text-[#7400B8]">{formatNumber(field.median)}</span>
+                    </div>
+                    {field.stddev !== undefined && (
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Stddev:</span>
+                            <span className="font-medium text-[#7400B8]">{formatNumber(field.stddev)}</span>
+                        </div>
+                    )}
+                </div>
+            );
+        } else if (field.type === 'categorical') {
+            return (
+                <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                        <span className="text-gray-600">Unique:</span>
+                        <span className="font-medium text-[#7400B8]">{field.unique_count}</span>
+                    </div>
+                    <div>
+                        <span className="text-gray-600">Top values:</span>
+                        <ul className="ml-2 mt-1 list-disc text-xs text-gray-700">
+                            {field.top_values?.map((v, i) => (
+                                <li key={i}>{v.value} <span className="text-[#7400B8]">({v.count})</span></li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    };
+
+    // Helper to render breakdown charts
+    const renderBreakdownChart = (data, xKey, yKey, title, icon) => (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
+        >
+            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                {icon}
+                {title}
+            </h3>
+            <div className="h-[350px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey={xKey} />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey={yKey} fill="#7400B8" radius={[8, 8, 0, 0]} />
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+        </motion.div>
+    );
+
+    // Helper to render pie chart breakdowns
+    const renderPieBreakdown = (data, nameKey, valueKey, title, icon) => (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
+        >
+            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                {icon}
+                {title}
+            </h3>
+            <div className="h-[350px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                        <Pie
+                            data={data}
+                            dataKey={valueKey}
+                            nameKey={nameKey}
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={120}
+                            fill="#8884d8"
+                            labelLine={false}
+                            label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
+                                const RADIAN = Math.PI / 180;
+                                const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                                const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                                const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                                return (
+                                    <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+                                        {`${(percent * 100).toFixed(0)}%`}
+                                    </text>
+                                );
+                            }}
+                        >
+                            {data.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
+                            ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                    </PieChart>
+                </ResponsiveContainer>
+            </div>
+        </motion.div>
+    );
+
+    // --- Trends scaling state ---
+    const [trendWindow, setTrendWindow] = useState('all');
+    const [customRange, setCustomRange] = useState({ start: '', end: '' });
+
+    // Helper to render medication trends
+    const renderMedicationTrends = (data) => {
+        // Helper to normalize to YYYY-MM-DD
+        const toYMD = (date) => {
+            if (!date) return '';
+            const d = new Date(date);
+            if (isNaN(d)) return '';
+            return d.toISOString().slice(0, 10);
         };
-    });
+        let filtered = data;
+        if (trendWindow === 'custom' && (customRange.start || customRange.end)) {
+            const startYMD = customRange.start;
+            const endYMD = customRange.end;
+            filtered = data.filter(d => {
+                const dYMD = toYMD(d.date);
+                if (!dYMD) return false;
+                if (startYMD && endYMD) return dYMD >= startYMD && dYMD <= endYMD;
+                if (startYMD) return dYMD >= startYMD;
+                if (endYMD) return dYMD <= endYMD;
+                return true;
+            });
+        } else if (trendWindow !== 'all') {
+            const window = Math.min(data.length, parseInt(trendWindow));
+            const start = data.length - window;
+            filtered = data.slice(start);
+        }
+        // Format date for display
+        filtered = filtered.map(d => ({ ...d, date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }));
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
+            >
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Medication Trends
+                    </h3>
+                    {data.length > 30 && (
+                        <div className="flex gap-2 items-center bg-white/70 border border-[#7400B8]/10 rounded-xl px-3 py-2 shadow-sm">
+                            <span className="text-sm font-medium text-gray-700">Show:</span>
+                            <select
+                                value={trendWindow}
+                                onChange={e => {
+                                    setTrendWindow(e.target.value);
+                                    if (e.target.value !== 'custom') {
+                                        setCustomRange({ start: '', end: '' });
+                                    }
+                                }}
+                                className="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[#7400B8] focus:border-[#7400B8] bg-white"
+                            >
+                                <option value="7">Last 7 days</option>
+                                <option value="30">Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                                <option value="all">All</option>
+                                <option value="custom">Custom Range…</option>
+                            </select>
+                            {trendWindow === 'custom' && (
+                                <>
+                                    <input
+                                        type="date"
+                                        value={customRange.start}
+                                        max={customRange.end || undefined}
+                                        onChange={e => setCustomRange(r => ({ ...r, start: e.target.value }))}
+                                        className="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[#7400B8] focus:border-[#7400B8] bg-white ml-2"
+                                    />
+                                    <span className="mx-1 text-gray-500">to</span>
+                                    <input
+                                        type="date"
+                                        value={customRange.end}
+                                        min={customRange.start || undefined}
+                                        onChange={e => setCustomRange(r => ({ ...r, end: e.target.value }))}
+                                        className="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[#7400B8] focus:border-[#7400B8] bg-white"
+                                    />
+                                </>
+                            )}
+                        </div>
+                    )}
+                </div>
+                <div className="h-[350px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={filtered}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                            <XAxis dataKey="date" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Line type="monotone" dataKey="count" stroke="#7400B8" strokeWidth={3} />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            </motion.div>
+        );
+    };
+
+    // Helper to render correlations
+    const renderCorrelations = (correlations) => (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 shadow-lg"
+        >
+            <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-[#7400B8]/10 flex items-center justify-center">
+                    <FiBarChart2 className="w-5 h-5 text-[#7400B8]" />
+                </div>
+                <div>
+                    <p className="text-xl font-bold text-gray-800">Correlations</p>
+                </div>
+            </div>
+            <ul className="space-y-2 mt-4">
+                {correlations.map((c, i) => (
+                    <li key={i} className="flex justify-between text-sm text-gray-700">
+                        <span className="font-medium text-gray-600">{c.between}</span>
+                        <span className="font-bold text-[#7400B8]">{c.correlation}</span>
+                    </li>
+                ))}
+            </ul>
+        </motion.div>
+    );
+
+    // Helper to render forecasts
+    const renderForecasts = (forecasts) => (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 shadow-lg"
+        >
+            <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-[#7400B8]/10 flex items-center justify-center">
+                    <FiBarChart2 className="w-5 h-5 text-[#7400B8]" />
+                </div>
+                <div>
+                    <p className="text-xl font-bold text-gray-800">Forecasts</p>
+                </div>
+            </div>
+            <ul className="space-y-2 mt-4">
+                {Object.entries(forecasts).map(([key, value], i) => (
+                    <li key={i} className="flex justify-between text-sm text-gray-700">
+                        <span className="font-medium text-gray-600">{key.replace(/_/g, ' ')}</span>
+                        <span className="font-bold text-[#7400B8]">{value}</span>
+                    </li>
+                ))}
+            </ul>
+        </motion.div>
+    );
 
     return (
         <>
@@ -67,52 +343,12 @@ const HealthcareDashboard = ({ file, analysis }) => {
                         Key Performance Indicators
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {Object.entries(kpis).map(([k, v], idx) => (
                         <motion.div
+                                key={k}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
-                            className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 hover:shadow-lg"
-                        >
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-xl bg-[#7400B8]/10 flex items-center justify-center">
-                                    <FiHeart className="w-5 h-5 text-[#7400B8]" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Total Cases</p>
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{formatNumber(kpis?.total_cases || 0)}</p>
-                            <p className="text-xs text-green-600 mt-2 flex items-center">
-                                <FiArrowUp className="w-3 h-3 mr-1" />
-                                {formatPercentage(kpis?.avg_cases || 0)} avg
-                            </p>
-                        </motion.div>
-
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
-                            className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 hover:shadow-lg"
-                        >
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-xl bg-[#7400B8]/10 flex items-center justify-center">
-                                    <FiTarget className="w-5 h-5 text-[#7400B8]" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Avg Cases</p>
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{formatNumber(kpis?.avg_cases || 0)}</p>
-                            <p className="text-xs text-blue-600 mt-2 flex items-center">
-                                <FiArrowUp className="w-3 h-3 mr-1" />
-                                {formatPercentage(kpis?.median_cases || 0)} median
-                            </p>
-                        </motion.div>
-
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
+                                transition={{ delay: 0.1 * (idx + 1) }}
                             className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 hover:shadow-lg"
                         >
                             <div className="flex items-center gap-3 mb-3">
@@ -120,274 +356,95 @@ const HealthcareDashboard = ({ file, analysis }) => {
                                     <FiBarChart2 className="w-5 h-5 text-[#7400B8]" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">Max Cases</p>
-                                </div>
+                                        <p className="text-sm font-medium text-gray-600">{k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
                             </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{formatNumber(kpis?.max_cases || 0)}</p>
-                            <p className="text-xs text-purple-600 mt-2 flex items-center">
-                                <FiArrowUp className="w-3 h-3 mr-1" />
-                                Peak recorded
-                            </p>
-                        </motion.div>
-
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.4 }}
-                            className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 hover:shadow-lg"
-                        >
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-xl bg-[#7400B8]/10 flex items-center justify-center">
-                                    <FiActivity className="w-5 h-5 text-[#7400B8]" />
                                 </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Next Year Forecast</p>
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{kpis?.predicted_next_year_cases || 'N/A'}</p>
-                            <p className="text-xs text-orange-600 mt-2 flex items-center">
-                                <FiArrowUp className="w-3 h-3 mr-1" />
-                                Predicted cases
-                            </p>
+                                <p className="text-2xl font-bold text-[#7400B8]">{formatNumber(v)}</p>
                         </motion.div>
+                        ))}
                     </div>
                 </div>
 
-                {/* Performance Analysis */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Top Performers */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                    >
-                        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                            <FiTrendingUp className="w-6 h-6 text-[#7400B8]" />
-                            Top Performing Regions
-                        </h3>
-                        <div className="space-y-4">
-                            {highPerformers?.top_regions?.map((region, index) => (
-                                <motion.div
-                                    key={region.Region}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-white rounded-2xl border border-green-200"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                            {index + 1}
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-800">{region.Region}</p>
-                                            <p className="text-sm text-gray-600">{region.Cases} cases</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-lg font-bold text-green-600">{region.Cases}</p>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </motion.div>
-
-                    {/* Low Performers */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                    >
-                        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                            <FiTrendingDown className="w-6 h-6 text-[#7400B8]" />
-                            Low Performing Regions
-                        </h3>
-                        <div className="space-y-4">
-                            {lowPerformers?.bottom_regions?.map((region, index) => (
-                                <motion.div
-                                    key={region.Region}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    className="flex items-center justify-between p-4 bg-gradient-to-r from-red-50 to-white rounded-2xl border border-red-200"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                            {index + 1}
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-800">{region.Region}</p>
-                                            <p className="text-sm text-gray-600">{region.Cases} cases</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-lg font-bold text-red-600">{region.Cases}</p>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </motion.div>
-                </div>
-
-                {/* Charts Grid */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                    {/* Cases by Region Chart */}
-                    {totals?.cases_by_regions && Array.isArray(totals.cases_by_regions) && totals.cases_by_regions.length > 0 && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                        >
-                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                <FiUsers className="w-6 h-6 text-[#7400B8]" />
-                                Cases by Region
-                            </h3>
-                            <div className="h-[350px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart
-                                        data={totals.cases_by_regions}
-                                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                                    >
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                        <XAxis dataKey="Region" />
-                                        <YAxis />
-                                        <Tooltip 
-                                            formatter={(value) => [value.toLocaleString(), 'Cases']}
-                                            labelStyle={{ color: '#7400B8' }}
-                                            contentStyle={{
-                                                backgroundColor: 'white',
-                                                border: '1px solid #f0f0f0',
-                                                borderRadius: '12px',
-                                                padding: '12px',
-                                                boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                            }}
-                                        />
-                                        <Legend />
-                                        <Bar 
-                                            dataKey="Cases" 
-                                            fill="#7400B8" 
-                                            radius={[8, 8, 0, 0]}
-                                            barSize={40}
-                                        >
-                                            {totals.cases_by_regions.map((_, index) => (
-                                                <Cell key={`cell-${index}`} fill={`rgba(116, 0, 184, ${0.3 + (index * 0.15)})`} />
-                                            ))}
-                                        </Bar>
-                                    </ComposedChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* Cases by Condition Chart */}
-                    {totals?.cases_by_conditions && Array.isArray(totals.cases_by_conditions) && totals.cases_by_conditions.length > 0 && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                        >
-                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                <FiBarChart2 className="w-6 h-6 text-[#7400B8]" />
-                                Cases by Condition
-                            </h3>
-                            <div className="h-[350px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={totals.cases_by_conditions}
-                                            dataKey="Cases"
-                                            nameKey="Condition"
-                                            cx="50%"
-                                            cy="50%"
-                                            outerRadius={120}
-                                            fill="#8884d8"
-                                            labelLine={false}
-                                            label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
-                                                const RADIAN = Math.PI / 180;
-                                                const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                                                const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                                                const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-                                                return (
-                                                    <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-                                                        {`${(percent * 100).toFixed(0)}%`}
-                                                    </text>
-                                                );
-                                            }}
-                                        >
-                                            {totals.cases_by_conditions.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip 
-                                            formatter={(value, name) => [value.toLocaleString(), name]}
-                                            contentStyle={{
-                                                backgroundColor: 'white',
-                                                border: '1px solid #f0f0f0',
-                                                borderRadius: '12px',
-                                                padding: '12px',
-                                                boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                            }}
-                                        />
-                                        <Legend />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </motion.div>
-                    )}
-                </div>
-
-                {/* Trends Analysis */}
-                {trends && Array.isArray(trends) && trends.length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                    >
-                        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                            <FiTrendingUp className="w-6 h-6 text-[#7400B8]" />
-                            Cases Trend Analysis
-                        </h3>
-                        <div className="h-[400px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart
-                                    data={trends}
-                                    margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
-                                >
-                                    <defs>
-                                        <linearGradient id="colorCases" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#7400B8" stopOpacity={0.8}/>
-                                            <stop offset="95%" stopColor="#7400B8" stopOpacity={0}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                    <XAxis dataKey="date" />
-                                    <YAxis />
-                                    <Tooltip 
-                                        formatter={(value) => [value.toLocaleString(), 'Cases']}
-                                        labelStyle={{ color: '#7400B8' }}
-                                        contentStyle={{
-                                            backgroundColor: 'white',
-                                            border: '1px solid #f0f0f0',
-                                            borderRadius: '12px',
-                                            padding: '12px',
-                                            boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                        }}
-                                    />
-                                    <Area 
-                                        type="monotone" 
-                                        dataKey="total" 
-                                        stroke="#7400B8" 
-                                        fill="url(#colorCases)" 
-                                        strokeWidth={3}
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </motion.div>
+                {/* Correlations & Forecasts side by side */}
+                {(correlations?.length > 0 || (forecasts && Object.keys(forecasts).length > 0)) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {correlations && correlations.length > 0 && renderCorrelations(correlations)}
+                    {forecasts && Object.keys(forecasts).length > 0 && renderForecasts(forecasts)}
+                  </div>
                 )}
+
+                {/* High/Low Performers */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* High Performer */}
+                    {Object.keys(highPerformers).length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
+                    >
+                        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                            <FiTrendingUp className="w-6 h-6 text-[#7400B8]" />
+                                High Performer
+                        </h3>
+                            <div className="space-y-2">
+                                {Object.entries(highPerformers).map(([k, v], idx) => (
+                                    <div key={k} className="flex justify-between">
+                                        <span className="text-gray-600">{k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
+                                        <span className="font-bold text-green-600">{formatNumber(v)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
+                    {/* Low Performer */}
+                    {Object.keys(lowPerformers).length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
+                        >
+                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                                <FiTrendingDown className="w-6 h-6 text-[#7400B8]" />
+                                Low Performer
+                            </h3>
+                            <div className="space-y-2">
+                                {Object.entries(lowPerformers).map(([k, v], idx) => (
+                                    <div key={k} className="flex justify-between">
+                                        <span className="text-gray-600">{k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
+                                        <span className="font-bold text-red-600">{formatNumber(v)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
+                </div>
+
+                {/* Breakdowns and Trends */}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                    {/* Admissions by Department */}
+                    {breakdowns.admissions_by_department && Array.isArray(breakdowns.admissions_by_department) && breakdowns.admissions_by_department.length > 0 &&
+                        renderBreakdownChart(breakdowns.admissions_by_department, 'Department', 'Admissions', 'Admissions by Department', <FiUsers className="w-6 h-6 text-[#7400B8]" />)
+                    }
+                    {/* Disease Incidence */}
+                    {breakdowns.disease_incidence && Array.isArray(breakdowns.disease_incidence) && breakdowns.disease_incidence.length > 0 &&
+                        renderBreakdownChart(breakdowns.disease_incidence, 'Disease', 'Admissions', 'Disease Incidence', <FiHeart className="w-6 h-6 text-[#7400B8]" />)
+                    }
+                    {/* Equipment Usage */}
+                    {breakdowns.equipment_usage && Array.isArray(breakdowns.equipment_usage) && breakdowns.equipment_usage.length > 0 &&
+                        renderBreakdownChart(breakdowns.equipment_usage, 'Equipment Used', 'Admissions', 'Equipment Usage', <FiBarChart2 className="w-6 h-6 text-[#7400B8]" />)
+                    }
+                    {/* Insurance Claims */}
+                    {breakdowns.insurance_claims && Array.isArray(breakdowns.insurance_claims) && breakdowns.insurance_claims.length > 0 &&
+                        renderBreakdownChart(breakdowns.insurance_claims, 'Insurance Claims', 'Admissions', 'Insurance Claims', <FiBarChart2 className="w-6 h-6 text-[#7400B8]" />)
+                    }
+                        </div>
+
+                {/* Medication Trends */}
+                {trends.medication_trends && Array.isArray(trends.medication_trends) && trends.medication_trends.length > 0 &&
+                    renderMedicationTrends(trends.medication_trends)
+                }
 
                 {/* Data Summary */}
                 <motion.div
@@ -401,11 +458,9 @@ const HealthcareDashboard = ({ file, analysis }) => {
                         Data Analytics Summary
                     </h3>
                     <p className="text-gray-600 mb-6">Statistical overview of healthcare metrics</p>
-                    
                     <div className="mb-6">
                         <p className="text-sm text-gray-600">Metrics analyzed: <span className="font-semibold text-[#7400B8]">{summaryFields.length}</span></p>
                     </div>
-                    
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {summaryFields.map((field, index) => (
                             <motion.div
@@ -418,24 +473,7 @@ const HealthcareDashboard = ({ file, analysis }) => {
                                 <h4 className="font-semibold text-gray-800 mb-3 capitalize">
                                     {field.name.replace(/([A-Z])/g, ' $1').trim()}
                                 </h4>
-                                <div className="space-y-2 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Min:</span>
-                                        <span className="font-medium text-[#7400B8]">{formatNumber(field.min)}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Max:</span>
-                                        <span className="font-medium text-[#7400B8]">{formatNumber(field.max)}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Mean:</span>
-                                        <span className="font-medium text-[#7400B8]">{formatNumber(field.mean)}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Median:</span>
-                                        <span className="font-medium text-[#7400B8]">{formatNumber(field.median)}</span>
-                                    </div>
-                                </div>
+                                {renderSummaryField(field)}
                             </motion.div>
                         ))}
                     </div>
@@ -454,7 +492,6 @@ const HealthcareDashboard = ({ file, analysis }) => {
                             AI-Powered Insights
                         </h3>
                     </div>
-                    
                     {/* Hypothesis */}
                     {hypothesis && Array.isArray(hypothesis) && (
                         <div className="mb-6">

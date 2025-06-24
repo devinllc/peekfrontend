@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiTrendingUp, FiTrendingDown, FiSettings, FiPackage, FiBarChart2, FiAlertTriangle, FiCpu, FiMessageSquare, FiTarget, FiArrowUp, FiArrowDown, FiCalendar, FiDollarSign, FiActivity } from 'react-icons/fi';
+import { FiTrendingUp, FiTrendingDown, FiSettings, FiPackage, FiBarChart2, FiAlertTriangle, FiCpu, FiMessageSquare, FiTarget, FiArrowUp, FiArrowDown, FiCalendar, FiDollarSign, FiActivity, FiUsers } from 'react-icons/fi';
 import {
     BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
     ResponsiveContainer, ComposedChart, Cell, Area, AreaChart, PieChart, Pie
@@ -26,7 +26,8 @@ const ManufacturingDashboard = ({ file, analysis }) => {
     ];
 
     const { summary, insights } = analysis;
-    const { kpis, highPerformers, lowPerformers, hypothesis, totals, trends } = insights;
+    const { kpis, highPerformers, lowPerformers, hypothesis, totals, trends, efficiency, quality, maintenance, supplyChain, energy, workforce } = insights;
+    const [showSummary, setShowSummary] = useState(false);
 
     // Helper function to format numbers
     const formatNumber = (value) => {
@@ -63,311 +64,209 @@ const ManufacturingDashboard = ({ file, analysis }) => {
         };
     });
 
+    // Helper: Round numbers to 4 decimals
+    const round4 = (v) => {
+        if (typeof v === 'number') return Number(v.toFixed(4));
+        if (typeof v === 'string' && !isNaN(Number(v))) return Number(Number(v).toFixed(4));
+        return v;
+    };
+
+    // Helper: Render KPIs
+    const renderKPIs = (kpis) => {
+        if (!kpis || Object.keys(kpis).length === 0) return null;
     return (
-        <>
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-8 p-4 sm:p-6 lg:p-8"
-            >
-                {/* Key Performance Indicators */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20">
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20 mb-8">
                     <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                        <FiTrendingUp className="w-6 h-6 text-[#7400B8]" />
-                        Key Performance Indicators
+                    <FiTrendingUp className="w-6 h-6 text-[#7400B8]" /> Key Performance Indicators
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {Object.entries(kpis).map(([key, value], idx) => (
                         <motion.div
+                            key={key}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
+                            transition={{ delay: idx * 0.1 }}
                             className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 hover:shadow-lg"
                         >
                             <div className="flex items-center gap-3 mb-3">
                                 <div className="w-10 h-10 rounded-xl bg-[#7400B8]/10 flex items-center justify-center">
-                                    <FiPackage className="w-5 h-5 text-[#7400B8]" />
+                                    <FiBarChart2 className="w-5 h-5 text-[#7400B8]" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">Total Production</p>
+                                    <p className="text-sm font-medium text-gray-600">
+                                        {key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                    </p>
                                 </div>
                             </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{formatNumber(kpis?.total_production || 0)}</p>
-                            <p className="text-xs text-green-600 mt-2 flex items-center">
-                                <FiArrowUp className="w-3 h-3 mr-1" />
-                                {formatNumber(kpis?.avg_production || 0)} avg
-                            </p>
+                            <p className="text-2xl font-bold text-[#7400B8]">{String(value)}</p>
                         </motion.div>
-
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
-                            className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 hover:shadow-lg"
-                        >
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-xl bg-[#7400B8]/10 flex items-center justify-center">
-                                    <FiDollarSign className="w-5 h-5 text-[#7400B8]" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Cost per Unit</p>
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{formatCurrency(kpis?.cost_per_unit || 0)}</p>
-                            <p className="text-xs text-blue-600 mt-2 flex items-center">
-                                <FiArrowUp className="w-3 h-3 mr-1" />
-                                {formatCurrency(kpis?.avg_cost || 0)} avg cost
-                            </p>
-                        </motion.div>
-
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
-                            className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 hover:shadow-lg"
-                        >
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-xl bg-[#7400B8]/10 flex items-center justify-center">
-                                    <FiActivity className="w-5 h-5 text-[#7400B8]" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Machine Uptime</p>
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{formatPercentage(kpis?.avg_machine_metric || 0)}</p>
-                            <p className="text-xs text-purple-600 mt-2 flex items-center">
-                                <FiArrowUp className="w-3 h-3 mr-1" />
-                                {formatNumber(kpis?.prod_per_machine_metric || 0)} units/machine
-                            </p>
-                        </motion.div>
-
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.4 }}
-                            className="p-6 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200 hover:shadow-lg"
-                        >
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-xl bg-[#7400B8]/10 flex items-center justify-center">
-                                    <FiAlertTriangle className="w-5 h-5 text-[#7400B8]" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-600">Defect Rate</p>
-                                </div>
-                            </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{formatPercentage(kpis?.avg_quality_metric || 0)}</p>
-                            <p className="text-xs text-orange-600 mt-2 flex items-center">
-                                <FiArrowDown className="w-3 h-3 mr-1" />
-                                Quality metric
-                            </p>
-                        </motion.div>
-                    </div>
+                    ))}
                 </div>
+                                        </div>
+        );
+    };
 
-                {/* Performance Analysis */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Top Performers */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                    >
+    // Helper: Render High/Low Performers (BarChart)
+    const renderPerformerSection = (title, data, labelKey, valueKey, color) => {
+        if (!data || !Array.isArray(data) || data.length === 0) return null;
+        return (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 flex flex-col items-start mb-8 w-full">
                         <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                            <FiTrendingUp className="w-6 h-6 text-[#7400B8]" />
-                            Top Performing Production Lines
+                    <FiTrendingUp className="w-6 h-6 text-[#7400B8]" /> {title}
                         </h3>
-                        <div className="space-y-4">
-                            {highPerformers?.top_Line?.map((line, index) => (
-                                <motion.div
-                                    key={line.Line}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-white rounded-2xl border border-green-200"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                            {index + 1}
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-800">Line {line.Line}</p>
-                                            <p className="text-sm text-gray-600">{line.UnitsProduced} units</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-lg font-bold text-green-600">{formatNumber(line.UnitsProduced)}</p>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </motion.div>
-
-                    {/* Low Performers */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                    >
-                        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                            <FiTrendingDown className="w-6 h-6 text-[#7400B8]" />
-                            Low Performing Production Lines
-                        </h3>
-                        <div className="space-y-4">
-                            {lowPerformers?.bottom_Line?.map((line, index) => (
-                                <motion.div
-                                    key={line.Line}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    className="flex items-center justify-between p-4 bg-gradient-to-r from-red-50 to-white rounded-2xl border border-red-200"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                            {index + 1}
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-800">Line {line.Line}</p>
-                                            <p className="text-sm text-gray-600">{line.UnitsProduced} units</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-lg font-bold text-red-600">{formatNumber(line.UnitsProduced)}</p>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </motion.div>
-                </div>
-
-                {/* Charts Grid */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                    {/* Production by Line Chart */}
-                    {totals?.production_by_Line && Array.isArray(totals.production_by_Line) && totals.production_by_Line.length > 0 && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                        >
-                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                <FiPackage className="w-6 h-6 text-[#7400B8]" />
-                                Production by Line
-                            </h3>
-                            <div className="h-[350px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart
-                                        data={totals.production_by_Line}
-                                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                                    >
+                <div className="w-full">
+                    <ResponsiveContainer width="100%" height={220}>
+                        <BarChart data={data} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                        <XAxis dataKey="Line" />
-                                        <YAxis />
-                                        <Tooltip 
-                                            formatter={(value) => [value.toLocaleString(), 'Units Produced']}
-                                            labelStyle={{ color: '#7400B8' }}
-                                            contentStyle={{
-                                                backgroundColor: 'white',
-                                                border: '1px solid #f0f0f0',
-                                                borderRadius: '12px',
-                                                padding: '12px',
-                                                boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                            }}
-                                        />
+                            <XAxis type="number" />
+                            <YAxis dataKey={labelKey} type="category" width={120} />
+                            <Tooltip formatter={(value) => [value, valueKey]} />
                                         <Legend />
-                                        <Bar 
-                                            dataKey="UnitsProduced" 
-                                            fill="#7400B8" 
-                                            radius={[8, 8, 0, 0]}
-                                            barSize={40}
-                                        >
-                                            {totals.production_by_Line.map((_, index) => (
-                                                <Cell key={`cell-${index}`} fill={`rgba(116, 0, 184, ${0.3 + (index * 0.15)})`} />
+                            <Bar dataKey={valueKey} fill={color} radius={[0, 8, 8, 0]} barSize={28}>
+                                {data.map((_, idx) => (
+                                    <Cell key={`cell-${idx}`} fill={pieColors[idx % pieColors.length]} />
                                             ))}
                                         </Bar>
-                                    </ComposedChart>
+                        </BarChart>
                                 </ResponsiveContainer>
                             </div>
                         </motion.div>
-                    )}
+        );
+    };
 
-                    {/* Production Efficiency Pie Chart */}
-                    {totals?.production_by_Line && Array.isArray(totals.production_by_Line) && totals.production_by_Line.length > 0 && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                        >
+    // Helper: Render Totals (LineChart or BarChart)
+    const renderTotals = (totals) => {
+        if (!totals || Object.keys(totals).length === 0) return null;
+        return (
+            <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8">
                             <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                <FiBarChart2 className="w-6 h-6 text-[#7400B8]" />
-                                Production Distribution by Line
+                    <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Totals
                             </h3>
-                            <div className="h-[350px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={totals.production_by_Line}
-                                            dataKey="UnitsProduced"
-                                            nameKey="Line"
-                                            cx="50%"
-                                            cy="50%"
-                                            outerRadius={120}
-                                            fill="#8884d8"
-                                            labelLine={false}
-                                            label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
-                                                const RADIAN = Math.PI / 180;
-                                                const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                                                const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                                                const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
+                <div className="flex flex-col gap-8 w-full">
+                    {Object.entries(totals).map(([key, value], idx) => {
+                        // If value is array of objects with two keys, render LineChart
+                        if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && Object.keys(value[0]).length === 2) {
+                            const [labelKey, valueKey] = Object.keys(value[0]);
                                                 return (
-                                                    <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-                                                        {`${(percent * 100).toFixed(0)}%`}
-                                                    </text>
-                                                );
-                                            }}
-                                        >
-                                            {totals.production_by_Line.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip 
-                                            formatter={(value, name) => [value.toLocaleString(), `Line ${name}`]}
-                                            contentStyle={{
-                                                backgroundColor: 'white',
-                                                border: '1px solid #f0f0f0',
-                                                borderRadius: '12px',
-                                                padding: '12px',
-                                                boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                            }}
-                                        />
+                                <div key={key} className="w-full flex flex-col items-center justify-center h-full flex-1 overflow-visible">
+                                    <h4 className="font-bold mb-2 text-center w-full break-words">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                    <div className="w-full flex items-center justify-center h-full overflow-visible">
+                                        <ResponsiveContainer width="100%" height={300}>
+                                            <LineChart data={value} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                                <XAxis dataKey={labelKey} tick={{ fontSize: 12 }} interval={0} angle={value.length > 8 ? -30 : 0} textAnchor={value.length > 8 ? 'end' : 'middle'} height={value.length > 8 ? 60 : 30} />
+                                                <YAxis />
+                                                <Tooltip formatter={(v) => v} />
                                         <Legend />
-                                    </PieChart>
+                                                <Line type="monotone" dataKey={valueKey} stroke="#7400B8" strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 8 }} />
+                                            </LineChart>
                                 </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            );
+                        }
+                        // Fallback: table or primitive
+                        return (
+                            <div key={key} className="w-full">
+                                <h4 className="font-bold mb-2">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                <p>{JSON.stringify(value)}</p>
                             </div>
-                        </motion.div>
-                    )}
+                        );
+                    })}
                 </div>
+            </div>
+        );
+    };
 
-                {/* Trends Analysis */}
-                {trends && Array.isArray(trends) && trends.length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                    >
-                        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                            <FiTrendingUp className="w-6 h-6 text-[#7400B8]" />
-                            Production Trend Analysis
+    // Helper: Get main metric from a section (first numeric or rate/efficiency/cost)
+    const getMainMetric = (data) => {
+        if (!data) return null;
+        const keys = Object.keys(data);
+        // Prefer keys with 'rate', 'efficiency', 'cost', 'main', 'avg', 'total'
+        const preferred = keys.find(k => /rate|efficiency|cost|main|avg|total/i.test(k) && typeof data[k] === 'number');
+        if (preferred) return { key: preferred, value: data[preferred] };
+        // Otherwise, first numeric
+        const firstNum = keys.find(k => typeof data[k] === 'number');
+        if (firstNum) return { key: firstNum, value: data[firstNum] };
+        // Otherwise, first value
+        return { key: keys[0], value: data[keys[0]] };
+    };
+
+    // Helper: Render KPI Cards Row (for efficiency, quality, energy, supplyChain)
+    const renderKpiCardsRow = () => {
+        const cardData = [
+            { title: 'Efficiency', data: efficiency, icon: <FiActivity className="w-6 h-6 text-[#7400B8]" />, color: 'from-[#F9F4FF] to-white', border: 'border-[#7400B8]/10' },
+            { title: 'Quality', data: quality, icon: <FiAlertTriangle className="w-6 h-6 text-[#C084FC]" />, color: 'from-[#F9F4FF] to-white', border: 'border-[#C084FC]/10' },
+            { title: 'Energy', data: energy, icon: <FiCpu className="w-6 h-6 text-[#8B5CF6]" />, color: 'from-[#F9F4FF] to-white', border: 'border-[#8B5CF6]/10' },
+            { title: 'Supply Chain', data: supplyChain, icon: <FiPackage className="w-6 h-6 text-[#F59E42]" />, color: 'from-[#F9F4FF] to-white', border: 'border-[#F59E42]/10' },
+        ];
+        // Only show cards with data
+        const visibleCards = cardData.filter(card => card.data && Object.keys(card.data).length > 0);
+        if (visibleCards.length === 0) return null;
+        return (
+            <div className="flex flex-wrap gap-4 w-full mb-8">
+                {visibleCards.map((card, idx) => {
+                    // Show all numeric or string-number values
+                    const metrics = Object.entries(card.data).filter(([k, v]) => typeof v === 'number' || (typeof v === 'string' && !isNaN(Number(v))));
+                    return (
+                        <div key={card.title} className={`flex-1 min-w-[220px] max-w-[20%] bg-white/80 rounded-2xl p-6 border ${card.border} flex flex-col items-start justify-between shadow h-[220px] transition-all duration-200 hover:shadow-lg hover:scale-[1.03] bg-gradient-to-br ${card.color}`}>
+                            <div className="flex items-center gap-2 mb-2">{card.icon}<span className="font-bold text-lg">{card.title}</span></div>
+                            <div className="flex-1 flex flex-col justify-center w-full gap-3">
+                                {metrics.length === 0 && <p className="text-gray-400 text-sm">No numeric data</p>}
+                                {metrics.map(([k, v]) => (
+                                    <div key={k} className="flex flex-col items-start w-full">
+                                        <span className="text-2xl font-bold text-[#7400B8]">{round4(v)}</span>
+                                        <span className="text-xs text-gray-600">{k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
+
+    // Filter state for trends and maintenance
+    const [trendsMetric, setTrendsMetric] = useState('total');
+    const [maintMetric, setMaintMetric] = useState('total');
+
+    // Helper: Get available metrics for trends/maintenance
+    const getAvailableMetrics = (arr) => {
+        if (!Array.isArray(arr) || arr.length === 0) return [];
+        return Object.keys(arr[0]).filter(k => typeof arr[0][k] === 'number');
+    };
+
+    // Helper: Render Trends with filter
+    const renderTrends = (trends) => {
+        if (!Array.isArray(trends) || trends.length === 0) return null;
+        if (trends.length < 3) {
+            return (
+                <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8 text-center text-gray-500">
+                    Not enough data to display trends graph.
+                </div>
+            );
+        }
+        const metrics = getAvailableMetrics(trends);
+        const metric = metrics.includes(trendsMetric) ? trendsMetric : metrics[0];
+        return (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8 w-full">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Trends
                         </h3>
-                        <div className="h-[400px] w-full">
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm">Metric:</span>
+                        <select value={metric} onChange={e => setTrendsMetric(e.target.value)} className="border rounded px-2 py-1 text-sm">
+                            {metrics.map(m => <option key={m} value={m}>{m.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>)}
+                        </select>
+                    </div>
+                </div>
+                <div className="h-[350px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart
-                                    data={trends}
-                                    margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
-                                >
+                        <AreaChart data={trends.map(d => ({ ...d, [metric]: round4(d[metric]) }))} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
                                     <defs>
-                                        <linearGradient id="colorProduction" x1="0" y1="0" x2="0" y2="1">
+                                <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#7400B8" stopOpacity={0.8}/>
                                             <stop offset="95%" stopColor="#7400B8" stopOpacity={0}/>
                                         </linearGradient>
@@ -375,129 +274,190 @@ const ManufacturingDashboard = ({ file, analysis }) => {
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                     <XAxis dataKey="date" />
                                     <YAxis />
-                                    <Tooltip 
-                                        formatter={(value) => [value.toLocaleString(), 'Production']}
-                                        labelStyle={{ color: '#7400B8' }}
-                                        contentStyle={{
-                                            backgroundColor: 'white',
-                                            border: '1px solid #f0f0f0',
-                                            borderRadius: '12px',
-                                            padding: '12px',
-                                            boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                                        }}
-                                    />
-                                    <Area 
-                                        type="monotone" 
-                                        dataKey="total" 
-                                        stroke="#7400B8" 
-                                        fill="url(#colorProduction)" 
-                                        strokeWidth={3}
-                                    />
+                            <Tooltip formatter={(v) => round4(v)} />
+                            <Legend />
+                            <Area type="monotone" dataKey={metric} stroke="#7400B8" fill="url(#colorTrend)" strokeWidth={3} />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
                     </motion.div>
-                )}
+        );
+    };
 
-                {/* Data Summary */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                >
-                    <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                        <FiCalendar className="w-6 h-6 text-[#7400B8]" />
-                        Data Analytics Summary
+    // Helper: Render Maintenance Trends with filter
+    const renderMaintenanceTrends = (maintenance) => {
+        if (!maintenance || !Array.isArray(maintenance.downtime_trends)) return null;
+        const data = maintenance.downtime_trends;
+        if (data.length === 0) return null;
+        if (data.length < 3) {
+            return (
+                <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8 text-center text-gray-500">
+                    Not enough data to display maintenance trends graph.
+                </div>
+            );
+        }
+        const metrics = getAvailableMetrics(data);
+        const metric = metrics.includes(maintMetric) ? maintMetric : metrics[0];
+        return (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8 w-full">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <FiSettings className="w-6 h-6 text-[#7400B8]" /> Maintenance Trends
                     </h3>
-                    <p className="text-gray-600 mb-6">Statistical overview of manufacturing metrics</p>
-                    
-                    <div className="mb-6">
-                        <p className="text-sm text-gray-600">Metrics analyzed: <span className="font-semibold text-[#7400B8]">{summaryFields.length}</span></p>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm">Metric:</span>
+                        <select value={metric} onChange={e => setMaintMetric(e.target.value)} className="border rounded px-2 py-1 text-sm">
+                            {metrics.map(m => <option key={m} value={m}>{m.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>)}
+                        </select>
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {summaryFields.map((field, index) => (
-                            <motion.div
-                                key={field.name}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                className="p-4 bg-gradient-to-br from-[#F9F4FF] to-white rounded-2xl border border-[#7400B8]/10 hover:border-[#7400B8]/20 transition-all duration-200"
-                            >
-                                <h4 className="font-semibold text-gray-800 mb-3 capitalize">
-                                    {field.name.replace(/([A-Z])/g, ' $1').trim()}
-                                </h4>
-                                <div className="space-y-2 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Min:</span>
-                                        <span className="font-medium text-[#7400B8]">
-                                            {field.name.includes('Cost') ? formatCurrency(field.min) : 
-                                             field.name.includes('Rate') || field.name.includes('Uptime') ? formatPercentage(field.min) : 
-                                             formatNumber(field.min)}
-                                        </span>
+                </div>
+                <div className="h-[350px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={data.map(d => ({ ...d, [metric]: round4(d[metric]) }))} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="colorMaint" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#7400B8" stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor="#7400B8" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                            <XAxis dataKey="date" />
+                            <YAxis />
+                            <Tooltip formatter={(v) => round4(v)} />
+                            <Legend />
+                            <Area type="monotone" dataKey={metric} stroke="#7400B8" fill="url(#colorMaint)" strokeWidth={3} />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            </motion.div>
+        );
+    };
+
+    // Helper: Render Section Cards (for efficiency, quality, etc.)
+    const renderSectionCard = (title, data, icon) => {
+        if (!data || Object.keys(data).length === 0) return null;
+        return (
+            <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8 w-full">
+                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    {icon} {title}
+                    </h3>
+                <ul className="list-disc list-inside">
+                    {Object.entries(data).map(([k, v]) => (
+                        <li key={k}><span className="font-semibold">{k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span> {typeof v === 'object' ? JSON.stringify(v) : String(v)}</li>
+                    ))}
+                </ul>
+                    </div>
+        );
+    };
+
+    // Helper: Render Summary
+    const renderSummary = (summary) => {
+        if (!summary || Object.keys(summary).length === 0) return null;
+        return (
+            <div className="mb-8">
+                <button
+                    className="mb-4 px-4 py-2 bg-[#7400B8] text-white rounded-lg shadow hover:bg-[#5a0091] transition"
+                    onClick={() => setShowSummary(s => !s)}
+                >
+                    {showSummary ? 'Hide Summary' : 'Show Summary'}
+                </button>
+                {showSummary && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {Object.entries(summary).map(([field, details]) => (
+                            <div key={field} className="bg-[#F9F4FF] rounded-2xl p-4 border border-[#7400B8]/10">
+                                <h4 className="font-bold mb-2">{field}</h4>
+                                {/* Numeric summary */}
+                                {details.type === 'numeric' && (
+                                    <ul className="text-sm space-y-1">
+                                        <li><span className="font-semibold">Count:</span> {details.count}</li>
+                                        <li><span className="font-semibold">Min:</span> {details.min}</li>
+                                        <li><span className="font-semibold">Max:</span> {details.max}</li>
+                                        <li><span className="font-semibold">Mean:</span> {details.mean}</li>
+                                        <li><span className="font-semibold">Median:</span> {details.median}</li>
+                                        <li><span className="font-semibold">Stddev:</span> {details.stddev}</li>
+                                    </ul>
+                                )}
+                                {/* Categorical summary */}
+                                {details.type === 'categorical' && (
+                                    <>
+                                        <div className="mb-2 text-sm"><span className="font-semibold">Unique Count:</span> {details.unique_count}</div>
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full text-xs">
+                                                <thead>
+                                                    <tr>
+                                                        <th className="px-2 py-1 border-b text-left">Value</th>
+                                                        <th className="px-2 py-1 border-b text-left">Count</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {details.top_values && details.top_values.map((v, i) => (
+                                                        <tr key={i}>
+                                                            <td className="px-2 py-1 border-b">{v.value}</td>
+                                                            <td className="px-2 py-1 border-b">{v.count}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Max:</span>
-                                        <span className="font-medium text-[#7400B8]">
-                                            {field.name.includes('Cost') ? formatCurrency(field.max) : 
-                                             field.name.includes('Rate') || field.name.includes('Uptime') ? formatPercentage(field.max) : 
-                                             formatNumber(field.max)}
-                                        </span>
+                                    </>
+                                )}
+                                {/* Boolean summary */}
+                                {details.type === 'boolean' && (
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full text-xs">
+                                            <thead>
+                                                <tr>
+                                                    <th className="px-2 py-1 border-b text-left">Value</th>
+                                                    <th className="px-2 py-1 border-b text-left">Count</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {details.counts && details.counts.map((v, i) => (
+                                                    <tr key={i}>
+                                                        <td className="px-2 py-1 border-b">{String(v.value)}</td>
+                                                        <td className="px-2 py-1 border-b">{v.count}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Mean:</span>
-                                        <span className="font-medium text-[#7400B8]">
-                                            {field.name.includes('Cost') ? formatCurrency(field.mean) : 
-                                             field.name.includes('Rate') || field.name.includes('Uptime') ? formatPercentage(field.mean) : 
-                                             formatNumber(field.mean)}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Median:</span>
-                                        <span className="font-medium text-[#7400B8]">
-                                            {field.name.includes('Cost') ? formatCurrency(field.median) : 
-                                             field.name.includes('Rate') || field.name.includes('Uptime') ? formatPercentage(field.median) : 
-                                             formatNumber(field.median)}
-                                        </span>
-                                    </div>
+                                )}
                                 </div>
-                            </motion.div>
                         ))}
                     </div>
-                </motion.div>
-
-                {/* AI Insights Section */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
-                >
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                            <FiCpu className="w-6 h-6 text-[#7400B8]" />
-                            AI-Powered Insights
-                        </h3>
+                )}
                     </div>
-                    
-                    {/* Hypothesis */}
-                    {hypothesis && Array.isArray(hypothesis) && (
-                        <div className="mb-6">
-                            <h4 className="font-bold text-gray-800 mb-3">Analysis Summary:</h4>
-                            <div className="space-y-2">
-                                {hypothesis.map((item, index) => (
-                                    <div key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                                        <span className="text-[#7400B8] mt-0.5">•</span>
-                                        <span>{item}</span>
+        );
+    };
+
+    // Helper: Render Hypotheses
+    const renderHypotheses = (hypothesis) => {
+        if (!Array.isArray(hypothesis) || hypothesis.length === 0) return null;
+        return (
+            <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8">
+                <h4 className="font-bold mb-2">Hypotheses</h4>
+                <ul className="list-disc list-inside">
+                    {hypothesis.map((h, i) => <li key={i}>{h}</li>)}
+                </ul>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </motion.div>
+        );
+    };
+
+    return (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 p-4 sm:p-6 lg:p-8">
+            {renderKPIs(kpis)}
+            {renderKpiCardsRow()}
+            {/* High Performers */}
+            {highPerformers && highPerformers.top_Product && renderPerformerSection('Top Product Lines', highPerformers.top_Product, 'Product Line', 'Units Produced', '#7400B8')}
+            {/* Low Performers */}
+            {lowPerformers && lowPerformers.bottom_Product && renderPerformerSection('Low Product Lines', lowPerformers.bottom_Product, 'Product Line', 'Units Produced', '#C084FC')}
+            {renderTotals(totals)}
+            {renderTrends(trends)}
+            {renderMaintenanceTrends(maintenance)}
+            {renderSectionCard('Workforce', workforce, <FiUsers className="w-6 h-6 text-[#7400B8]" />)}
+            {renderSummary(summary)}
+            {renderHypotheses(hypothesis)}
             </motion.div>
-        </>
     );
 };
 
