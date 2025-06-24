@@ -25,3 +25,4 @@ ask to aiss
 
 v1.0.0 soft lauch 
 v1.0.0 ai fila 
+retailv1.1.1
