@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiSend, FiMessageSquare, FiTrendingUp, FiBarChart2, FiPieChart, FiActivity, FiTarget, FiZap, FiChevronRight, FiTrendingDown, FiUsers, FiDollarSign, FiCalendar, FiArrowUp, FiArrowDown, FiEye } from 'react-icons/fi';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -7,6 +7,7 @@ import {
     ResponsiveContainer, ComposedChart, Cell, Area, AreaChart, PieChart, Pie, ScatterChart, Scatter
 } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
+import axios from 'axios';
 
 // --- IMPORTANT: API Key Configuration ---
 // It's recommended to use environment variables to store your API key securely.
@@ -15,31 +16,66 @@ import { useAuth } from '../../contexts/AuthContext';
 // 3. Make sure your build process (e.g., Vite) is configured to handle .env files.
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
-const AIAnalyst = ({ analysis, file, onClose }) => {
+// Track AI prompt usage with retry logic
+const API_BASE_URL = 'https://api.peekbi.com';
+
+async function trackAIPromptUsageWithRetry(maxRetries = 1) {
+    const token = localStorage.getItem('token');
+    if (!token) return { success: false, message: 'No token' };
+    let attempt = 0;
+    while (attempt <= maxRetries) {
+        try {
+            const res = await axios.post(
+                `${API_BASE_URL}/files/promts/`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (res.status === 200 && res.data?.message === 'AI prompt used successfully') {
+                return { success: true, usage: res.data.usage };
+            } else {
+                // Check for limit message
+                const msg = res.data?.message || '';
+                const isLimit = /limit|Upgrade your plan/i.test(msg);
+                return { success: false, message: msg || 'Unknown error', isLimit };
+            }
+        } catch (err) {
+            attempt++;
+            const msg = err?.response?.data?.message || err.message || 'Internal server error';
+            const status = err?.response?.status;
+            const isLimit = status === 403 || /limit|Upgrade your plan/i.test(msg);
+            if (attempt > maxRetries) {
+                return { success: false, message: msg, isLimit };
+            }
+        }
+    }
+}
+
+const AIAnalyst = ({ analysis, file, onClose, onUpgradePlan }) => {
     const { user } = useAuth();
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
     const [suggestedKeywords, setSuggestedKeywords] = useState([]);
     const messagesEndRef = useRef(null);
-
-    const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
+    const genAI = useMemo(() => {
+        if (import.meta.env.VITE_GEMINI_API_KEY) {
+            return new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+        }
+        return null;
+    }, []);
 
     // Enhanced color palette for charts
     const chartColors = [
-        '#7400B8', '#9B4DCA', '#C77DFF', '#E0AAFF', '#F8F4FF',
-        '#8B5CF6', '#A855F7', '#C084FC', '#DDD6FE', '#F3E8FF',
-        '#06B6D4', '#0891B2', '#0E7490', '#155E75', '#164E63'
+        '#7400B8', '#9B4DCA', '#C77DFF', '#E0AAFF', '#FF6B6B', 
+        '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'
     ];
 
     useEffect(() => {
-        if (!API_KEY) {
-            console.error('Gemini API key is not configured. Please add it to your .env file.');
+        if (analysis && genAI) {
+            generateInitialInsights();
         }
-        
-        // Generate initial insights and suggested keywords
-        generateInitialInsights();
-    }, [file.originalName, analysis]);
+    }, [analysis, genAI]);
     
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -56,6 +92,7 @@ const AIAnalyst = ({ analysis, file, onClose }) => {
     const generateInitialInsights = async () => {
         if (!analysis || !genAI) return;
 
+        setIsInitialLoading(true);
         try {
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
             const formattedAnalysis = formatAnalysisData();
@@ -149,6 +186,8 @@ What would you like to explore first?`,
                     timestamp: new Date()
                 },
             ]);
+        } finally {
+            setIsInitialLoading(false);
         }
     };
 
@@ -266,21 +305,49 @@ Provide a comprehensive, helpful response that addresses the user's question whi
 
     const parseAIResponse = (text) => {
         let content = text;
-        let chartData = null;
+        const chartData = [];
 
-        const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
-        const match = text.match(jsonRegex);
-
-        if (match && match[1]) {
+        // Regex to find all JSON code blocks
+        const jsonRegex = /```json\s*([\s\S]*?)\s*```/g;
+        let match;
+        while ((match = jsonRegex.exec(text)) !== null) {
+            console.log("Found JSON block:", match[1]);
             try {
-                // Remove comments from the JSON string before parsing
-                const jsonString = match[1].replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
-                chartData = JSON.parse(jsonString);
-                content = text.replace(jsonRegex, '').trim();
+                let jsonString = match[1].replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+                jsonString = jsonString.replace(/,(\s*?[\}\]])/g, '$1');
+                const parsed = JSON.parse(jsonString);
+                chartData.push(parsed);
+                console.log("Parsed chart data:", parsed);
             } catch (error) {
                 console.error('Error parsing chart JSON from AI response:', error);
+                console.log("Original JSON string that failed parsing:", match[1]);
+            }
+            // Remove the matched block from the content
+            content = content.replace(match[0], '');
+        }
+
+        // If no code blocks were found, try to find raw JSON objects
+        if (chartData.length === 0) {
+            const rawJsonRegex = /\{[\s\S]*?"type"[\s\S]*?"data"[\s\S]*?\}/g;
+            while ((match = rawJsonRegex.exec(text)) !== null) {
+                console.log("Found raw JSON:", match[0]);
+                try {
+                    let jsonString = match[0].replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+                    jsonString = jsonString.replace(/,(\s*?[\}\]])/g, '$1');
+                    const parsed = JSON.parse(jsonString);
+                    chartData.push(parsed);
+                    console.log("Parsed raw chart data:", parsed);
+                } catch (error) {
+                    console.error('Error parsing raw JSON from AI response:', error);
+                    console.log("Original raw JSON string that failed parsing:", match[0]);
+                }
+                // Remove the matched block from the content
+                content = content.replace(match[0], '');
             }
         }
+        
+        // Clean up any extra whitespace and newlines
+        content = content.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
 
         return { content, chartData };
     };
@@ -318,14 +385,32 @@ Provide a comprehensive, helpful response that addresses the user's question whi
         setInput('');
         setIsLoading(true);
 
+        // Track AI prompt usage before calling AI
+        const usageResult = await trackAIPromptUsageWithRetry(1);
+        if (!usageResult.success) {
+            setMessages(prev => [
+                ...prev,
+                {
+                    id: Date.now() + 1,
+                    type: 'ai',
+                    isUpgrade: usageResult.isLimit || true,
+                    errorText: usageResult.message || 'You have reached your AI prompt limit or there was an error. Please try again later.',
+                    timestamp: new Date()
+                }
+            ]);
+            setIsLoading(false);
+            return;
+        }
+
         try {
-            const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
             const enhancedPrompt = createEnhancedPrompt(promptText);
             
             const result = await model.generateContent(enhancedPrompt);
             const response = await result.response;
             const text = response.text();
+            
+            console.log("Raw AI Response:", text);
 
             const { content, chartData } = parseAIResponse(text);
             
@@ -333,7 +418,7 @@ Provide a comprehensive, helpful response that addresses the user's question whi
                 id: Date.now() + 1,
                 type: 'ai',
                 content: content,
-                chartSuggestions: chartData ? [chartData] : [],
+                chartSuggestions: chartData,
                 timestamp: new Date()
             };
 
@@ -557,48 +642,79 @@ Provide a comprehensive, helpful response that addresses the user's question whi
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -20 }}
-                                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                                    className={`flex flex-col ${message.type === 'user' ? 'items-end' : 'items-start'}`}
                                 >
-                                    <div className={`max-w-[85%] sm:max-w-[75%] lg:max-w-[70%] ${message.type === 'user' ? 'order-2' : 'order-1'}`}>
+                                    <div className={`max-w-[85%] sm:max-w-[75%] lg:max-w-[70%]`}>
                                         <div className={`p-3 sm:p-4 rounded-2xl ${
                                             message.type === 'user' 
                                                 ? 'bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white' 
                                                 : 'bg-white/80 backdrop-blur-sm border border-gray-200 text-gray-800'
                                         }`}>
                                             <div className="prose prose-sm sm:prose-base max-w-none">
-                                                <div dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }} />
+                                                {message.isUpgrade ? (
+                                                    <>
+                                                        <span>{message.errorText}</span>
+                                                        {typeof onUpgradePlan === 'function' && (
+                                                            <button onClick={onUpgradePlan} className="mt-3 px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl font-bold shadow-lg hover:from-[#9B4DCA] hover:to-[#C77DFF] transition-all duration-200">Upgrade Plan</button>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <div dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }} />
+                                                )}
                                             </div>
-                                            
-                                            {/* Chart Suggestions */}
-                                            {message.chartSuggestions && message.chartSuggestions.length > 0 && (
-                                                <div className="mt-4 space-y-3">
-                                                    {message.chartSuggestions.map((suggestion, index) => (
-                                                        <div key={index} className="bg-white/10 rounded-xl p-3 sm:p-4">
-                                                            <div className="text-xs sm:text-sm font-medium text-white/90 mb-2 flex items-center">
-                                                                <FiEye className="w-4 h-4 mr-2" />
-                                                                {suggestion.title || 'Suggested Visualization'}
-                                                            </div>
-                                                            {suggestion.description && (
-                                                                <p className="text-xs text-white/80 mb-3">{suggestion.description}</p>
-                                                            )}
-                                                            <div className="h-48 sm:h-56 lg:h-64">
-                                                                {renderChart(suggestion)}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
                                         </div>
                                         <div className={`text-xs text-gray-500 mt-1 ${message.type === 'user' ? 'text-right' : 'text-left'}`}>
                                             {message.timestamp.toLocaleTimeString()}
                                         </div>
                                     </div>
+                                    
+                                    {/* Chart Suggestions - rendered outside the message bubble */}
+                                    {message.chartSuggestions && message.chartSuggestions.length > 0 && (
+                                        <div className="mt-2 space-y-3 w-full max-w-[85%] sm:max-w-[75%] lg:max-w-[70%]">
+                                            {message.chartSuggestions.map((suggestion, index) => (
+                                                <motion.div 
+                                                    key={index}
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: index * 0.2 }}
+                                                    className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-3 sm:p-4"
+                                                >
+                                                    <div className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                                                        <FiBarChart2 className="w-4 h-4 mr-2 text-[#7400B8]" />
+                                                        {suggestion.title || 'Suggested Visualization'}
+                                                    </div>
+                                                    {suggestion.description && (
+                                                        <p className="text-xs text-gray-600 mb-3">{suggestion.description}</p>
+                                                    )}
+                                                    <div className="h-48 sm:h-56 lg:h-64">
+                                                        {renderChart(suggestion)}
+                                                    </div>
+                                                </motion.div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </motion.div>
                             ))}
                         </AnimatePresence>
                         
-                        {/* Loading indicator */}
-                        {isLoading && (
+                        {/* Initial loading indicator */}
+                        {isInitialLoading && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="flex justify-start"
+                            >
+                                <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-3 sm:p-4">
+                                    <div className="flex items-center space-x-2">
+                                        <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-[#7400B8] border-t-transparent rounded-full animate-spin"></div>
+                                        <span className="text-sm sm:text-base text-gray-600">Analyzing your data...</span>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+                        
+                        {/* Loading indicator for ongoing messages */}
+                        {isLoading && !isInitialLoading && (
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
@@ -650,16 +766,16 @@ Provide a comprehensive, helpful response that addresses the user's question whi
                                     onKeyPress={handleKeyPress}
                                     placeholder="Ask me about your data..."
                                     className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent transition-all duration-200 text-sm sm:text-base"
-                                    disabled={isLoading}
+                                    disabled={isLoading || isInitialLoading}
                                 />
                             </div>
                             <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => handleSendMessage()}
-                                disabled={!input.trim() || isLoading}
+                                disabled={!input.trim() || isLoading || isInitialLoading}
                                 className={`p-2 sm:p-3 rounded-xl transition-all duration-200 ${
-                                    input.trim() && !isLoading
+                                    input.trim() && !isLoading && !isInitialLoading
                                         ? 'bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white hover:shadow-lg'
                                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 }`}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiTrendingUp, FiTrendingDown, FiUsers, FiBookOpen, FiBarChart2, FiAward, FiCpu, FiMessageSquare, FiTarget, FiArrowUp, FiArrowDown, FiCalendar, FiActivity } from 'react-icons/fi';
+import { FiTrendingUp, FiTrendingDown, FiUsers, FiBookOpen, FiBarChart2, FiAward, FiCpu, FiMessageSquare, FiTarget, FiArrowUp, FiArrowDown, FiCalendar, FiActivity, FiInfo } from 'react-icons/fi';
 import {
     BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
     ResponsiveContainer, ComposedChart, Cell, Area, AreaChart, PieChart, Pie
@@ -8,8 +8,6 @@ import {
 import AIAnalyst from './AIAnalyst';
 
 const EducationDashboard = ({ file, analysis }) => {
-    const [isAiChatOpen, setIsAiChatOpen] = useState(false);
-
     if (!file || !analysis) {
         return (
             <div className="text-center p-8">
@@ -562,55 +560,36 @@ const EducationDashboard = ({ file, analysis }) => {
                     </div>
                 </motion.div>
 
-                {/* AI Insights Section */}
+                {/* Hypothesis Section */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
                     className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
                 >
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                            <FiCpu className="w-6 h-6 text-[#7400B8]" />
-                            AI-Powered Insights
-                        </h3>
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setIsAiChatOpen(true)}
-                            className="px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:shadow-lg transition-all duration-200 flex items-center space-x-2 text-sm font-medium"
-                        >
-                            <FiMessageSquare className="w-4 h-4" />
-                            <span>Ask AI</span>
-                        </motion.button>
+                    <div className="flex items-center space-x-3 mb-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-2xl flex items-center justify-center">
+                            <FiInfo className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-800">Analysis Summary</h3>
+                            <p className="text-gray-600">Key insights and recommendations</p>
+                        </div>
                     </div>
                     
                     {/* Hypothesis */}
                     {hypothesis && Array.isArray(hypothesis) && (
-                        <div className="mb-6">
-                            <h4 className="font-bold text-gray-800 mb-3">Analysis Summary:</h4>
-                            <div className="space-y-2">
-                                {hypothesis.map((item, index) => (
-                                    <div key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                                        <span className="text-[#7400B8] mt-0.5">•</span>
-                                        <span>{item}</span>
-                                    </div>
-                                ))}
-                            </div>
+                        <div className="space-y-2">
+                            {hypothesis.map((item, index) => (
+                                <div key={index} className="flex items-start gap-2 text-sm text-gray-700">
+                                    <span className="text-[#7400B8] mt-0.5">•</span>
+                                    <span>{item}</span>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </motion.div>
             </motion.div>
-
-            <AnimatePresence>
-                {isAiChatOpen && (
-                    <AIAnalyst
-                        file={file}
-                        analysis={analysis}
-                        onClose={() => setIsAiChatOpen(false)}
-                    />
-                )}
-            </AnimatePresence>
         </>
     );
 };

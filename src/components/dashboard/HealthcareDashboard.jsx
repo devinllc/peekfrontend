@@ -8,8 +8,6 @@ import {
 import AIAnalyst from './AIAnalyst';
 
 const HealthcareDashboard = ({ file, analysis }) => {
-    const [isAiChatOpen, setIsAiChatOpen] = useState(false);
-
     if (!file || !analysis) {
         return (
             <div className="text-center p-8">
@@ -455,15 +453,6 @@ const HealthcareDashboard = ({ file, analysis }) => {
                             <FiCpu className="w-6 h-6 text-[#7400B8]" />
                             AI-Powered Insights
                         </h3>
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setIsAiChatOpen(true)}
-                            className="px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:shadow-lg transition-all duration-200 flex items-center space-x-2 text-sm font-medium"
-                        >
-                            <FiMessageSquare className="w-4 h-4" />
-                            <span>Ask AI</span>
-                        </motion.button>
                     </div>
                     
                     {/* Hypothesis */}
@@ -482,16 +471,6 @@ const HealthcareDashboard = ({ file, analysis }) => {
                     )}
                 </motion.div>
             </motion.div>
-
-            <AnimatePresence>
-                {isAiChatOpen && (
-                    <AIAnalyst
-                        file={file}
-                        analysis={analysis}
-                        onClose={() => setIsAiChatOpen(false)}
-                    />
-                )}
-            </AnimatePresence>
         </>
     );
 };

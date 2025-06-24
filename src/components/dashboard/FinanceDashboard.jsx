@@ -8,7 +8,6 @@ import {
 import AIAnalyst from './AIAnalyst';
 
 const FinanceDashboard = ({ file, analysis }) => {
-    const [isAiChatOpen, setIsAiChatOpen] = useState(false);
     const [selectedPeriod, setSelectedPeriod] = useState('all');
     const [selectedMetric, setSelectedMetric] = useState('revenue');
 
@@ -537,15 +536,26 @@ const FinanceDashboard = ({ file, analysis }) => {
                                 <p className="text-gray-600">Key findings and recommendations</p>
                             </div>
                         </div>
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setIsAiChatOpen(true)}
-                            className="px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:shadow-lg transition-all duration-200 flex items-center space-x-2 text-sm font-medium"
-                        >
-                            <FiMessageSquare className="w-4 h-4" />
-                            <span>Ask AI</span>
-                        </motion.button>
+                    </div>
+                </motion.div>
+
+                {/* Hypothesis */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1.2 }}
+                    className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
+                >
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center space-x-3">
+                            <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-2xl flex items-center justify-center">
+                                <FiInfo className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-800">Hypothesis</h2>
+                                <p className="text-gray-600">Key insights and recommendations</p>
+                            </div>
+                        </div>
                     </div>
                     {hypothesis && hypothesis.length > 0 && (
                         <div className="text-gray-700 space-y-4 prose prose-purple max-w-none">
@@ -559,16 +569,6 @@ const FinanceDashboard = ({ file, analysis }) => {
                     )}
                 </motion.div>
             </motion.div>
-
-            <AnimatePresence>
-                {isAiChatOpen && (
-                    <AIAnalyst
-                        file={file}
-                        analysis={analysis}
-                        onClose={() => setIsAiChatOpen(false)}
-                    />
-                )}
-            </AnimatePresence>
         </>
     );
 };

@@ -1,12 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiMenu, FiX, FiArrowLeft } from 'react-icons/fi';
+import { FiMenu, FiX, FiArrowLeft, FiMessageSquare } from 'react-icons/fi';
 
 const Header = ({ 
     title, 
     description, 
     icon: Icon, 
     actionButton = null,
+    aiButton = null,
     className = "",
     sidebarOpen = false,
     setSidebarOpen = null,
@@ -52,22 +53,42 @@ const Header = ({
                         <p className="text-white/80 text-xs sm:text-base">{description}</p>
                     </div>
                 </div>
-                {/* Handle actionButton whether it's a React element or an object with properties */}
-                {actionButton && (
-                    React.isValidElement(actionButton) 
-                    ? <div className="mt-2 sm:mt-0">{actionButton}</div>
-                    : (
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={actionButton.onClick}
-                            className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-xl transition-all duration-200 text-sm sm:text-base"
-                        >
-                            {actionButton.icon && <actionButton.icon className="w-4 h-4 sm:w-5 sm:h-5" />}
-                            <span className="font-medium">{actionButton.label}</span>
-                        </motion.button>
-                    )
-                )}
+                {/* Action buttons container */}
+                <div className="flex items-center space-x-2 sm:space-x-3 mt-2 sm:mt-0">
+                    {/* AI Button */}
+                    {aiButton && (
+                        React.isValidElement(aiButton) 
+                        ? <div>{aiButton}</div>
+                        : (
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={aiButton.onClick}
+                                className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-xl transition-all duration-200 text-sm sm:text-base border border-white/30"
+                            >
+                                <FiMessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
+                                <span className="font-medium">Ask AI</span>
+                            </motion.button>
+                        )
+                    )}
+                    
+                    {/* Handle actionButton whether it's a React element or an object with properties */}
+                    {actionButton && (
+                        React.isValidElement(actionButton) 
+                        ? <div>{actionButton}</div>
+                        : (
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={actionButton.onClick}
+                                className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-xl transition-all duration-200 text-sm sm:text-base"
+                            >
+                                {actionButton.icon && <actionButton.icon className="w-4 h-4 sm:w-5 sm:h-5" />}
+                                <span className="font-medium">{actionButton.label}</span>
+                            </motion.button>
+                        )
+                    )}
+                </div>
             </div>
         </div>
     );

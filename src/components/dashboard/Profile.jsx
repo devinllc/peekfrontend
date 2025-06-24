@@ -1,12 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { FiUser, FiMail, FiCalendar, FiShield, FiDatabase, FiCreditCard, FiCheck, FiX, FiEdit, FiSave, FiLoader, FiPhone, FiBriefcase } from 'react-icons/fi';
+import { FiUser, FiMail, FiCalendar, FiShield, FiDatabase, FiCreditCard, FiCheck, FiX, FiEdit, FiSave, FiLoader, FiPhone, FiBriefcase, FiArrowUpCircle } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import Header from './Header';
 
 const API_BASE_URL = 'https://api.peekbi.com';
+
+const PLAN_OPTIONS = [
+  { name: 'free', label: 'Free' },
+  { name: 'premium', label: 'Premium' },
+  { name: 'enterprise', label: 'Enterprise' },
+];
+
+// Helper to generate a unique payment ID
+function generatePaymentId() {
+    return 'test_' + Math.random().toString(36).substring(2, 15) + Date.now();
+}
 
 const Profile = () => {
     const { user: authUser, logout, updateProfile } = useAuth();
@@ -17,6 +28,13 @@ const Profile = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [formData, setFormData] = useState({});
+    const [planData, setPlanData] = useState(null);
+    const [usageData, setUsageData] = useState(null);
+    const [showUpgrade, setShowUpgrade] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState('premium');
+    const [upgradeLoading, setUpgradeLoading] = useState(false);
+    const [upgradeError, setUpgradeError] = useState(null);
+    const [upgradeSuccess, setUpgradeSuccess] = useState(null);
 
     const formatLastLogin = (lastLogin) => {
         if (!lastLogin) return 'Never';
@@ -65,6 +83,33 @@ const Profile = () => {
 
         fetchProfileData();
     }, []); // Empty dependency array - only run once on mount
+
+    // Fetch usage data
+    const fetchUsageData = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+            const usageRes = await axios.get(`${API_BASE_URL}/subscribe/uses`, { headers: { 'Authorization': `Bearer ${token}` } });
+            setUsageData(usageRes.data);
+        } catch (err) {
+            // Optionally handle error
+        }
+    };
+
+    useEffect(() => {
+        const fetchPlanAndUsage = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+                const planRes = await axios.get(`${API_BASE_URL}/subscribe/`, { headers: { 'Authorization': `Bearer ${token}` } });
+                setPlanData(planRes.data);
+            } catch (err) {
+                // Optionally handle error
+            }
+        };
+        fetchPlanAndUsage();
+        fetchUsageData();
+    }, []);
 
     const handleEdit = () => {
         setIsEditing(true);
@@ -131,6 +176,59 @@ const Profile = () => {
             setError(err.message || 'Failed to update profile');
         } finally {
             setIsUpdating(false);
+        }
+    };
+
+    const handleSubscribeFree = async () => {
+        setUpgradeLoading(true);
+        setUpgradeError(null);
+        setUpgradeSuccess(null);
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) throw new Error('No token');
+            const body = {
+                planName: 'free',
+                razorpayPaymentId: generatePaymentId(),
+                status: 'success',
+                test: true
+            };
+            await axios.post(`${API_BASE_URL}/subscribe/`, body, { headers: { 'Authorization': `Bearer ${token}` } });
+            setUpgradeSuccess('Free plan activated!');
+            // Refresh plan data
+            const planRes = await axios.get(`${API_BASE_URL}/subscribe/`, { headers: { 'Authorization': `Bearer ${token}` } });
+            setPlanData(planRes.data);
+            await fetchUsageData();
+        } catch (err) {
+            setUpgradeError(err?.response?.data?.message || err.message || 'Subscription failed');
+        } finally {
+            setUpgradeLoading(false);
+        }
+    };
+
+    const handleUpgrade = async () => {
+        setUpgradeLoading(true);
+        setUpgradeError(null);
+        setUpgradeSuccess(null);
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) throw new Error('No token');
+            const body = {
+                planName: selectedPlan,
+                razorpayPaymentId: generatePaymentId(),
+                status: 'success',
+                test: true
+            };
+            await axios.post(`${API_BASE_URL}/subscribe/`, body, { headers: { 'Authorization': `Bearer ${token}` } });
+            setUpgradeSuccess('Plan upgraded successfully!');
+            setShowUpgrade(false);
+            // Refresh plan data
+            const planRes = await axios.get(`${API_BASE_URL}/subscribe/`, { headers: { 'Authorization': `Bearer ${token}` } });
+            setPlanData(planRes.data);
+            await fetchUsageData();
+        } catch (err) {
+            setUpgradeError(err?.response?.data?.message || err.message || 'Upgrade failed');
+        } finally {
+            setUpgradeLoading(false);
         }
     };
 
@@ -558,103 +656,168 @@ const Profile = () => {
                             <FiCreditCard className="w-6 h-6 sm:w-8 sm:h-8 text-[#7400B8]" />
                             <span>Subscription Plan</span>
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
-                            <motion.div 
-                                className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-8 border border-white/30 shadow-lg"
-                                whileHover={{ y: -4 }}
-                                transition={{ duration: 0.3 }}
-                            >
-                                <div className="flex items-center space-x-3 sm:space-x-4 mb-4 sm:mb-6">
-                                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-2xl flex items-center justify-center">
-                                        <FiCreditCard className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                        {(!planData || !planData.currentPlan) ? (
+                            <div className="flex flex-col items-center justify-center py-12">
+                                <p className="text-gray-700 mb-4">You have no active plan. Get started with our Free Plan!</p>
+                                <button
+                                    className="px-6 py-3 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl font-bold shadow-lg hover:from-[#9B4DCA] hover:to-[#C77DFF] transition-all duration-200"
+                                    onClick={handleSubscribeFree}
+                                    disabled={upgradeLoading}
+                                >
+                                    {upgradeLoading ? 'Subscribing...' : 'Subscribe to Free Plan'}
+                                </button>
+                                {upgradeError && <p className="text-red-600 mt-2">{upgradeError}</p>}
+                                {upgradeSuccess && <p className="text-green-600 mt-2">{upgradeSuccess}</p>}
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
+                                <motion.div 
+                                    className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-8 border border-white/30 shadow-lg"
+                                    whileHover={{ y: -4 }}
+                                    transition={{ duration: 0.3 }}
+                                >
+                                    <div className="flex items-center space-x-3 sm:space-x-4 mb-4 sm:mb-6">
+                                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-2xl flex items-center justify-center">
+                                            <FiCreditCard className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-lg sm:text-xl font-bold text-gray-800 capitalize">
+                                                {planData.currentPlan.name} Plan
+                                            </h4>
+                                            <p className="text-xs sm:text-sm text-gray-600 capitalize">
+                                                {planData.userMeta?.subscriptionStatus || 'inactive'}
+                                            </p>
+                                            {planData.currentPlan.startDate && (
+                                                <p className="text-xs text-gray-500 mt-1">Start: {new Date(planData.currentPlan.startDate).toLocaleDateString()}</p>
+                                            )}
+                                            {planData.currentPlan.endDate && (
+                                                <p className="text-xs text-gray-500 mt-1">End: {new Date(planData.currentPlan.endDate).toLocaleDateString()}</p>
+                                            )}
+                                            {planData.userMeta?.currentPeriodEnd && (
+                                                <p className="text-xs text-gray-500 mt-1">Current Period Ends: {new Date(planData.userMeta.currentPeriodEnd).toLocaleDateString()}</p>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 className="text-lg sm:text-xl font-bold text-gray-800 capitalize">
-                                            {user?.plan?.name || 'free'} Plan
-                                        </h4>
-                                        <p className="text-xs sm:text-sm text-gray-600 capitalize">
-                                            {user?.subscriptionStataus || 'inactive'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <dl className="space-y-4 text-sm">
-                                    <div className="flex justify-between items-center p-3 bg-gray-50/50 rounded-xl">
-                                        <dt className="text-gray-600 font-medium">Max Reports</dt>
-                                        <dd className="font-bold text-gray-800">{user?.plan?.maxReports || 0}</dd>
-                                    </div>
-                                    <div className="flex justify-between items-center p-3 bg-gray-50/50 rounded-xl">
-                                        <dt className="text-gray-600 font-medium">Max Saved Charts</dt>
-                                        <dd className="font-bold text-gray-800">{user?.plan?.maxSavedCharts || 0}</dd>
-                                    </div>
-                                    <div className="flex justify-between items-center p-3 bg-gray-50/50 rounded-xl">
-                                        <dt className="text-gray-600 font-medium">Max Users</dt>
-                                        <dd className="font-bold text-gray-800">{user?.plan?.maxUsersPerAccount || 1}</dd>
-                                    </div>
-                                    <div className="flex justify-between items-center p-3 bg-gray-50/50 rounded-xl">
-                                        <dt className="text-gray-600 font-medium">Data Retention</dt>
-                                        <dd className="font-bold text-gray-800">{user?.plan?.dataRetentionDays || 30} days</dd>
-                                    </div>
-                                    <div className="flex justify-between items-center p-3 bg-gray-50/50 rounded-xl">
-                                        <dt className="text-gray-600 font-medium">Billing Interval</dt>
-                                        <dd className="font-bold text-gray-800 capitalize">{user?.plan?.billingInterval || 'Monthly'}</dd>
-                                    </div>
-                                    <div className="flex justify-between items-center p-3 bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 rounded-xl">
-                                        <dt className="text-gray-700 font-bold">Price</dt>
-                                        <dd className="font-bold text-[#7400B8]">${user?.plan?.price || 0}/month</dd>
-                                    </div>
-                                </dl>
-                            </motion.div>
+                                    <dl className="space-y-4 text-sm">
+                                        {planData.currentPlan.limits && Object.entries(planData.currentPlan.limits).map(([key, value]) => (
+                                            <div key={key} className="flex justify-between items-center p-3 bg-gray-50/50 rounded-xl">
+                                                <dt className="text-gray-600 font-medium">{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</dt>
+                                                <dd className="font-bold text-gray-800">{value}</dd>
+                                            </div>
+                                        ))}
+                                        <div className="flex justify-between items-center p-3 bg-gray-50/50 rounded-xl">
+                                            <dt className="text-gray-600 font-medium">Billing Interval</dt>
+                                            <dd className="font-bold text-gray-800 capitalize">{planData.currentPlan.billingInterval}</dd>
+                                        </div>
+                                        <div className="flex justify-between items-center p-3 bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 rounded-xl">
+                                            <dt className="text-gray-700 font-bold">Price</dt>
+                                            <dd className="font-bold text-[#7400B8]">${(planData.currentPlan.price / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}/month</dd>
+                                        </div>
+                                    </dl>
+                                    {/* Payment History */}
+                                    {planData.paymentHistory && planData.paymentHistory.length > 0 && (
+                                        <div className="mt-6">
+                                            <h5 className="font-bold text-gray-800 mb-2">Payment History</h5>
+                                            <ul className="space-y-2 text-xs">
+                                                {planData.paymentHistory.map((p, idx) => (
+                                                    <li key={p._id || idx} className="flex justify-between items-center bg-gray-50/80 rounded-lg px-3 py-2">
+                                                        <span>{new Date(p.date).toLocaleDateString()}</span>
+                                                        <span>${(p.amount / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                                        <span className={p.status === 'success' ? 'text-green-600' : 'text-red-600'}>{p.status}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+                                </motion.div>
 
-                            <motion.div 
-                                className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/30 shadow-lg"
-                                whileHover={{ y: -4 }}
-                                transition={{ duration: 0.3 }}
-                            >
-                                <h4 className="font-bold text-gray-800 mb-6 text-lg">Plan Features</h4>
-                                <ul className="space-y-4 text-sm">
-                                    {user?.plan?.features && Object.entries(user.plan.features).map(([feature, enabled], index) => (
-                                        <motion.li 
-                                            key={feature} 
-                                            className="flex items-center space-x-3 p-3 rounded-xl"
-                                            initial={{ opacity: 0, x: -20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: index * 0.1 }}
+                                <motion.div 
+                                    className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/30 shadow-lg"
+                                    whileHover={{ y: -4 }}
+                                    transition={{ duration: 0.3 }}
+                                >
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h4 className="font-bold text-gray-800 text-lg">Plan Features</h4>
+                                        <button
+                                            className="flex items-center px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:from-[#9B4DCA] hover:to-[#C77DFF] transition-all duration-200 font-medium shadow-lg"
+                                            onClick={() => setShowUpgrade(true)}
                                         >
-                                            {enabled ?
-                                                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                                                    <FiCheck className="w-4 h-4 text-white" />
-                                                </div> :
-                                                <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
-                                                    <FiX className="w-4 h-4 text-white" />
-                                                </div>
-                                            }
-                                            <span className={`font-medium ${enabled ? "text-gray-800" : "text-gray-500"}`}>
-                                                {feature.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                            </span>
-                                        </motion.li>
-                                    ))}
-                                </ul>
-                            </motion.div>
-                        </div>
-
-                        {/* Usage Statistics */}
-                        <motion.div 
-                            className="mt-4 sm:mt-8 bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-8 border border-white/30 shadow-lg"
-                            whileHover={{ y: -4 }}
-                            transition={{ duration: 0.3 }}
-                        >
-                            <h4 className="font-bold text-gray-800 mb-3 sm:mb-6 text-base sm:text-lg">Usage Statistics</h4>
-                            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 text-xs sm:text-sm">
-                                <div className="p-3 sm:p-4 bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 rounded-xl">
-                                    <dt className="text-gray-600 font-medium mb-1 sm:mb-2">Reports Created</dt>
-                                    <dd className="font-bold text-xl sm:text-2xl text-[#7400B8]">{user?.repoerCount || 0}</dd>
+                                            <FiArrowUpCircle className="mr-2" /> Upgrade Plan
+                                        </button>
+                                    </div>
+                                    <ul className="space-y-4 text-sm">
+                                        {planData.currentPlan.features && Object.entries(planData.currentPlan.features).map(([feature, enabled], index) => (
+                                            <motion.li 
+                                                key={feature} 
+                                                className="flex items-center space-x-3 p-3 rounded-xl"
+                                                initial={{ opacity: 0, x: -20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: index * 0.1 }}
+                                            >
+                                                {enabled ?
+                                                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                                        <FiCheck className="w-4 h-4 text-white" />
+                                                    </div> :
+                                                    <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+                                                        <FiX className="w-4 h-4 text-white" />
+                                                    </div>
+                                                }
+                                                <span className={`font-medium ${enabled ? "text-gray-800" : "text-gray-500"}`}>
+                                                    {feature.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                </span>
+                                            </motion.li>
+                                        ))}
+                                    </ul>
+                                    {/* Usage Statistics */}
+                                    {usageData && (
+                                        <div className="mt-8">
+                                            <h5 className="font-bold text-gray-800 mb-2">Usage Statistics</h5>
+                                            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 text-xs sm:text-sm">
+                                                {Object.entries(usageData).filter(([k]) => k !== 'updatedAt').map(([key, value]) => (
+                                                    <div key={key} className="p-3 sm:p-4 bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 rounded-xl">
+                                                        <dt className="text-gray-600 font-medium mb-1 sm:mb-2">{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</dt>
+                                                        <dd className="font-bold text-xl sm:text-2xl text-[#7400B8]">{value}</dd>
+                                                    </div>
+                                                ))}
+                                            </dl>
+                                            {usageData.updatedAt && (
+                                                <p className="text-xs text-gray-500 mt-2">Last updated: {new Date(usageData.updatedAt).toLocaleString()}</p>
+                                            )}
+                                        </div>
+                                    )}
+                                </motion.div>
+                            </div>
+                        )}
+                        {/* Upgrade Modal */}
+                        {showUpgrade && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                                <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative">
+                                    <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700" onClick={() => setShowUpgrade(false)}>&times;</button>
+                                    <h3 className="text-lg font-bold mb-4">Upgrade Plan</h3>
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium mb-2">Select Plan</label>
+                                        <select
+                                            className="w-full px-4 py-2 border rounded-xl"
+                                            value={selectedPlan}
+                                            onChange={e => setSelectedPlan(e.target.value)}
+                                        >
+                                            {PLAN_OPTIONS.map(opt => (
+                                                <option key={opt.name} value={opt.name}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <button
+                                        className="w-full py-3 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl font-bold mt-2"
+                                        onClick={handleUpgrade}
+                                        disabled={upgradeLoading}
+                                    >
+                                        {upgradeLoading ? 'Upgrading...' : 'Confirm Upgrade'}
+                                    </button>
+                                    {upgradeError && <p className="text-red-600 mt-2">{upgradeError}</p>}
+                                    {upgradeSuccess && <p className="text-green-600 mt-2">{upgradeSuccess}</p>}
                                 </div>
-                                <div className="p-3 sm:p-4 bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 rounded-xl">
-                                    <dt className="text-gray-600 font-medium mb-1 sm:mb-2">Charts Created</dt>
-                                    <dd className="font-bold text-xl sm:text-2xl text-[#7400B8]">{user?.chartCount || 0}</dd>
-                                </div>
-                            </dl>
-                        </motion.div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

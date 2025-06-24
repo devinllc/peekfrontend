@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
-import { FiBarChart2, FiCpu, FiActivity, FiFile, FiDownload, FiCalendar, FiDatabase } from 'react-icons/fi';
+import { FiBarChart2, FiCpu, FiActivity, FiFile, FiDownload, FiCalendar, FiDatabase, FiMessageSquare } from 'react-icons/fi';
 import axios from 'axios';
 
 // Import components
@@ -19,6 +19,7 @@ import EducationDashboard from '../../components/dashboard/EducationDashboard';
 import ManufacturingDashboard from '../../components/dashboard/ManufacturingDashboard';
 import HealthcareDashboard from '../../components/dashboard/HealthcareDashboard';
 import Settings from '../../components/dashboard/Settings';
+import AIAnalyst from '../../components/dashboard/AIAnalyst';
 
 const UserDashboard = () => {
     const location = useLocation();
@@ -35,6 +36,7 @@ const UserDashboard = () => {
     const [fileError, setFileError] = useState('');
     const [analysisError, setAnalysisError] = useState('');
     const [showAnalysis, setShowAnalysis] = useState(false);
+    const [showUpgrade, setShowUpgrade] = useState(false);
     const filesFetchedRef = useRef(false);
     const initialAnalysisHandledRef = useRef(false);
     const handledFileIdsRef = useRef(new Set());
@@ -438,6 +440,21 @@ const UserDashboard = () => {
 
     // This component will render the correct dashboard based on the file category
     const AnalysisDashboard = ({ file, analysisData, onBack }) => {
+        const [isAiChatOpen, setIsAiChatOpen] = useState(false);
+
+        // Listen for the openAiChat custom event
+        useEffect(() => {
+            const handleOpenAiChat = () => {
+                setIsAiChatOpen(true);
+            };
+
+            window.addEventListener('openAiChat', handleOpenAiChat);
+
+            return () => {
+                window.removeEventListener('openAiChat', handleOpenAiChat);
+            };
+        }, []);
+
         if (!file || !analysisData) {
             return (
                 <div className="flex justify-center items-center h-full">
@@ -450,18 +467,102 @@ const UserDashboard = () => {
         
         switch(category) {
             case 'Retail':
-                return <RetailDashboard file={file} analysis={analysisData} onBack={onBack} />;
+                return (
+                    <>
+                        <RetailDashboard file={file} analysis={analysisData} onBack={onBack} />
+                        <AnimatePresence>
+                            {isAiChatOpen && (
+                                <AIAnalyst
+                                    file={file}
+                                    analysis={analysisData}
+                                    onClose={() => setIsAiChatOpen(false)}
+                                    onUpgradePlan={() => setShowUpgrade(true)}
+                                />
+                            )}
+                        </AnimatePresence>
+                    </>
+                );
             case 'Finance':
-                return <FinanceDashboard file={file} analysis={analysisData} onBack={onBack} />;
+                return (
+                    <>
+                        <FinanceDashboard file={file} analysis={analysisData} onBack={onBack} />
+                        <AnimatePresence>
+                            {isAiChatOpen && (
+                                <AIAnalyst
+                                    file={file}
+                                    analysis={analysisData}
+                                    onClose={() => setIsAiChatOpen(false)}
+                                    onUpgradePlan={() => setShowUpgrade(true)}
+                                />
+                            )}
+                        </AnimatePresence>
+                    </>
+                );
             case 'Education':
-                return <EducationDashboard file={file} analysis={analysisData} onBack={onBack} />;
+                return (
+                    <>
+                        <EducationDashboard file={file} analysis={analysisData} onBack={onBack} />
+                        <AnimatePresence>
+                            {isAiChatOpen && (
+                                <AIAnalyst
+                                    file={file}
+                                    analysis={analysisData}
+                                    onClose={() => setIsAiChatOpen(false)}
+                                    onUpgradePlan={() => setShowUpgrade(true)}
+                                />
+                            )}
+                        </AnimatePresence>
+                    </>
+                );
             case 'Manufacturing':
-                return <ManufacturingDashboard file={file} analysis={analysisData} onBack={onBack} />;
+                return (
+                    <>
+                        <ManufacturingDashboard file={file} analysis={analysisData} onBack={onBack} />
+                        <AnimatePresence>
+                            {isAiChatOpen && (
+                                <AIAnalyst
+                                    file={file}
+                                    analysis={analysisData}
+                                    onClose={() => setIsAiChatOpen(false)}
+                                    onUpgradePlan={() => setShowUpgrade(true)}
+                                />
+                            )}
+                        </AnimatePresence>
+                    </>
+                );
             case 'Healthcare':
-                return <HealthcareDashboard file={file} analysis={analysisData} onBack={onBack} />;
+                return (
+                    <>
+                        <HealthcareDashboard file={file} analysis={analysisData} onBack={onBack} />
+                        <AnimatePresence>
+                            {isAiChatOpen && (
+                                <AIAnalyst
+                                    file={file}
+                                    analysis={analysisData}
+                                    onClose={() => setIsAiChatOpen(false)}
+                                    onUpgradePlan={() => setShowUpgrade(true)}
+                                />
+                            )}
+                        </AnimatePresence>
+                    </>
+                );
             default:
                 // Fallback to a general analysis component if it exists, or show a message
-                return <Analysis file={file} analysis={analysisData} onBack={onBack} />;
+                return (
+                    <>
+                        <Analysis file={file} analysis={analysisData} onBack={onBack} />
+                        <AnimatePresence>
+                            {isAiChatOpen && (
+                                <AIAnalyst
+                                    file={file}
+                                    analysis={analysisData}
+                                    onClose={() => setIsAiChatOpen(false)}
+                                    onUpgradePlan={() => setShowUpgrade(true)}
+                                />
+                            )}
+                        </AnimatePresence>
+                    </>
+                );
         }
     };
     
@@ -502,11 +603,11 @@ const UserDashboard = () => {
                                     <div className="flex mb-3 items-center justify-between">
                                         <span className="text-sm font-medium text-[#7400B8]">Processing</span>
                                         <span className="text-sm text-gray-500">Analyzing...</span>
-                                    </div>
+                                            </div>
                                     <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
                                         <div className="h-full bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full animate-progress"></div>
                                     </div>
-                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -539,14 +640,22 @@ const UserDashboard = () => {
     const getHeaderInfo = () => {
         const path = location.pathname;
         
-        // If showing analysis, the header should have a back button
+        // If showing analysis, the header should have a back button and AI button
         if (showAnalysis && selectedFile) {
             const category = selectedFile.fileCategory || 'General';
             return {
                 title: `${category} Analysis`,
                 description: `Analysis for ${selectedFile.displayName}`,
                 icon: FiCpu,
-                onBack: handleBackToDashboard // Pass the back handler to the header
+                onBack: handleBackToDashboard, // Pass the back handler to the header
+                aiButton: {
+                    onClick: () => {
+                        // This will be handled by the AnalysisDashboard component
+                        // We need to trigger the AI chat from here
+                        // For now, we'll use a custom event to communicate with the AnalysisDashboard
+                        window.dispatchEvent(new CustomEvent('openAiChat'));
+                    }
+                }
             };
         }
 
@@ -567,7 +676,7 @@ const UserDashboard = () => {
         };
     };
 
-    const { title, description, icon, onBack } = getHeaderInfo();
+    const { title, description, icon, onBack, aiButton } = getHeaderInfo();
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5">
@@ -585,6 +694,7 @@ const UserDashboard = () => {
                                     setSidebarOpen={setSidebarOpen}
                                     sidebarOpen={sidebarOpen}
                                     onBack={onBack}
+                                    aiButton={aiButton}
                                 />
 
                                 {/* Content */}
@@ -605,6 +715,7 @@ const UserDashboard = () => {
                                     setSidebarOpen={setSidebarOpen}
                                     sidebarOpen={sidebarOpen}
                                     onBack={onBack}
+                                    aiButton={aiButton}
                                 />
 
                                 {/* Content */}

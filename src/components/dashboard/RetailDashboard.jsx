@@ -8,8 +8,6 @@ import {
 import AIAnalyst from './AIAnalyst';
 
 const RetailDashboard = ({ file, analysis }) => {
-    const [isAiChatOpen, setIsAiChatOpen] = useState(false);
-
     if (!file || !analysis) {
         return (
             <div className="text-center p-8">
@@ -26,6 +24,74 @@ const RetailDashboard = ({ file, analysis }) => {
         '#8B5CF6', '#A855F7', '#C084FC', '#DDD6FE', '#F3E8FF',
         '#7C3AED', '#9333EA', '#A855F7', '#C084FC', '#DDD6FE'
     ];
+
+    const [showSummary, setShowSummary] = useState(false);
+
+    // Generic section renderer for dynamic fields
+    const renderSection = (title, data) => {
+        if (!data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && Object.keys(data).length === 0)) {
+            return (
+                <div className="bg-white/80 rounded-2xl p-4 border border-gray-200 mb-4">
+                    <h4 className="font-bold mb-2">{title}</h4>
+                    <p className="text-gray-500">No data available.</p>
+                </div>
+            );
+        }
+        if (Array.isArray(data)) {
+            if (data.length > 0 && typeof data[0] === 'object' && !Array.isArray(data[0])) {
+                // Table
+                const columns = Object.keys(data[0]);
+                return (
+                    <div className="overflow-x-auto mb-4 bg-white/80 rounded-2xl p-4 border border-gray-200">
+                        <h4 className="font-bold mb-2">{title}</h4>
+                        <table className="min-w-full text-sm">
+                            <thead>
+                                <tr>
+                                    {columns.map(col => <th key={col} className="px-2 py-1 border-b text-left">{col}</th>)}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.map((row, i) => (
+                                    <tr key={i}>
+                                        {columns.map(col => <td key={col} className="px-2 py-1 border-b">{row[col]}</td>)}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            } else {
+                // List
+                return (
+                    <div className="mb-4 bg-white/80 rounded-2xl p-4 border border-gray-200">
+                        <h4 className="font-bold mb-2">{title}</h4>
+                        <ul className="list-disc list-inside">
+                            {data.map((item, i) => <li key={i}>{String(item)}</li>)}
+                        </ul>
+                    </div>
+                );
+            }
+        }
+        if (typeof data === 'object') {
+            return (
+                <div className="mb-4 bg-white/80 rounded-2xl p-4 border border-gray-200">
+                    <h4 className="font-bold mb-2">{title}</h4>
+                    <ul className="list-disc list-inside">
+                        {Object.entries(data).map(([k, v]) => (
+                            <li key={k}><span className="font-semibold">{k}:</span> {typeof v === 'object' ? JSON.stringify(v) : String(v)}</li>
+                        ))}
+                    </ul>
+                </div>
+            );
+        }
+        // Primitive
+        return (
+            <div className="mb-4 bg-white/80 rounded-2xl p-4 border border-gray-200">
+                <h4 className="font-bold mb-2">{title}</h4>
+                <p>{String(data)}</p>
+            </div>
+        );
+    };
 
     return (
         <>
@@ -67,6 +133,112 @@ const RetailDashboard = ({ file, analysis }) => {
                             </motion.div>
                         ))}
                     </div>
+                </div>
+
+                {/* --- Top Row: Special KPIs + Totals (now below KPIs) --- */}
+                <div className="flex flex-col lg:flex-row gap-6 mb-8 mt-8">
+                    {/* Left: Special KPIs Card */}
+                    <div className="flex-1 bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 flex flex-col justify-between min-h-[340px]">
+                        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                            <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Key Metrics
+                        </h3>
+                        <div className="flex flex-col gap-6 h-full justify-center">
+                            {/* Return Rate */}
+                            {analysis.insights.returns?.return_rate_percent && (
+                                <div className="flex items-center justify-between bg-[#F9F4FF] rounded-xl px-4 py-3 mb-2">
+                                    <span className="font-medium text-gray-700">Return Rate</span>
+                                    <span className="text-2xl font-bold text-[#7400B8]">{analysis.insights.returns.return_rate_percent}%</span>
+                                </div>
+                            )}
+                            {/* Inventory Turnover */}
+                            {analysis.insights.inventory?.turnover_rate && (
+                                <div className="flex items-center justify-between bg-[#F9F4FF] rounded-xl px-4 py-3 mb-2">
+                                    <span className="font-medium text-gray-700">Inventory Turnover</span>
+                                    <span className="text-2xl font-bold text-[#7400B8]">{analysis.insights.inventory.turnover_rate}</span>
+                                </div>
+                            )}
+                            {/* Promotion Impact */}
+                            {analysis.insights.promotions?.impact && (
+                                <div className="bg-[#F9F4FF] rounded-xl px-4 py-3 flex flex-col gap-1">
+                                    <span className="font-medium text-gray-700 mb-1">Promotion Impact</span>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-600">Avg. with Promo</span>
+                                        <span className="text-xl font-bold text-[#7400B8]">₹{analysis.insights.promotions.impact.avg_with_promo}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-600">Avg. without Promo</span>
+                                        <span className="text-xl font-bold text-[#7400B8]">₹{analysis.insights.promotions.impact.avg_without_promo}</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    {/* Right: Totals Card */}
+                    {analysis.insights.totals && Object.keys(analysis.insights.totals).length > 0 && (
+                        <div className="flex-1 bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 flex flex-col justify-between min-h-[340px]">
+                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                                <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Totals
+                            </h3>
+                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-6 min-h-0 items-center justify-center">
+                                {Object.entries(analysis.insights.totals).map(([key, value], idx) => {
+                                    // Pie chart for array of objects with two keys (e.g., sales_by_region)
+                                    if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && Object.keys(value[0]).length === 2) {
+                                        const [nameKey, valueKey] = Object.keys(value[0]);
+                                        return (
+                                            <div
+                                                key={key}
+                                                className="col-span-1 flex flex-col items-center justify-center h-full w-full flex-1 overflow-visible"
+                                            >
+                                                <h4 className="font-bold mb-2 text-center w-full break-words">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                                <div className="flex-1 flex items-center justify-center w-full h-full overflow-visible">
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <PieChart>
+                                                            <Pie
+                                                                data={value}
+                                                                dataKey={valueKey}
+                                                                nameKey={nameKey}
+                                                                cx="50%"
+                                                                cy="50%"
+                                                                outerRadius="80%"
+                                                                fill="#7400B8"
+                                                                label={({ percent, name }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                                            >
+                                                                {value.map((entry, i) => (
+                                                                    <Cell key={`cell-${i}`} fill={pieColors[i % pieColors.length]} />
+                                                                ))}
+                                                            </Pie>
+                                                            <Tooltip formatter={(v, n) => [`₹${v.toLocaleString()}`, n]} />
+                                                            <Legend verticalAlign="bottom" align="center" wrapperStyle={{ textAlign: 'center', width: '100%' }} height={36} />
+                                                        </PieChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    // Card for primitives/objects
+                                    if (typeof value === 'object' && value !== null) {
+                                        return (
+                                            <div key={key} className="col-span-1 h-full w-full">
+                                                <h4 className="font-bold mb-2">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                                <ul className="list-disc list-inside">
+                                                    {Object.entries(value).map(([k, v]) => (
+                                                        <li key={k}><span className="font-semibold">{k}:</span> {typeof v === 'object' ? JSON.stringify(v) : String(v)}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        );
+                                    }
+                                    // Primitive
+                                    return (
+                                        <div key={key} className="col-span-1 flex flex-col items-start justify-center h-full w-full">
+                                            <h4 className="font-bold mb-2">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                            <p className="text-2xl font-bold text-[#7400B8]">{String(value)}</p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Charts Grid */}
@@ -331,56 +503,227 @@ const RetailDashboard = ({ file, analysis }) => {
                     )}
                 </div>
 
-                {/* Insights Section */}
+                {/* --- Custom Visualizations for Insights --- */}
+                {/* High Performers - Horizontal Bar Chart + List */}
+                {analysis.insights.highPerformers?.top_products && Array.isArray(analysis.insights.highPerformers.top_products) && analysis.insights.highPerformers.top_products.length > 0 && (
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 flex flex-col lg:flex-row gap-8 items-start">
+                        <div className="flex-1 min-w-[300px]">
+                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                                <FiTrendingUp className="w-6 h-6 text-[#7400B8]" /> High Performing Products
+                            </h3>
+                            <ResponsiveContainer width="100%" height={260}>
+                                <BarChart data={analysis.insights.highPerformers.top_products} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis type="number" />
+                                    <YAxis dataKey="Product" type="category" width={120} />
+                                    <Tooltip formatter={(value) => [`₹${value.toLocaleString()}`, 'Total Revenue']} />
+                                    <Legend />
+                                    <Bar dataKey="Total Revenue" fill="#7400B8" radius={[0, 8, 8, 0]} barSize={28}>
+                                        {analysis.insights.highPerformers.top_products.map((_, index) => (
+                                            <Cell key={`cell-high-${index}`} fill={`rgba(116, 0, 184, ${0.3 + (index * 0.15)})`} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="flex-1 min-w-[200px]">
+                            <h4 className="font-bold mb-2">Top Products</h4>
+                            <ul className="space-y-2">
+                                {analysis.insights.highPerformers.top_products.map((prod, i) => (
+                                    <li key={prod.Product} className="flex justify-between items-center bg-[#F9F4FF] rounded-xl px-4 py-2">
+                                        <span>{prod.Product}</span>
+                                        <span className="font-bold text-[#7400B8]">₹{prod['Total Revenue'].toLocaleString()}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Low Performers - Horizontal Bar Chart + List */}
+                {analysis.insights.lowPerformers?.low_products && Array.isArray(analysis.insights.lowPerformers.low_products) && analysis.insights.lowPerformers.low_products.length > 0 && (
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 flex flex-col lg:flex-row gap-8 items-start">
+                        <div className="flex-1 min-w-[300px]">
+                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                                <FiTrendingUp className="w-6 h-6 text-[#7400B8]" /> Low Performing Products
+                            </h3>
+                            <ResponsiveContainer width="100%" height={180}>
+                                <BarChart data={analysis.insights.lowPerformers.low_products} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis type="number" />
+                                    <YAxis dataKey="Product" type="category" width={120} />
+                                    <Tooltip formatter={(value) => [`₹${value.toLocaleString()}`, 'Total Revenue']} />
+                                    <Legend />
+                                    <Bar dataKey="Total Revenue" fill="#C084FC" radius={[0, 8, 8, 0]} barSize={28}>
+                                        {analysis.insights.lowPerformers.low_products.map((_, index) => (
+                                            <Cell key={`cell-low-${index}`} fill={`rgba(192, 132, 252, ${0.3 + (index * 0.15)})`} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="flex-1 min-w-[200px]">
+                            <h4 className="font-bold mb-2">Low Products</h4>
+                            <ul className="space-y-2">
+                                {analysis.insights.lowPerformers.low_products.map((prod, i) => (
+                                    <li key={prod.Product} className="flex justify-between items-center bg-[#F9F4FF] rounded-xl px-4 py-2">
+                                        <span>{prod.Product}</span>
+                                        <span className="font-bold text-[#C084FC]">₹{prod['Total Revenue'].toLocaleString()}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Customer - Bar Chart for Frequent Customers */}
+                {analysis.insights.customer?.frequent_customers && Array.isArray(analysis.insights.customer.frequent_customers) && analysis.insights.customer.frequent_customers.length > 0 && (
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20">
+                        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                            <FiUsers className="w-6 h-6 text-[#7400B8]" /> Frequent Customers
+                        </h3>
+                        <div className="h-[300px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={analysis.insights.customer.frequent_customers} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey="customer" />
+                                    <YAxis />
+                                    <Tooltip formatter={(value) => [value, 'Purchases']} />
+                                    <Legend />
+                                    <Bar dataKey="purchases" fill="#8B5CF6" radius={[8, 8, 0, 0]} barSize={40}>
+                                        {analysis.insights.customer.frequent_customers.map((_, index) => (
+                                            <Cell key={`cell-cust-${index}`} fill={`rgba(139, 92, 246, ${0.3 + (index * 0.15)})`} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Trends - Line/Area Chart for Daily Trends */}
+                {analysis.insights.trends?.daily && Array.isArray(analysis.insights.trends.daily) && analysis.insights.trends.daily.length > 0 && (
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20">
+                        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                            <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Sales Trends (Daily)
+                        </h3>
+                        <div className="h-[350px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={analysis.insights.trends.daily.map(d => ({ ...d, date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }))} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#7400B8" stopOpacity={0.8}/>
+                                            <stop offset="95%" stopColor="#7400B8" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey="date" />
+                                    <YAxis />
+                                    <Tooltip formatter={(value, name) => name === 'total' ? [`₹${value.toLocaleString()}`, 'Total'] : [value, name]} />
+                                    <Legend />
+                                    <Area type="monotone" dataKey="total" stroke="#7400B8" fill="url(#colorTrend)" strokeWidth={3} />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* High/Low Performers and Hypotheses at the bottom as Insights */}
+                {(!!analysis.insights.summary || (!!analysis.insights.hypothesis && Array.isArray(analysis.insights.hypothesis) && analysis.insights.hypothesis.length > 0)) && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20"
+                        className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20 mt-8"
                 >
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                             <FiCpu className="w-6 h-6 text-[#7400B8]" />
-                            AI-Powered Insights
+                                AI-Powered Insights & Hypotheses
                         </h3>
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => setIsAiChatOpen(true)}
-                            className="px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:shadow-lg transition-all duration-200 flex items-center space-x-2 text-sm font-medium"
-                        >
-                            <FiMessageSquare className="w-4 h-4" />
-                            <span>Ask AI</span>
-                        </motion.button>
+                            <button
+                                className="ml-4 px-4 py-2 bg-[#7400B8] text-white rounded-lg shadow hover:bg-[#5a0091] transition"
+                                onClick={() => setShowSummary(s => !s)}
+                            >
+                                {showSummary ? 'Hide Summary' : 'Show Summary'}
+                            </button>
+                        </div>
+                        {showSummary && analysis.summary && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                                {Object.entries(analysis.summary).map(([field, details]) => (
+                                    <div key={field} className="bg-[#F9F4FF] rounded-2xl p-4 border border-[#7400B8]/10">
+                                        <h4 className="font-bold mb-2">{field}</h4>
+                                        {/* Numeric summary */}
+                                        {details.type === 'numeric' && (
+                                            <ul className="text-sm space-y-1">
+                                                <li><span className="font-semibold">Count:</span> {details.count}</li>
+                                                <li><span className="font-semibold">Min:</span> {details.min}</li>
+                                                <li><span className="font-semibold">Max:</span> {details.max}</li>
+                                                <li><span className="font-semibold">Mean:</span> {details.mean}</li>
+                                                <li><span className="font-semibold">Median:</span> {details.median}</li>
+                                                <li><span className="font-semibold">Stddev:</span> {details.stddev}</li>
+                                            </ul>
+                                        )}
+                                        {/* Categorical summary */}
+                                        {details.type === 'categorical' && (
+                                            <>
+                                                <div className="mb-2 text-sm"><span className="font-semibold">Unique Count:</span> {details.unique_count}</div>
+                                                <div className="overflow-x-auto">
+                                                    <table className="min-w-full text-xs">
+                                                        <thead>
+                                                            <tr>
+                                                                <th className="px-2 py-1 border-b text-left">Value</th>
+                                                                <th className="px-2 py-1 border-b text-left">Count</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {details.top_values && details.top_values.map((v, i) => (
+                                                                <tr key={i}>
+                                                                    <td className="px-2 py-1 border-b">{v.value}</td>
+                                                                    <td className="px-2 py-1 border-b">{v.count}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
                     </div>
-                    {analysis.insights?.summary && (
-                        <div className="text-gray-700 space-y-4 prose prose-purple max-w-none">
-                            <p>{analysis.insights.summary.replace("Sure, here is your summary:", "").trim()}</p>
-                            
-                            {analysis.insights.recommendations && (
-                                <div>
-                                    <h4 className="font-bold">Recommendations:</h4>
-                                    <ul className="list-disc list-inside">
-                                        {analysis.insights.recommendations.map((rec, index) => (
-                                            <li key={index}>{rec}</li>
-                                        ))}
-                                    </ul>
+                                            </>
+                                        )}
+                                        {/* Boolean summary */}
+                                        {details.type === 'boolean' && (
+                                            <div className="overflow-x-auto">
+                                                <table className="min-w-full text-xs">
+                                                    <thead>
+                                                        <tr>
+                                                            <th className="px-2 py-1 border-b text-left">Value</th>
+                                                            <th className="px-2 py-1 border-b text-left">Count</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {details.counts && details.counts.map((v, i) => (
+                                                            <tr key={i}>
+                                                                <td className="px-2 py-1 border-b">{String(v.value)}</td>
+                                                                <td className="px-2 py-1 border-b">{v.count}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
                                 </div>
                             )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {analysis.insights.hypothesis && Array.isArray(analysis.insights.hypothesis) && analysis.insights.hypothesis.length > 0 && (
+                            <div className="mt-4">
+                                <h4 className="font-bold">Hypotheses:</h4>
+                                <ul className="list-disc list-inside">
+                                    {analysis.insights.hypothesis.map((h, i) => <li key={i}>{h}</li>)}
+                                </ul>
                         </div>
                     )}
                 </motion.div>
-            </motion.div>
-
-            <AnimatePresence>
-                {isAiChatOpen && (
-                    <AIAnalyst
-                        file={file}
-                        analysis={analysis}
-                        onClose={() => setIsAiChatOpen(false)}
-                    />
                 )}
-            </AnimatePresence>
+            </motion.div>
         </>
     );
 };
