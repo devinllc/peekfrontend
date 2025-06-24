@@ -27,6 +27,10 @@ const RetailDashboard = ({ file, analysis }) => {
 
     const [showSummary, setShowSummary] = useState(false);
 
+    // --- Trends scaling state ---
+    const [trendWindow, setTrendWindow] = useState('all');
+    const [customRange, setCustomRange] = useState({ start: '', end: '' });
+
     // Generic section renderer for dynamic fields
     const renderSection = (title, data) => {
         if (!data || (Array.isArray(data) && data.length === 0) || (typeof data === 'object' && Object.keys(data).length === 0)) {
@@ -170,6 +174,10 @@ const RetailDashboard = ({ file, analysis }) => {
                                         <span className="text-xl font-bold text-[#7400B8]">₹{analysis.insights.promotions.impact.avg_without_promo}</span>
                                     </div>
                                 </div>
+                            )}
+                            {/* Fallback message if no key metrics are present */}
+                            {!(analysis.insights.returns?.return_rate_percent || analysis.insights.inventory?.turnover_rate || analysis.insights.promotions?.impact) && (
+                                <div className="text-center text-gray-500 py-8">No key metrics available for this file.</div>
                             )}
                         </div>
                     </div>
@@ -460,13 +468,48 @@ const RetailDashboard = ({ file, analysis }) => {
                                 <FiShoppingCart className="w-6 h-6 text-[#7400B8]" />
                                 Sales Over Time
                             </h3>
+                            {/* Scale/Zoom Controls */}
+                            {analysis.insights.trends.sales_over_time.Date.length > 30 && (
+                                <div className="mb-4 flex gap-2 items-center">
+                                    <span className="text-sm font-medium">Show:</span>
+                                    <select value={trendWindow} onChange={e => setTrendWindow(e.target.value)} className="border rounded px-2 py-1">
+                                        <option value="7">Last 7 days</option>
+                                        <option value="30">Last 30 days</option>
+                                        <option value="90">Last 90 days</option>
+                                        <option value="all">All</option>
+                                    </select>
+                                </div>
+                            )}
                             <div className="h-[400px] w-full">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart
-                                        data={analysis.insights.trends.sales_over_time.Date.map((date, index) => ({
-                                            date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                                            sales: analysis.insights.trends.sales_over_time.Sales[index]
-                                        }))}
+                                        data={(() => {
+                                            const daily = analysis.insights.trends.daily;
+                                            // Helper to normalize to YYYY-MM-DD
+                                            const toYMD = (date) => {
+                                                if (!date) return '';
+                                                const d = new Date(date);
+                                                if (isNaN(d)) return '';
+                                                return d.toISOString().slice(0, 10);
+                                            };
+                                            if (trendWindow === 'custom' && (customRange.start || customRange.end)) {
+                                                const startYMD = customRange.start;
+                                                const endYMD = customRange.end;
+                                                return daily.filter(d => {
+                                                    const dYMD = toYMD(d.date);
+                                                    if (!dYMD) return false;
+                                                    if (startYMD && endYMD) return dYMD >= startYMD && dYMD <= endYMD;
+                                                    if (startYMD) return dYMD >= startYMD;
+                                                    if (endYMD) return dYMD <= endYMD;
+                                                    return true;
+                                                }).map(d => ({ ...d, date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }));
+                                            } else {
+                                                let window = daily.length;
+                                                if (trendWindow !== 'all') window = Math.min(daily.length, parseInt(trendWindow));
+                                                const start = daily.length - window;
+                                                return daily.slice(start).map(d => ({ ...d, date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }));
+                                            }
+                                        })()}
                                         margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
                                     >
                                         <defs>
@@ -515,26 +558,47 @@ const RetailDashboard = ({ file, analysis }) => {
                                 <BarChart data={analysis.insights.highPerformers.top_products} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                     <XAxis type="number" />
-                                    <YAxis dataKey="Product" type="category" width={120} />
-                                    <Tooltip formatter={(value) => [`₹${value.toLocaleString()}`, 'Total Revenue']} />
+                                    {(() => {
+                                        const first = analysis.insights.highPerformers.top_products[0];
+                                        const stringKey = Object.keys(first).find(k => typeof first[k] === 'string');
+                                        return <YAxis dataKey={stringKey} type="category" width={120} />;
+                                    })()}
+                                    <Tooltip formatter={(value) => [`₹${value.toLocaleString()}`, 'Value']} />
                                     <Legend />
-                                    <Bar dataKey="Total Revenue" fill="#7400B8" radius={[0, 8, 8, 0]} barSize={28}>
-                                        {analysis.insights.highPerformers.top_products.map((_, index) => (
-                                            <Cell key={`cell-high-${index}`} fill={`rgba(116, 0, 184, ${0.3 + (index * 0.15)})`} />
-                                        ))}
-                                    </Bar>
+                                    {(() => {
+                                        const first = analysis.insights.highPerformers.top_products[0];
+                                        const numberKey = Object.keys(first).find(k => typeof first[k] === 'number');
+                                        return (
+                                            <Bar dataKey={numberKey} fill="#7400B8" radius={[0, 8, 8, 0]} barSize={28}>
+                                                {analysis.insights.highPerformers.top_products.map((_, index) => (
+                                                    <Cell key={`cell-high-${index}`} fill={`rgba(116, 0, 184, ${0.3 + (index * 0.15)})`} />
+                                                ))}
+                                            </Bar>
+                                        );
+                                    })()}
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
                         <div className="flex-1 min-w-[200px]">
                             <h4 className="font-bold mb-2">Top Products</h4>
                             <ul className="space-y-2">
-                                {analysis.insights.highPerformers.top_products.map((prod, i) => (
-                                    <li key={prod.Product} className="flex justify-between items-center bg-[#F9F4FF] rounded-xl px-4 py-2">
-                                        <span>{prod.Product}</span>
-                                        <span className="font-bold text-[#7400B8]">₹{prod['Total Revenue'].toLocaleString()}</span>
-                                    </li>
-                                ))}
+                                {analysis.insights.highPerformers.top_products.map((prod, i) => {
+                                    const keys = Object.keys(prod);
+                                    const nameKey = keys.find(k => typeof prod[k] === 'string') || keys[0];
+                                    const valueKey = keys.find(k => typeof prod[k] === 'number');
+                                    return (
+                                        <li key={i} className="flex justify-between items-center bg-[#F9F4FF] rounded-xl px-4 py-2">
+                                            <span>{prod[nameKey]}</span>
+                                            <span className="font-bold text-[#7400B8]">
+                                                {typeof prod[valueKey] === 'number'
+                                                    ? `₹${prod[valueKey].toLocaleString()}`
+                                                    : prod[valueKey] !== undefined
+                                                        ? String(prod[valueKey])
+                                                        : 'N/A'}
+                                            </span>
+                                        </li>
+                                    );
+                                })}
                             </ul>
                         </div>
                     </motion.div>
@@ -551,26 +615,47 @@ const RetailDashboard = ({ file, analysis }) => {
                                 <BarChart data={analysis.insights.lowPerformers.low_products} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                     <XAxis type="number" />
-                                    <YAxis dataKey="Product" type="category" width={120} />
-                                    <Tooltip formatter={(value) => [`₹${value.toLocaleString()}`, 'Total Revenue']} />
+                                    {(() => {
+                                        const first = analysis.insights.lowPerformers.low_products[0];
+                                        const stringKey = Object.keys(first).find(k => typeof first[k] === 'string');
+                                        return <YAxis dataKey={stringKey} type="category" width={120} />;
+                                    })()}
+                                    <Tooltip formatter={(value) => [`₹${value.toLocaleString()}`, 'Value']} />
                                     <Legend />
-                                    <Bar dataKey="Total Revenue" fill="#C084FC" radius={[0, 8, 8, 0]} barSize={28}>
-                                        {analysis.insights.lowPerformers.low_products.map((_, index) => (
-                                            <Cell key={`cell-low-${index}`} fill={`rgba(192, 132, 252, ${0.3 + (index * 0.15)})`} />
-                                        ))}
-                                    </Bar>
+                                    {(() => {
+                                        const first = analysis.insights.lowPerformers.low_products[0];
+                                        const numberKey = Object.keys(first).find(k => typeof first[k] === 'number');
+                                        return (
+                                            <Bar dataKey={numberKey} fill="#C084FC" radius={[0, 8, 8, 0]} barSize={28}>
+                                                {analysis.insights.lowPerformers.low_products.map((_, index) => (
+                                                    <Cell key={`cell-low-${index}`} fill={`rgba(192, 132, 252, ${0.3 + (index * 0.15)})`} />
+                                                ))}
+                                            </Bar>
+                                        );
+                                    })()}
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
                         <div className="flex-1 min-w-[200px]">
                             <h4 className="font-bold mb-2">Low Products</h4>
                             <ul className="space-y-2">
-                                {analysis.insights.lowPerformers.low_products.map((prod, i) => (
-                                    <li key={prod.Product} className="flex justify-between items-center bg-[#F9F4FF] rounded-xl px-4 py-2">
-                                        <span>{prod.Product}</span>
-                                        <span className="font-bold text-[#C084FC]">₹{prod['Total Revenue'].toLocaleString()}</span>
-                                    </li>
-                                ))}
+                                {analysis.insights.lowPerformers.low_products.map((prod, i) => {
+                                    const keys = Object.keys(prod);
+                                    const nameKey = keys.find(k => typeof prod[k] === 'string') || keys[0];
+                                    const valueKey = keys.find(k => typeof prod[k] === 'number');
+                                    return (
+                                        <li key={i} className="flex justify-between items-center bg-[#F9F4FF] rounded-xl px-4 py-2">
+                                            <span>{prod[nameKey]}</span>
+                                            <span className="font-bold text-[#C084FC]">
+                                                {typeof prod[valueKey] === 'number'
+                                                    ? `₹${prod[valueKey].toLocaleString()}`
+                                                    : prod[valueKey] !== undefined
+                                                        ? String(prod[valueKey])
+                                                        : 'N/A'}
+                                            </span>
+                                        </li>
+                                    );
+                                })}
                             </ul>
                         </div>
                     </motion.div>
@@ -604,12 +689,83 @@ const RetailDashboard = ({ file, analysis }) => {
                 {/* Trends - Line/Area Chart for Daily Trends */}
                 {analysis.insights.trends?.daily && Array.isArray(analysis.insights.trends.daily) && analysis.insights.trends.daily.length > 0 && (
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20">
-                        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                            <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Sales Trends (Daily)
-                        </h3>
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Sales Trends (Daily)
+                            </h3>
+                            {analysis.insights.trends.daily.length > 30 && (
+                                <div className="flex gap-2 items-center bg-white/70 border border-[#7400B8]/10 rounded-xl px-3 py-2 shadow-sm">
+                                    <span className="text-sm font-medium text-gray-700">Show:</span>
+                                    <select
+                                        value={trendWindow}
+                                        onChange={e => {
+                                            setTrendWindow(e.target.value);
+                                            if (e.target.value !== 'custom') {
+                                                setCustomRange({ start: '', end: '' });
+                                            }
+                                        }}
+                                        className="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[#7400B8] focus:border-[#7400B8] bg-white"
+                                    >
+                                        <option value="7">Last 7 days</option>
+                                        <option value="30">Last 30 days</option>
+                                        <option value="90">Last 90 days</option>
+                                        <option value="all">All</option>
+                                        <option value="custom">Custom Range…</option>
+                                    </select>
+                                    {trendWindow === 'custom' && (
+                                        <>
+                                            <input
+                                                type="date"
+                                                value={customRange.start}
+                                                max={customRange.end || undefined}
+                                                onChange={e => setCustomRange(r => ({ ...r, start: e.target.value }))}
+                                                className="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[#7400B8] focus:border-[#7400B8] bg-white ml-2"
+                                            />
+                                            <span className="mx-1 text-gray-500">to</span>
+                                            <input
+                                                type="date"
+                                                value={customRange.end}
+                                                min={customRange.start || undefined}
+                                                onChange={e => setCustomRange(r => ({ ...r, end: e.target.value }))}
+                                                className="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[#7400B8] focus:border-[#7400B8] bg-white"
+                                            />
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                         <div className="h-[350px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={analysis.insights.trends.daily.map(d => ({ ...d, date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }))} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                                <AreaChart 
+                                    data={(() => {
+                                        const daily = analysis.insights.trends.daily;
+                                        // Helper to normalize to YYYY-MM-DD
+                                        const toYMD = (date) => {
+                                            if (!date) return '';
+                                            const d = new Date(date);
+                                            if (isNaN(d)) return '';
+                                            return d.toISOString().slice(0, 10);
+                                        };
+                                        if (trendWindow === 'custom' && (customRange.start || customRange.end)) {
+                                            const startYMD = customRange.start;
+                                            const endYMD = customRange.end;
+                                            return daily.filter(d => {
+                                                const dYMD = toYMD(d.date);
+                                                if (!dYMD) return false;
+                                                if (startYMD && endYMD) return dYMD >= startYMD && dYMD <= endYMD;
+                                                if (startYMD) return dYMD >= startYMD;
+                                                if (endYMD) return dYMD <= endYMD;
+                                                return true;
+                                            }).map(d => ({ ...d, date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }));
+                                        } else {
+                                            let window = daily.length;
+                                            if (trendWindow !== 'all') window = Math.min(daily.length, parseInt(trendWindow));
+                                            const start = daily.length - window;
+                                            return daily.slice(start).map(d => ({ ...d, date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }));
+                                        }
+                                    })()}
+                                    margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
+                                >
                                     <defs>
                                         <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#7400B8" stopOpacity={0.8}/>
@@ -629,26 +785,26 @@ const RetailDashboard = ({ file, analysis }) => {
                 )}
 
                 {/* High/Low Performers and Hypotheses at the bottom as Insights */}
-                {(!!analysis.insights.summary || (!!analysis.insights.hypothesis && Array.isArray(analysis.insights.hypothesis) && analysis.insights.hypothesis.length > 0)) && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                        className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20 mt-8"
+                    className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20 mt-8"
                 >
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                             <FiCpu className="w-6 h-6 text-[#7400B8]" />
-                                AI-Powered Insights & Hypotheses
+                            AI-Powered Insights & Hypotheses
                         </h3>
-                            <button
-                                className="ml-4 px-4 py-2 bg-[#7400B8] text-white rounded-lg shadow hover:bg-[#5a0091] transition"
-                                onClick={() => setShowSummary(s => !s)}
-                            >
-                                {showSummary ? 'Hide Summary' : 'Show Summary'}
-                            </button>
-                        </div>
-                        {showSummary && analysis.summary && (
+                        <button
+                            className="ml-4 px-4 py-2 bg-[#7400B8] text-white rounded-lg shadow hover:bg-[#5a0091] transition"
+                            onClick={() => setShowSummary(s => !s)}
+                        >
+                            {showSummary ? 'Hide Summary' : 'Show Summary'}
+                        </button>
+                    </div>
+                    {showSummary && (
+                        analysis.summary ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                                 {Object.entries(analysis.summary).map(([field, details]) => (
                                     <div key={field} className="bg-[#F9F4FF] rounded-2xl p-4 border border-[#7400B8]/10">
@@ -685,7 +841,7 @@ const RetailDashboard = ({ file, analysis }) => {
                                                             ))}
                                                         </tbody>
                                                     </table>
-                    </div>
+                                                </div>
                                             </>
                                         )}
                                         {/* Boolean summary */}
@@ -707,22 +863,24 @@ const RetailDashboard = ({ file, analysis }) => {
                                                         ))}
                                                     </tbody>
                                                 </table>
-                                </div>
-                            )}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
-                        )}
-                        {analysis.insights.hypothesis && Array.isArray(analysis.insights.hypothesis) && analysis.insights.hypothesis.length > 0 && (
-                            <div className="mt-4">
-                                <h4 className="font-bold">Hypotheses:</h4>
-                                <ul className="list-disc list-inside">
-                                    {analysis.insights.hypothesis.map((h, i) => <li key={i}>{h}</li>)}
-                                </ul>
+                        ) : (
+                            <div className="mb-6 text-gray-500">No summary available.</div>
+                        )
+                    )}
+                    {analysis.insights.hypothesis && Array.isArray(analysis.insights.hypothesis) && analysis.insights.hypothesis.length > 0 && (
+                        <div className="mt-4">
+                            <h4 className="font-bold">Hypotheses:</h4>
+                            <ul className="list-disc list-inside">
+                                {analysis.insights.hypothesis.map((h, i) => <li key={i}>{h}</li>)}
+                            </ul>
                         </div>
                     )}
                 </motion.div>
-                )}
             </motion.div>
         </>
     );

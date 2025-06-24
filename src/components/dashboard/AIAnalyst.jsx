@@ -50,7 +50,7 @@ async function trackAIPromptUsageWithRetry(maxRetries = 1) {
     }
 }
 
-const AIAnalyst = ({ analysis, file, onClose, onUpgradePlan }) => {
+const AIAnalyst = ({ analysis, summary, file, onClose, onUpgradePlan }) => {
     const { user } = useAuth();
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
@@ -64,12 +64,6 @@ const AIAnalyst = ({ analysis, file, onClose, onUpgradePlan }) => {
         }
         return null;
     }, []);
-
-    // Enhanced color palette for charts
-    const chartColors = [
-        '#7400B8', '#9B4DCA', '#C77DFF', '#E0AAFF', '#FF6B6B', 
-        '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'
-    ];
 
     useEffect(() => {
         if (analysis && genAI) {
@@ -252,7 +246,26 @@ What would you like to explore first?`,
     const createEnhancedPrompt = (userMessage) => {
         const formattedAnalysis = formatAnalysisData();
         const { category } = analysis.insights;
-
+        let summarySection = '';
+        if (summary && Object.keys(summary).length > 0) {
+            summarySection = '\n**Data Summary:**\n';
+            Object.entries(summary).forEach(([field, details]) => {
+                summarySection += `- ${field}: `;
+                if (details.type === 'numeric') {
+                    summarySection += `count=${details.count}, min=${details.min}, max=${details.max}, mean=${details.mean}, median=${details.median}, stddev=${details.stddev}`;
+                } else if (details.type === 'categorical') {
+                    summarySection += `unique_count=${details.unique_count}`;
+                    if (details.top_values) {
+                        summarySection += ', top_values=' + details.top_values.map(v => `${v.value} (${v.count})`).join(', ');
+                    }
+                } else if (details.type === 'boolean') {
+                    if (details.counts) {
+                        summarySection += details.counts.map(v => `${v.value}: ${v.count}`).join(', ');
+                    }
+                }
+                summarySection += '\n';
+            });
+        }
         return `
 You are an expert AI data analyst with access to comprehensive data analysis results. Your role is to:
 
@@ -266,7 +279,7 @@ You are an expert AI data analyst with access to comprehensive data analysis res
 - File: ${file.originalName}
 - Category: ${category}
 - Analysis Results: ${formattedAnalysis}
-
+${summarySection}
 **User Question:** "${userMessage}"
 
 **Response Guidelines:**
@@ -311,16 +324,26 @@ Provide a comprehensive, helpful response that addresses the user's question whi
         const jsonRegex = /```json\s*([\s\S]*?)\s*```/g;
         let match;
         while ((match = jsonRegex.exec(text)) !== null) {
-            console.log("Found JSON block:", match[1]);
             try {
-                let jsonString = match[1].replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+                let jsonString = match[1].replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
                 jsonString = jsonString.replace(/,(\s*?[\}\]])/g, '$1');
+
+                // --- Fix: Evaluate math expressions in value fields ---
+                jsonString = jsonString.replace(/("value"\s*:\s*)([0-9.]+\s*\/\s*[0-9.]+)/g, (m, prefix, expr) => {
+                    try {
+                        // Evaluate the math expression safely
+                        const val = Function('return ' + expr)();
+                        return `${prefix}${val}`;
+                    } catch {
+                        return m; // fallback to original if error
+                    }
+                });
+                // --- End fix ---
+
                 const parsed = JSON.parse(jsonString);
                 chartData.push(parsed);
-                console.log("Parsed chart data:", parsed);
             } catch (error) {
                 console.error('Error parsing chart JSON from AI response:', error);
-                console.log("Original JSON string that failed parsing:", match[1]);
             }
             // Remove the matched block from the content
             content = content.replace(match[0], '');
@@ -330,16 +353,25 @@ Provide a comprehensive, helpful response that addresses the user's question whi
         if (chartData.length === 0) {
             const rawJsonRegex = /\{[\s\S]*?"type"[\s\S]*?"data"[\s\S]*?\}/g;
             while ((match = rawJsonRegex.exec(text)) !== null) {
-                console.log("Found raw JSON:", match[0]);
                 try {
-                    let jsonString = match[0].replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+                    let jsonString = match[0].replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
                     jsonString = jsonString.replace(/,(\s*?[\}\]])/g, '$1');
+
+                    // --- Fix: Evaluate math expressions in value fields ---
+                    jsonString = jsonString.replace(/("value"\s*:\s*)([0-9.]+\s*\/\s*[0-9.]+)/g, (m, prefix, expr) => {
+                        try {
+                            const val = Function('return ' + expr)();
+                            return `${prefix}${val}`;
+                        } catch {
+                            return m;
+                        }
+                    });
+                    // --- End fix ---
+
                     const parsed = JSON.parse(jsonString);
                     chartData.push(parsed);
-                    console.log("Parsed raw chart data:", parsed);
                 } catch (error) {
                     console.error('Error parsing raw JSON from AI response:', error);
-                    console.log("Original raw JSON string that failed parsing:", match[0]);
                 }
                 // Remove the matched block from the content
                 content = content.replace(match[0], '');
@@ -410,8 +442,6 @@ Provide a comprehensive, helpful response that addresses the user's question whi
             const response = await result.response;
             const text = response.text();
             
-            console.log("Raw AI Response:", text);
-
             const { content, chartData } = parseAIResponse(text);
             
             const newAiMessage = {

@@ -475,6 +475,7 @@ const UserDashboard = () => {
                                 <AIAnalyst
                                     file={file}
                                     analysis={analysisData}
+                                    summary={analysisData.summary}
                                     onClose={() => setIsAiChatOpen(false)}
                                     onUpgradePlan={() => setShowUpgrade(true)}
                                 />
@@ -491,6 +492,7 @@ const UserDashboard = () => {
                                 <AIAnalyst
                                     file={file}
                                     analysis={analysisData}
+                                    summary={analysisData.summary}
                                     onClose={() => setIsAiChatOpen(false)}
                                     onUpgradePlan={() => setShowUpgrade(true)}
                                 />
@@ -507,6 +509,7 @@ const UserDashboard = () => {
                                 <AIAnalyst
                                     file={file}
                                     analysis={analysisData}
+                                    summary={analysisData.summary}
                                     onClose={() => setIsAiChatOpen(false)}
                                     onUpgradePlan={() => setShowUpgrade(true)}
                                 />
@@ -523,6 +526,7 @@ const UserDashboard = () => {
                                 <AIAnalyst
                                     file={file}
                                     analysis={analysisData}
+                                    summary={analysisData.summary}
                                     onClose={() => setIsAiChatOpen(false)}
                                     onUpgradePlan={() => setShowUpgrade(true)}
                                 />
@@ -539,6 +543,7 @@ const UserDashboard = () => {
                                 <AIAnalyst
                                     file={file}
                                     analysis={analysisData}
+                                    summary={analysisData.summary}
                                     onClose={() => setIsAiChatOpen(false)}
                                     onUpgradePlan={() => setShowUpgrade(true)}
                                 />
@@ -556,6 +561,7 @@ const UserDashboard = () => {
                                 <AIAnalyst
                                     file={file}
                                     analysis={analysisData}
+                                    summary={analysisData.summary}
                                     onClose={() => setIsAiChatOpen(false)}
                                     onUpgradePlan={() => setShowUpgrade(true)}
                                 />
