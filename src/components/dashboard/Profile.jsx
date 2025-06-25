@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { FiUser, FiMail, FiCalendar, FiShield, FiDatabase, FiCreditCard, FiCheck, FiX, FiEdit, FiSave, FiLoader, FiPhone, FiBriefcase, FiArrowUpCircle } from 'react-icons/fi';
 import { motion } from 'framer-motion';
@@ -14,6 +14,72 @@ const PLAN_OPTIONS = [
   { name: 'enterprise', label: 'Enterprise' },
 ];
 
+const PLAN_DEFAULTS = {
+    free: {
+        price: 0,
+        billingInterval: 'monthly',
+        limits: {
+            uploads: 10,
+            download: 5,
+            analyse: 3,
+            aiPromts: 5,
+            reports: 2,
+            charts: 5,
+            maxUsersPerAccount: 1,
+            dataRetentionDays: 7,
+        },
+        features: {
+            scheduleReports: false,
+            exportAsPDF: false,
+            shareableDashboards: false,
+            emailSupport: true,
+            prioritySupport: false,
+        },
+    },
+    premium: {
+        price: 9900,
+        billingInterval: 'monthly',
+        limits: {
+            uploads: 100,
+            download: 50,
+            analyse: 30,
+            aiPromts: 50,
+            reports: 20,
+            charts: 50,
+            maxUsersPerAccount: 5,
+            dataRetentionDays: 30,
+        },
+        features: {
+            scheduleReports: true,
+            exportAsPDF: true,
+            shareableDashboards: true,
+            emailSupport: true,
+            prioritySupport: false,
+        },
+    },
+    enterprise: {
+        price: 49900,
+        billingInterval: 'monthly',
+        limits: {
+            uploads: 1000,
+            download: 500,
+            analyse: 300,
+            aiPromts: 500,
+            reports: 200,
+            charts: 500,
+            maxUsersPerAccount: 100,
+            dataRetentionDays: 365,
+        },
+        features: {
+            scheduleReports: true,
+            exportAsPDF: true,
+            shareableDashboards: true,
+            emailSupport: true,
+            prioritySupport: true,
+        },
+    }
+};
+
 // Helper to generate a unique payment ID
 function generatePaymentId() {
     return 'test_' + Math.random().toString(36).substring(2, 15) + Date.now();
@@ -22,6 +88,7 @@ function generatePaymentId() {
 const Profile = () => {
     const { user: authUser, logout, updateProfile } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -32,9 +99,14 @@ const Profile = () => {
     const [usageData, setUsageData] = useState(null);
     const [showUpgrade, setShowUpgrade] = useState(false);
     const [selectedPlan, setSelectedPlan] = useState('premium');
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+    const [isPaymentLoading, setIsPaymentLoading] = useState(false);
     const [upgradeLoading, setUpgradeLoading] = useState(false);
     const [upgradeError, setUpgradeError] = useState(null);
     const [upgradeSuccess, setUpgradeSuccess] = useState(null);
+    const [selectedPlanFromQuery, setSelectedPlanFromQuery] = useState(null);
+    const [showAllLogins, setShowAllLogins] = useState(false);
+    const [showAllTransactions, setShowAllTransactions] = useState(false);
 
     const formatLastLogin = (lastLogin) => {
         if (!lastLogin) return 'Never';
@@ -111,6 +183,16 @@ const Profile = () => {
         fetchUsageData();
     }, []);
 
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const plan = params.get('plan');
+        if (plan && PLAN_DEFAULTS[plan]) {
+            setSelectedPlan(plan);
+            setShowUpgrade(true);
+            setSelectedPlanFromQuery(plan);
+        }
+    }, [location.search]);
+
     const handleEdit = () => {
         setIsEditing(true);
     };
@@ -180,47 +262,134 @@ const Profile = () => {
     };
 
     const handleSubscribeFree = async () => {
-        setUpgradeLoading(true);
-        setUpgradeError(null);
-        setUpgradeSuccess(null);
+        setIsPaymentLoading(true);
         try {
-            const token = localStorage.getItem('token');
-            if (!token) throw new Error('No token');
-            const body = {
-                planName: 'free',
-                razorpayPaymentId: generatePaymentId(),
-                status: 'success',
-                test: true
+            if (!window.Razorpay) {
+                alert('Payment system is not available. Please refresh the page and try again.');
+                setIsPaymentLoading(false);
+                return;
+            }
+            const options = {
+                key: 'rzp_test_uHLEyEPCcVnh5M',
+                amount: 0, // Zero amount for free plan
+                currency: 'INR',
+                name: 'PeekBI',
+                description: 'Free Plan Subscription',
+                image: '/vite.svg',
+                handler: function (response) {
+                    handleSubscribePaid('free', response, 'success');
+                },
+                prefill: {
+                    name: user?.name || '',
+                    email: user?.email || '',
+                    contact: user?.phone || ''
+                },
+                notes: {
+                    address: 'PeekBI Subscription'
+                },
+                theme: {
+                    color: '#7400B8'
+                },
+                modal: {
+                    ondismiss: function() {
+                        setIsPaymentLoading(false);
+                        handleSubscribePaid('free', { failReason: 'User cancelled payment' }, 'failed');
+                        alert('Payment was cancelled. You can try again anytime.');
+                    }
+                }
             };
-            await axios.post(`${API_BASE_URL}/subscribe/`, body, { headers: { 'Authorization': `Bearer ${token}` } });
-            setUpgradeSuccess('Free plan activated!');
-            // Refresh plan data
-            const planRes = await axios.get(`${API_BASE_URL}/subscribe/`, { headers: { 'Authorization': `Bearer ${token}` } });
-            setPlanData(planRes.data);
-            await fetchUsageData();
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (response) {
+                setIsPaymentLoading(false);
+                handleSubscribePaid('free', { ...response.error, failReason: response.error.description || 'Payment failed' }, 'failed');
+                alert('Payment failed: ' + (response.error.description || 'Unknown error'));
+            });
+            rzp.open();
         } catch (err) {
-            setUpgradeError(err?.response?.data?.message || err.message || 'Subscription failed');
-        } finally {
-            setUpgradeLoading(false);
+            setIsPaymentLoading(false);
+            alert('Unable to open payment gateway. Please try again or contact support.');
         }
     };
 
-    const handleUpgrade = async () => {
+    const handleRazorpayPayment = async () => {
+        try {
+            setIsPaymentLoading(true);
+            
+            // Check if Razorpay is loaded
+            if (!window.Razorpay) {
+                console.error('Razorpay not loaded');
+                alert('Payment system is not available. Please refresh the page and try again.');
+                return;
+            }
+
+            const options = {
+                key: 'rzp_test_uHLEyEPCcVnh5M', // Replace with your Razorpay key
+                amount: PLAN_DEFAULTS[selectedPlan].price, // Amount in paise
+                currency: 'INR',
+                name: 'PeekBI',
+                description: `${selectedPlan} Plan Subscription`,
+                image: '/vite.svg', // Your logo
+                handler: function (response) {
+                    handleSubscribePaid(selectedPlan, response, 'success');
+                },
+                prefill: {
+                    name: user?.name || '',
+                    email: user?.email || '',
+                    contact: user?.phone || ''
+                },
+                notes: {
+                    address: 'PeekBI Subscription'
+                },
+                theme: {
+                    color: '#7400B8'
+                },
+                modal: {
+                    ondismiss: function() {
+                        console.log('Payment modal dismissed');
+                        setIsPaymentLoading(false);
+                        // Call API with failed status and message
+                        handleSubscribePaid(selectedPlan, { failReason: 'User cancelled payment' }, 'failed');
+                        alert('Payment was cancelled. You can try again anytime.');
+                    }
+                }
+            };
+
+            console.log('Opening Razorpay', options);
+            const rzp = new window.Razorpay(options);
+            // Listen for payment failures
+            rzp.on('payment.failed', function (response) {
+                setIsPaymentLoading(false);
+                handleSubscribePaid(selectedPlan, { ...response.error, failReason: response.error.description || 'Payment failed' }, 'failed');
+                alert('Payment failed: ' + (response.error.description || 'Unknown error'));
+            });
+            rzp.open();
+        } catch (error) {
+            console.error('Error opening Razorpay:', error);
+            alert('Unable to open payment gateway. Please try again or contact support.');
+        } finally {
+            setIsPaymentLoading(false);
+        }
+    };
+
+    const handleSubscribePaid = async (plan, razorpayResponse, status) => {
         setUpgradeLoading(true);
+        setIsPaymentLoading(false); // Reset payment loading state
         setUpgradeError(null);
         setUpgradeSuccess(null);
         try {
             const token = localStorage.getItem('token');
             if (!token) throw new Error('No token');
             const body = {
-                planName: selectedPlan,
-                razorpayPaymentId: generatePaymentId(),
-                status: 'success',
+                planName: plan,
+                razorpayPaymentId: razorpayResponse.razorpay_payment_id || generatePaymentId(),
+                razorpayOrderId: razorpayResponse.razorpay_order_id || generatePaymentId(),
+                razorpaySignature: razorpayResponse.razorpay_signature || 'test_signature',
+                status,
+                failReason: razorpayResponse.failReason || '',
                 test: true
             };
             await axios.post(`${API_BASE_URL}/subscribe/`, body, { headers: { 'Authorization': `Bearer ${token}` } });
-            setUpgradeSuccess('Plan upgraded successfully!');
-            setShowUpgrade(false);
+            setUpgradeSuccess(status === 'success' ? 'Plan upgraded successfully!' : 'Payment failed or cancelled.');
             // Refresh plan data
             const planRes = await axios.get(`${API_BASE_URL}/subscribe/`, { headers: { 'Authorization': `Bearer ${token}` } });
             setPlanData(planRes.data);
@@ -229,6 +398,8 @@ const Profile = () => {
             setUpgradeError(err?.response?.data?.message || err.message || 'Upgrade failed');
         } finally {
             setUpgradeLoading(false);
+            setShowUpgrade(false);
+            setSelectedPlanFromQuery(null);
         }
     };
 
@@ -628,7 +799,7 @@ const Profile = () => {
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-gray-100">
-                                                        {user.lastLogin.map((login, index) => {
+                                                        {user.lastLogin.slice(0, 3).map((login, index) => {
                                                             const date = new Date(login);
                                                             return (
                                                                 <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
@@ -640,8 +811,13 @@ const Profile = () => {
                                                         })}
                                                     </tbody>
                                                 </table>
-                                </div>
-                            </div>
+                                                {user.lastLogin.length > 3 && (
+                                                    <button className="mt-2 text-xs text-[#7400B8] underline" onClick={() => setShowAllLogins(true)}>
+                                                        View All Logins
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
                                     ) : (
                                         <p className="text-gray-500 italic text-xs sm:text-sm">No login history available</p>
                                     )}
@@ -719,7 +895,7 @@ const Profile = () => {
                                         <div className="mt-6">
                                             <h5 className="font-bold text-gray-800 mb-2">Payment History</h5>
                                             <ul className="space-y-2 text-xs">
-                                                {planData.paymentHistory.map((p, idx) => (
+                                                {planData.paymentHistory.slice(0, 3).map((p, idx) => (
                                                     <li key={p._id || idx} className="flex justify-between items-center bg-gray-50/80 rounded-lg px-3 py-2">
                                                         <span>{new Date(p.date).toLocaleDateString()}</span>
                                                         <span>${(p.amount / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
@@ -727,6 +903,11 @@ const Profile = () => {
                                                     </li>
                                                 ))}
                                             </ul>
+                                            {planData.paymentHistory.length > 3 && (
+                                                <button className="mt-2 text-xs text-[#7400B8] underline" onClick={() => setShowAllTransactions(true)}>
+                                                    View All Transactions
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                 </motion.div>
@@ -806,12 +987,48 @@ const Profile = () => {
                                             ))}
                                         </select>
                                     </div>
+                                    {/* Show plan details */}
+                                    {PLAN_DEFAULTS[selectedPlan] && (
+                                        <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                            <div className="mb-2 flex items-center justify-between">
+                                                <span className="font-bold text-lg text-[#7400B8]">{selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} Plan</span>
+                                                <span className="font-bold text-gray-800 text-lg">
+                                                    {PLAN_DEFAULTS[selectedPlan].price === 0 ? 'Free' : `₹${(PLAN_DEFAULTS[selectedPlan].price / 100).toLocaleString('en-IN', {minimumFractionDigits: 0})}/mo`}
+                                                </span>
+                                            </div>
+                                            <div className="mb-2">
+                                                <span className="font-semibold text-gray-700">Limits:</span>
+                                                <ul className="list-disc list-inside text-sm text-gray-700 ml-2">
+                                                    {Object.entries(PLAN_DEFAULTS[selectedPlan].limits).map(([k, v]) => (
+                                                        <li key={k}><span className="font-medium">{k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</span> {v}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                            <div>
+                                                <span className="font-semibold text-gray-700">Features:</span>
+                                                <ul className="list-disc list-inside text-sm text-gray-700 ml-2">
+                                                    {Object.entries(PLAN_DEFAULTS[selectedPlan].features).map(([k, v]) => (
+                                                        <li key={k} className={v ? 'text-green-700' : 'text-gray-400'}>
+                                                            <span className="font-medium">{k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</span> {v ? 'Yes' : 'No'}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    )}
                                     <button
-                                        className="w-full py-3 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl font-bold mt-2"
-                                        onClick={handleUpgrade}
-                                        disabled={upgradeLoading}
+                                        className="w-full py-3 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl font-bold mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        onClick={() => {
+                                            if (selectedPlan === 'free') {
+                                                handleSubscribeFree();
+                                            } else {
+                                                handleRazorpayPayment();
+                                            }
+                                        }}
+                                        disabled={upgradeLoading || isPaymentLoading}
                                     >
-                                        {upgradeLoading ? 'Upgrading...' : 'Confirm Upgrade'}
+                                        {upgradeLoading ? (selectedPlan === 'free' ? 'Subscribing...' : 'Processing...') : 
+                                         isPaymentLoading ? 'Opening Payment Gateway...' : 'Confirm Upgrade'}
                                     </button>
                                     {upgradeError && <p className="text-red-600 mt-2">{upgradeError}</p>}
                                     {upgradeSuccess && <p className="text-green-600 mt-2">{upgradeSuccess}</p>}
@@ -837,6 +1054,69 @@ const Profile = () => {
                     background: #9B4DCA;
                 }
             `}</style>
+            {/* Modal for all logins */}
+            {showAllLogins && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                    <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-xl relative">
+                        <button className="absolute top-2 right-2 text-gray-500" onClick={() => setShowAllLogins(false)}><FiX /></button>
+                        <h3 className="text-lg font-bold mb-4">All Login History</h3>
+                        <div className="max-h-96 overflow-y-auto">
+                            <table className="w-full text-xs sm:text-sm">
+                                <thead className="bg-gray-50/80 text-gray-700">
+                                    <tr>
+                                        <th className="py-1 sm:py-2 px-2 sm:px-4 text-left">#</th>
+                                        <th className="py-1 sm:py-2 px-2 sm:px-4 text-left">Date</th>
+                                        <th className="py-1 sm:py-2 px-2 sm:px-4 text-left">Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {user.lastLogin.map((login, index) => {
+                                        const date = new Date(login);
+                                        return (
+                                            <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                                                <td className="py-1 sm:py-2 px-2 sm:px-4">{index + 1}</td>
+                                                <td className="py-1 sm:py-2 px-2 sm:px-4">{date.toLocaleDateString()}</td>
+                                                <td className="py-1 sm:py-2 px-2 sm:px-4">{date.toLocaleTimeString()}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Modal for all transactions */}
+            {showAllTransactions && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                    <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-xl relative">
+                        <button className="absolute top-2 right-2 text-gray-500" onClick={() => setShowAllTransactions(false)}><FiX /></button>
+                        <h3 className="text-lg font-bold mb-4">All Transactions</h3>
+                        <div className="max-h-96 overflow-y-auto">
+                            <table className="w-full text-xs sm:text-sm">
+                                <thead className="bg-gray-50/80 text-gray-700">
+                                    <tr>
+                                        <th className="py-1 sm:py-2 px-2 sm:px-4 text-left">#</th>
+                                        <th className="py-1 sm:py-2 px-2 sm:px-4 text-left">Date</th>
+                                        <th className="py-1 sm:py-2 px-2 sm:px-4 text-left">Amount</th>
+                                        <th className="py-1 sm:py-2 px-2 sm:px-4 text-left">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {planData.paymentHistory.map((p, idx) => (
+                                        <tr key={p._id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                                            <td className="py-1 sm:py-2 px-2 sm:px-4">{idx + 1}</td>
+                                            <td className="py-1 sm:py-2 px-2 sm:px-4">{new Date(p.date).toLocaleDateString()}</td>
+                                            <td className="py-1 sm:py-2 px-2 sm:px-4">${(p.amount / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                                            <td className={p.status === 'success' ? 'text-green-600' : 'text-red-600'}>{p.status}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

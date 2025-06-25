@@ -7,60 +7,98 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 gsap.registerPlugin(ScrollTrigger);
 
+const PLAN_DEFAULTS = {
+    free: {
+        price: 0,
+        billingInterval: 'monthly',
+        limits: {
+            uploads: 10,
+            download: 5,
+            analyse: 3,
+            aiPromts: 5,
+            reports: 2,
+            charts: 5,
+            maxUsersPerAccount: 1,
+            dataRetentionDays: 7,
+        },
+        features: {
+            scheduleReports: false,
+            exportAsPDF: false,
+            shareableDashboards: false,
+            emailSupport: true,
+            prioritySupport: false,
+        },
+    },
+    premium: {
+        price: 99000,
+        billingInterval: 'monthly',
+        limits: {
+            uploads: 100,
+            download: 50,
+            analyse: 30,
+            aiPromts: 50,
+            reports: 20,
+            charts: 50,
+            maxUsersPerAccount: 5,
+            dataRetentionDays: 30,
+        },
+        features: {
+            scheduleReports: true,
+            exportAsPDF: true,
+            shareableDashboards: true,
+            emailSupport: true,
+            prioritySupport: false,
+        },
+    },
+    enterprise: {
+        price: 499000,
+        billingInterval: 'monthly',
+        limits: {
+            uploads: 1000,
+            download: 500,
+            analyse: 300,
+            aiPromts: 500,
+            reports: 200,
+            charts: 500,
+            maxUsersPerAccount: 100,
+            dataRetentionDays: 365,
+        },
+        features: {
+            scheduleReports: true,
+            exportAsPDF: true,
+            shareableDashboards: true,
+            emailSupport: true,
+            prioritySupport: true,
+        },
+    }
+};
+
+const pricingPlans = [
+    {
+        name: 'Starter',
+        planKey: 'free',
+        highlighted: false,
+        buttonText: 'Start Free Trial',
+        description: 'Perfect for small businesses and startups',
+    },
+    {
+        name: 'Professional',
+        planKey: 'premium',
+        highlighted: true,
+        buttonText: 'Start Free Trial',
+        description: 'Ideal for growing businesses',
+    },
+    {
+        name: 'Enterprise',
+        planKey: 'enterprise',
+        highlighted: false,
+        buttonText: 'Contact Sales',
+        description: 'For large organizations with complex needs',
+    },
+];
+
 const PricingSection = () => {
     const navigate = useNavigate();
-    const pricingPlans = [
-        {
-            name: 'Starter',
-            price: '$49',
-            period: '/month',
-            description: 'Perfect for small businesses and startups',
-            features: [
-                'Up to 5 users',
-                'Basic analytics dashboard',
-                'Data visualization tools',
-                'Email support',
-                '5GB storage'
-            ],
-            highlighted: false,
-            buttonText: 'Start Free Trial'
-        },
-        {
-            name: 'Professional',
-            price: '$99',
-            period: '/month',
-            description: 'Ideal for growing businesses',
-            features: [
-                'Up to 20 users',
-                'Advanced analytics dashboard',
-                'Custom data visualization',
-                'Priority email & chat support',
-                '50GB storage',
-                'API access',
-                'Custom reporting'
-            ],
-            highlighted: true,
-            buttonText: 'Start Free Trial'
-        },
-        {
-            name: 'Enterprise',
-            price: 'Custom',
-            period: '',
-            description: 'For large organizations with complex needs',
-            features: [
-                'Unlimited users',
-                'Enterprise-grade analytics',
-                'Advanced AI predictions',
-                'Dedicated support team',
-                'Unlimited storage',
-                'Full API access',
-                'Custom integrations',
-                'On-premise deployment option'
-            ],
-            highlighted: false,
-            buttonText: 'Contact Sales'
-        }
-    ];
     useEffect(()=>{
         gsap.utils.toArray('.pricingCard').forEach(pricingCard=>{
             gsap.to(pricingCard,{
@@ -113,12 +151,12 @@ const PricingSection = () => {
                                     <h3 className="text-2xl font-bold text-gray-800 mb-2">{plan.name}</h3>
                                     <p className="text-gray-600 mb-6">{plan.description}</p>
                                     <div className="mb-6">
-                                        <span className="text-5xl font-bold text-gray-800">{plan.price}</span>
-                                        <span className="text-gray-600">{plan.period}</span>
+                                        <span className="text-5xl font-bold text-gray-800">{PLAN_DEFAULTS[plan.planKey].price}</span>
+                                        <span className="text-gray-600">{PLAN_DEFAULTS[plan.planKey].billingInterval}</span>
                                     </div>
                                     <ul className="space-y-4 mb-8">
-                                        {plan.features.map((feature, i) => (
-                                            <li key={i} className="flex items-start">
+                                        {Object.entries(PLAN_DEFAULTS[plan.planKey].features).map(([feature, enabled]) => (
+                                            <li key={feature} className="flex items-start">
                                                 <FiCheck className="text-[#7400B8] mt-1 mr-3 flex-shrink-0" />
                                                 <span className="text-gray-600">{feature}</span>
                                             </li>
@@ -128,7 +166,7 @@ const PricingSection = () => {
                                         className={`w-full py-3 px-6 rounded-full font-medium transition-all duration-300 ${plan.highlighted ? 'bg-[#7400B8] text-white hover:bg-[#8B2CD9]' : 'bg-white text-[#7400B8] border-2 border-[#7400B8] hover:bg-[#7400B8] hover:text-white'
                                             
                                         }` }     
-                                        onClick={() => navigate('/register')}
+                                        onClick={() => navigate(`/user/profile?plan=${plan.planKey}`)}
                                     >
                                         {plan.buttonText}
                                     </button>
