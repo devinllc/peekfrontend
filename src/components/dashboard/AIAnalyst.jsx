@@ -8,7 +8,11 @@ import {
 } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
-
+const chartColors = [
+    '#7400B8', '#9B4DCA', '#C77DFF', '#E0AAFF', '#F8F4FF',
+    '#8B5CF6', '#A855F7', '#C084FC', '#DDD6FE', '#F3E8FF',
+    '#7C3AED', '#9333EA', '#A855F7', '#C084FC', '#DDD6FE'
+  ];
 // --- IMPORTANT: API Key Configuration ---
 // It's recommended to use environment variables to store your API key securely.
 // 1. Create a .env file in the root of your project.
@@ -343,7 +347,7 @@ Provide a comprehensive, helpful response that addresses the user's question whi
                 const parsed = JSON.parse(jsonString);
                 chartData.push(parsed);
             } catch (error) {
-                console.error('Error parsing chart JSON from AI response:', error);
+                console.error('[AIAnalyst] Error parsing chart JSON from AI response:', error);
             }
             // Remove the matched block from the content
             content = content.replace(match[0], '');
@@ -371,17 +375,23 @@ Provide a comprehensive, helpful response that addresses the user's question whi
                     const parsed = JSON.parse(jsonString);
                     chartData.push(parsed);
                 } catch (error) {
-                    console.error('Error parsing raw JSON from AI response:', error);
+                    console.error('[AIAnalyst] Error parsing raw JSON from AI response:', error);
                 }
                 // Remove the matched block from the content
                 content = content.replace(match[0], '');
             }
         }
-        
         // Clean up any extra whitespace and newlines
         content = content.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
 
-        return { content, chartData };
+        // Also extract the first JSON/code block for fallback display
+        let rawJsonBlock = null;
+        const codeBlockMatch = text.match(/```json[\s\S]*?```/);
+        if (codeBlockMatch) {
+            rawJsonBlock = codeBlockMatch[0];
+        }
+
+        return { content, chartData, rawJsonBlock, rawText: text };
     };
 
     const formatMessageContent = (content) => {
@@ -442,13 +452,15 @@ Provide a comprehensive, helpful response that addresses the user's question whi
             const response = await result.response;
             const text = response.text();
             
-            const { content, chartData } = parseAIResponse(text);
+            const { content, chartData, rawJsonBlock, rawText } = parseAIResponse(text);
             
             const newAiMessage = {
                 id: Date.now() + 1,
                 type: 'ai',
                 content: content,
                 chartSuggestions: chartData,
+                rawJsonBlock: rawJsonBlock,
+                rawText: rawText,
                 timestamp: new Date()
             };
 
@@ -480,150 +492,168 @@ Provide a comprehensive, helpful response that addresses the user's question whi
 
     const renderChart = (suggestion) => {
         const { type, data, title } = suggestion;
-        
-        if (!data || data.length === 0) return null;
 
-        switch (type) {
-            case 'bar':
-                return (
-                    <div className="space-y-2">
-                        {title && <h4 className="text-sm font-semibold text-gray-700">{title}</h4>}
-                        <ResponsiveContainer width="100%" height={200}>
-                            <BarChart data={data}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                <Tooltip 
-                                    formatter={(value) => [value, 'Value']}
-                                    contentStyle={{
-                                        backgroundColor: 'white',
-                                        border: '1px solid #f0f0f0',
-                                        borderRadius: '12px',
-                                        padding: '12px'
-                                    }}
-                                />
-                                <Bar dataKey="value" fill="#7400B8" radius={[4, 4, 0, 0]}>
-                                    {data.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                );
-            
-            case 'pie':
-                return (
-                    <div className="space-y-2">
-                        {title && <h4 className="text-sm font-semibold text-gray-700">{title}</h4>}
-                        <ResponsiveContainer width="100%" height={200}>
-                            <PieChart>
-                                <Pie
-                                    data={data}
-                                    dataKey="value"
-                                    nameKey="name"
-                                    cx="50%"
-                                    cy="50%"
-                                    outerRadius={80}
-                                    fill="#8884d8"
-                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                >
-                                    {data.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-                );
-            
-            case 'line':
-                return (
-                    <div className="space-y-2">
-                        {title && <h4 className="text-sm font-semibold text-gray-700">{title}</h4>}
-                        <ResponsiveContainer width="100%" height={200}>
-                            <LineChart data={data}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                <Tooltip 
-                                    formatter={(value) => [value, 'Value']}
-                                    contentStyle={{
-                                        backgroundColor: 'white',
-                                        border: '1px solid #f0f0f0',
-                                        borderRadius: '12px',
-                                        padding: '12px'
-                                    }}
-                                />
-                                <Line 
-                                    type="monotone" 
-                                    dataKey="value" 
-                                    stroke="#7400B8" 
-                                    strokeWidth={3}
-                                    dot={{ fill: '#7400B8', strokeWidth: 2, r: 6 }}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                );
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            return null;
+        }
 
-            case 'area':
-                return (
-                    <div className="space-y-2">
-                        {title && <h4 className="text-sm font-semibold text-gray-700">{title}</h4>}
-                        <ResponsiveContainer width="100%" height={200}>
-                            <AreaChart data={data}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                <Tooltip 
-                                    formatter={(value) => [value, 'Value']}
-                                    contentStyle={{
-                                        backgroundColor: 'white',
-                                        border: '1px solid #f0f0f0',
-                                        borderRadius: '12px',
-                                        padding: '12px'
-                                    }}
-                                />
-                                <Area 
-                                    type="monotone" 
-                                    dataKey="value" 
-                                    stroke="#7400B8" 
-                                    fill="#7400B8"
-                                    fillOpacity={0.3}
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                );
+        // Dynamically detect keys (robust)
+        const first = data[0] || {};
+        const keys = Object.keys(first);
+        let stringKeys = keys.filter(k => typeof first[k] === 'string');
+        let numberKeys = keys.filter(k => typeof first[k] === 'number');
+        let xKey = stringKeys[0] || keys[0];
+        let yKey = numberKeys[0] || keys.find(k => k !== xKey);
+        if (!yKey) yKey = keys[0];
+        // For scatter: x = first number key, y = second number key
+        let scatterXKey = numberKeys[0];
+        let scatterYKey = numberKeys[1];
+        if (!scatterXKey) scatterXKey = keys[0];
+        if (!scatterYKey) scatterYKey = keys[1] || keys[0];
 
-            case 'scatter':
-                return (
-                    <div className="space-y-2">
-                        {title && <h4 className="text-sm font-semibold text-gray-700">{title}</h4>}
-                        <ResponsiveContainer width="100%" height={200}>
-                            <ScatterChart>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                <XAxis dataKey="x" type="number" />
-                                <YAxis dataKey="y" type="number" />
-                                <Tooltip 
-                                    formatter={(value, name) => [value, name === 'x' ? 'X Value' : 'Y Value']}
-                                    contentStyle={{
-                                        backgroundColor: 'white',
-                                        border: '1px solid #f0f0f0',
-                                        borderRadius: '12px',
-                                        padding: '12px'
-                                    }}
-                                />
-                                <Scatter data={data} fill="#7400B8" />
-                            </ScatterChart>
-                        </ResponsiveContainer>
-                    </div>
-                );
-            
-            default:
-                return null;
+        try {
+            switch (type) {
+                case 'bar':
+                    return (
+                        <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-3 shadow">
+                            {title && <h4 className="text-sm font-semibold text-gray-700 mb-2">{title}</h4>}
+                            <ResponsiveContainer width="100%" height={200}>
+                                <BarChart data={data}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey={xKey} />
+                                    <YAxis />
+                                    <Tooltip 
+                                        formatter={(value) => [value, yKey]}
+                                        contentStyle={{
+                                            backgroundColor: 'white',
+                                            border: '1px solid #f0f0f0',
+                                            borderRadius: '12px',
+                                            padding: '12px'
+                                        }}
+                                    />
+                                    <Bar dataKey={yKey} fill="#7400B8" radius={[4, 4, 0, 0]}>
+                                        {data.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    );
+                case 'pie':
+                    return (
+                        <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-3 shadow">
+                            {title && <h4 className="text-sm font-semibold text-gray-700 mb-2">{title}</h4>}
+                            <ResponsiveContainer width="100%" height={200}>
+                                <PieChart>
+                                    <Pie
+                                        data={data}
+                                        dataKey={yKey}
+                                        nameKey={xKey}
+                                        cx="50%"
+                                        cy="50%"
+                                        outerRadius={80}
+                                        fill="#8884d8"
+                                        label={entry => `${entry[xKey]} ${(entry[yKey] / data.reduce((sum, d) => sum + (d[yKey] || 0), 0) * 100).toFixed(0)}%`}
+                                    >
+                                        {data.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    );
+                case 'line':
+                    return (
+                        <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-3 shadow">
+                            {title && <h4 className="text-sm font-semibold text-gray-700 mb-2">{title}</h4>}
+                            <ResponsiveContainer width="100%" height={200}>
+                                <LineChart data={data}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey={xKey} />
+                                    <YAxis />
+                                    <Tooltip 
+                                        formatter={(value) => [value, yKey]}
+                                        contentStyle={{
+                                            backgroundColor: 'white',
+                                            border: '1px solid #f0f0f0',
+                                            borderRadius: '12px',
+                                            padding: '12px'
+                                        }}
+                                    />
+                                    <Line 
+                                        type="monotone" 
+                                        dataKey={yKey} 
+                                        stroke="#7400B8" 
+                                        strokeWidth={3}
+                                        dot={{ fill: '#7400B8', strokeWidth: 2, r: 6 }}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    );
+                case 'area':
+                    return (
+                        <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-3 shadow">
+                            {title && <h4 className="text-sm font-semibold text-gray-700 mb-2">{title}</h4>}
+                            <ResponsiveContainer width="100%" height={200}>
+                                <AreaChart data={data}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey={xKey} />
+                                    <YAxis />
+                                    <Tooltip 
+                                        formatter={(value) => [value, yKey]}
+                                        contentStyle={{
+                                            backgroundColor: 'white',
+                                            border: '1px solid #f0f0f0',
+                                            borderRadius: '12px',
+                                            padding: '12px'
+                                        }}
+                                    />
+                                    <Area 
+                                        type="monotone" 
+                                        dataKey={yKey} 
+                                        stroke="#7400B8" 
+                                        fill="#7400B8"
+                                        fillOpacity={0.3}
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    );
+                case 'scatter':
+                    if (!scatterXKey || !scatterYKey) {
+                        return null;
+                    }
+                    return (
+                        <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-3 shadow">
+                            {title && <h4 className="text-sm font-semibold text-gray-700 mb-2">{title}</h4>}
+                            <ResponsiveContainer width="100%" height={200}>
+                                <ScatterChart>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey={scatterXKey} type="number" name={scatterXKey} />
+                                    <YAxis dataKey={scatterYKey} type="number" name={scatterYKey} />
+                                    <Tooltip 
+                                        formatter={(value, name) => [value, name]}
+                                        contentStyle={{
+                                            backgroundColor: 'white',
+                                            border: '1px solid #f0f0f0',
+                                            borderRadius: '12px',
+                                            padding: '12px'
+                                        }}
+                                    />
+                                    <Scatter data={data} fill="#7400B8" />
+                                </ScatterChart>
+                            </ResponsiveContainer>
+                        </div>
+                    );
+                default:
+                    return null;
+            }
+        } catch (err) {
+            return <div style={{ color: 'red', fontWeight: 'bold' }}>Chart rendering error: {err && err.message ? err.message : String(err)}</div>;
         }
     };
 
@@ -697,30 +727,25 @@ Provide a comprehensive, helpful response that addresses the user's question whi
                                             {message.timestamp.toLocaleTimeString()}
                                         </div>
                                     </div>
-                                    
-                                    {/* Chart Suggestions - rendered outside the message bubble */}
-                                    {message.chartSuggestions && message.chartSuggestions.length > 0 && (
+                                    {/* Render chart only if valid chartSuggestions and data */}
+                                    {message.type === 'ai' && Array.isArray(message.chartSuggestions) && message.chartSuggestions.length > 0 && message.chartSuggestions.some(s => s.data && s.data.length > 0) && (
                                         <div className="mt-2 space-y-3 w-full max-w-[85%] sm:max-w-[75%] lg:max-w-[70%]">
-                                            {message.chartSuggestions.map((suggestion, index) => (
-                                                <motion.div 
-                                                    key={index}
-                                                    initial={{ opacity: 0, y: 10 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: index * 0.2 }}
-                                                    className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl p-3 sm:p-4"
-                                                >
-                                                    <div className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 flex items-center">
-                                                        <FiBarChart2 className="w-4 h-4 mr-2 text-[#7400B8]" />
-                                                        {suggestion.title || 'Suggested Visualization'}
-                                                    </div>
-                                                    {suggestion.description && (
-                                                        <p className="text-xs text-gray-600 mb-3">{suggestion.description}</p>
-                                                    )}
-                                                    <div className="h-48 sm:h-56 lg:h-64">
-                                                        {renderChart(suggestion)}
-                                                    </div>
-                                                </motion.div>
-                                            ))}
+                                            <AnimatePresence>
+                                                {message.chartSuggestions.map((suggestion, index) => (
+                                                    suggestion.data && suggestion.data.length > 0 && (
+                                                        <motion.div 
+                                                            key={index}
+                                                            initial={{ opacity: 0, y: 10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            exit={{ opacity: 0, y: -10 }}
+                                                            transition={{ delay: index * 0.1 }}
+                                                            className=""
+                                                        >
+                                                            {renderChart(suggestion)}
+                                                        </motion.div>
+                                                    )
+                                                ))}
+                                            </AnimatePresence>
                                         </div>
                                     )}
                                 </motion.div>
@@ -764,19 +789,23 @@ Provide a comprehensive, helpful response that addresses the user's question whi
 
                     {/* Suggested Keywords */}
                     {suggestedKeywords.length > 0 && (
-                        <div className="border-t border-gray-200/50 p-3 sm:p-4">
-                            <div className="flex items-center space-x-2 mb-3">
+                        <div className="border-t border-gray-200/50 p-2 sm:p-3">
+                            <div className="flex items-center space-x-2 mb-2 sm:mb-3">
                                 <FiZap className="w-4 h-4 text-yellow-600" />
                                 <span className="text-sm font-medium text-gray-700">Quick Questions:</span>
                             </div>
-                            <div className="flex flex-wrap gap-2">
+                            <div
+                                className="flex flex-nowrap items-stretch min-h-0 gap-2 overflow-x-auto pb-1 max-w-full hide-scrollbar"
+                                style={{ WebkitOverflowScrolling: 'touch', maxHeight: 60 }}
+                            >
                                 {suggestedKeywords.map((keyword, index) => (
                                     <motion.button
                                         key={index}
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
                                         onClick={() => handleKeywordClick(keyword)}
-                                        className="px-3 py-1.5 bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 text-[#7400B8] rounded-full text-xs font-medium hover:from-[#7400B8]/20 hover:to-[#9B4DCA]/20 transition-all duration-200 border border-[#7400B8]/20"
+                                        className={`px-3 py-1.5 bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 text-[#7400B8] rounded-full text-xs font-medium hover:from-[#7400B8]/20 hover:to-[#9B4DCA]/20 transition-all duration-200 border border-[#7400B8]/20 whitespace-nowrap shrink-0${index !== suggestedKeywords.length - 1 ? ' mr-2' : ''}`}
+                                        style={{ minWidth: 90 }}
                                     >
                                         {keyword}
                                     </motion.button>
@@ -820,4 +849,14 @@ Provide a comprehensive, helpful response that addresses the user's question whi
     );
 };
 
-export default AIAnalyst; 
+export default AIAnalyst;
+
+// Hide scrollbar for Chrome, Safari, Opera, IE, Edge, and Firefox for .hide-scrollbar
+if (typeof window !== 'undefined') {
+  const style = document.createElement('style');
+  style.innerHTML = `
+    .hide-scrollbar::-webkit-scrollbar { display: none !important; }
+    .hide-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+  `;
+  document.head.appendChild(style);
+} 

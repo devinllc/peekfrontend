@@ -98,7 +98,7 @@ const ManufacturingDashboard = ({ file, analysis }) => {
                                     </p>
                                 </div>
                             </div>
-                            <p className="text-2xl font-bold text-[#7400B8]">{String(value)}</p>
+                            <p className="text-2xl font-bold text-[#7400B8]">{typeof value === 'number' || (!isNaN(Number(value)) && value !== null && value !== undefined) ? round4(value) : String(value)}</p>
                         </motion.div>
                     ))}
                 </div>
@@ -135,37 +135,109 @@ const ManufacturingDashboard = ({ file, analysis }) => {
     };
 
     // Helper: Render Totals (LineChart or BarChart)
+    const [totalsWindow, setTotalsWindow] = useState({});
     const renderTotals = (totals) => {
         if (!totals || Object.keys(totals).length === 0) return null;
         return (
             <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8">
-                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                     <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Totals
-                            </h3>
+                </h3>
                 <div className="flex flex-col gap-8 w-full">
                     {Object.entries(totals).map(([key, value], idx) => {
                         // If value is array of objects with two keys, render LineChart
                         if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && Object.keys(value[0]).length === 2) {
                             const [labelKey, valueKey] = Object.keys(value[0]);
-                                                return (
+                            const dataLength = value.length;
+                            const showSlider = dataLength > 12;
+                            const windowState = totalsWindow[key] || [0, 12];
+                            const [start, end] = windowState;
+                            const visibleData = showSlider ? value.slice(start, end) : value;
+                            const handleTotalsWindowChange = (e) => {
+                                const val = Number(e.target.value);
+                                setTotalsWindow(prev => ({ ...prev, [key]: [val, Math.min(val + 12, dataLength)] }));
+                            };
+                            return (
                                 <div key={key} className="w-full flex flex-col items-center justify-center h-full flex-1 overflow-visible">
                                     <h4 className="font-bold mb-2 text-center w-full break-words">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                    {showSlider && (
+                                        <div className="mb-2 flex items-center gap-2 w-full max-w-md mx-auto">
+                                            <label htmlFor={`totals-slider-${key}`} className="text-xs text-gray-500">Window:</label>
+                                            <input
+                                                id={`totals-slider-${key}`}
+                                                type="range"
+                                                min={0}
+                                                max={dataLength - 12}
+                                                value={start}
+                                                onChange={handleTotalsWindowChange}
+                                                className="w-full max-w-xs"
+                                            />
+                                            <span className="text-xs text-gray-500">{start + 1} - {end}</span>
+                                        </div>
+                                    )}
                                     <div className="w-full flex items-center justify-center h-full overflow-visible">
                                         <ResponsiveContainer width="100%" height={300}>
-                                            <LineChart data={value} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                            <LineChart data={visibleData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                                <XAxis dataKey={labelKey} tick={{ fontSize: 12 }} interval={0} angle={value.length > 8 ? -30 : 0} textAnchor={value.length > 8 ? 'end' : 'middle'} height={value.length > 8 ? 60 : 30} />
+                                                <XAxis dataKey={labelKey} tick={{ fontSize: 12 }} interval={0} angle={visibleData.length > 8 ? -30 : 0} textAnchor={visibleData.length > 8 ? 'end' : 'middle'} height={visibleData.length > 8 ? 60 : 30} />
                                                 <YAxis />
                                                 <Tooltip formatter={(v) => v} />
-                                        <Legend />
+                                                <Legend />
                                                 <Line type="monotone" dataKey={valueKey} stroke="#7400B8" strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 8 }} />
                                             </LineChart>
-                                </ResponsiveContainer>
+                                        </ResponsiveContainer>
                                     </div>
                                 </div>
                             );
                         }
                         // Fallback: table or primitive
+                        if (typeof value === 'object' && value !== null && Array.isArray(Object.values(value)[0])) {
+                            const dataLength = Object.values(value)[0].length;
+                            const showSlider = dataLength > 12;
+                            const windowState = totalsWindow[key] || [0, 12];
+                            const [start, end] = windowState;
+                            const visibleRows = showSlider ? Array.from({length: end - start}, (_, i) => start + i) : Array.from({length: dataLength}, (_, i) => i);
+                            const handleTotalsWindowChange = (e) => {
+                                const val = Number(e.target.value);
+                                setTotalsWindow(prev => ({ ...prev, [key]: [val, Math.min(val + 12, dataLength)] }));
+                            };
+                            return (
+                                <div key={key} className="w-full">
+                                    <h4 className="font-bold mb-2">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                    {showSlider && (
+                                        <div className="mb-2 flex items-center gap-2 w-full max-w-md mx-auto">
+                                            <label htmlFor={`totals-slider-table-${key}`} className="text-xs text-gray-500">Window:</label>
+                                            <input
+                                                id={`totals-slider-table-${key}`}
+                                                type="range"
+                                                min={0}
+                                                max={dataLength - 12}
+                                                value={start}
+                                                onChange={handleTotalsWindowChange}
+                                                className="w-full max-w-xs"
+                                            />
+                                            <span className="text-xs text-gray-500">{start + 1} - {end}</span>
+                                        </div>
+                                    )}
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full text-xs">
+                                            <thead>
+                                                <tr>
+                                                    {Object.keys(value).map((col, i) => <th key={i} className="px-2 py-1 border-b text-left">{col}</th>)}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {visibleRows.map((rowIdx) => (
+                                                    <tr key={rowIdx}>
+                                                        {Object.keys(value).map((col, i) => <td key={i} className="px-2 py-1 border-b">{value[col][rowIdx]}</td>)}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            );
+                        }
                         return (
                             <div key={key} className="w-full">
                                 <h4 className="font-bold mb-2">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>

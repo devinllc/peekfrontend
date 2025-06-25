@@ -120,13 +120,14 @@ const EducationDashboard = ({ file, analysis }) => {
     };
 
     // Helper: Render Totals (line chart or table style)
+    const [totalsWindow, setTotalsWindow] = useState({});
     const renderTotals = (totals) => {
         if (!totals || Object.keys(totals).length === 0) return null;
         return (
             <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8">
-                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                     <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Totals
-                            </h3>
+                </h3>
                 <div className="flex flex-col gap-8 w-full">
                     {Object.entries(totals).map(([key, value], idx) => {
                         // Line chart for object with two arrays of equal length
@@ -138,29 +139,100 @@ const EducationDashboard = ({ file, analysis }) => {
                             Object.values(value)[0].length === Object.values(value)[1].length
                         ) {
                             const [labelKey, valueKey] = Object.keys(value);
+                            const dataLength = value[labelKey].length;
+                            const showSlider = dataLength > 12;
+                            const windowState = totalsWindow[key] || [0, 12];
+                            const [start, end] = windowState;
                             const data = value[labelKey].map((label, i) => ({
                                 [labelKey]: label,
                                 [valueKey]: value[valueKey][i]
                             }));
-                                                return (
+                            const visibleData = showSlider ? data.slice(start, end) : data;
+                            const handleTotalsWindowChange = (e) => {
+                                const val = Number(e.target.value);
+                                setTotalsWindow(prev => ({ ...prev, [key]: [val, Math.min(val + 12, dataLength)] }));
+                            };
+                            return (
                                 <div key={key} className="w-full flex flex-col items-center justify-center h-full flex-1 overflow-visible">
                                     <h4 className="font-bold mb-2 text-center w-full break-words">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                    {showSlider && (
+                                        <div className="mb-2 flex items-center gap-2 w-full max-w-md mx-auto">
+                                            <label htmlFor={`totals-slider-${key}`} className="text-xs text-gray-500">Window:</label>
+                                            <input
+                                                id={`totals-slider-${key}`}
+                                                type="range"
+                                                min={0}
+                                                max={dataLength - 12}
+                                                value={start}
+                                                onChange={handleTotalsWindowChange}
+                                                className="w-full max-w-xs"
+                                            />
+                                            <span className="text-xs text-gray-500">{start + 1} - {end}</span>
+                                        </div>
+                                    )}
                                     <div className="w-full flex items-center justify-center h-full overflow-visible">
                                         <ResponsiveContainer width="100%" height={300}>
-                                            <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                            <LineChart data={visibleData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                                <XAxis dataKey={labelKey} tick={{ fontSize: 12 }} interval={0} angle={data.length > 8 ? -30 : 0} textAnchor={data.length > 8 ? 'end' : 'middle'} height={data.length > 8 ? 60 : 30} />
+                                                <XAxis dataKey={labelKey} tick={{ fontSize: 12 }} interval={0} angle={visibleData.length > 8 ? -30 : 0} textAnchor={visibleData.length > 8 ? 'end' : 'middle'} height={visibleData.length > 8 ? 60 : 30} />
                                                 <YAxis />
                                                 <Tooltip formatter={(v) => v} />
-                                        <Legend />
+                                                <Legend />
                                                 <Line type="monotone" dataKey={valueKey} stroke="#7400B8" strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 8 }} />
                                             </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                </div>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
                             );
                         }
                         // Fallback: table or primitive
+                        if (typeof value === 'object' && value !== null && Array.isArray(Object.values(value)[0])) {
+                            const dataLength = Object.values(value)[0].length;
+                            const showSlider = dataLength > 12;
+                            const windowState = totalsWindow[key] || [0, 12];
+                            const [start, end] = windowState;
+                            const visibleRows = showSlider ? Array.from({length: end - start}, (_, i) => start + i) : Array.from({length: dataLength}, (_, i) => i);
+                            const handleTotalsWindowChange = (e) => {
+                                const val = Number(e.target.value);
+                                setTotalsWindow(prev => ({ ...prev, [key]: [val, Math.min(val + 12, dataLength)] }));
+                            };
+                            return (
+                                <div key={key} className="w-full">
+                                    <h4 className="font-bold mb-2">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                    {showSlider && (
+                                        <div className="mb-2 flex items-center gap-2 w-full max-w-md mx-auto">
+                                            <label htmlFor={`totals-slider-table-${key}`} className="text-xs text-gray-500">Window:</label>
+                                            <input
+                                                id={`totals-slider-table-${key}`}
+                                                type="range"
+                                                min={0}
+                                                max={dataLength - 12}
+                                                value={start}
+                                                onChange={handleTotalsWindowChange}
+                                                className="w-full max-w-xs"
+                                            />
+                                            <span className="text-xs text-gray-500">{start + 1} - {end}</span>
+                                        </div>
+                                    )}
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full text-xs">
+                                            <thead>
+                                                <tr>
+                                                    {Object.keys(value).map((col, i) => <th key={i} className="px-2 py-1 border-b text-left">{col}</th>)}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {visibleRows.map((rowIdx) => (
+                                                    <tr key={rowIdx}>
+                                                        {Object.keys(value).map((col, i) => <td key={i} className="px-2 py-1 border-b">{value[col][rowIdx]}</td>)}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            );
+                        }
                         return (
                             <div key={key} className="w-full">
                                 <h4 className="font-bold mb-2">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
@@ -193,6 +265,8 @@ const EducationDashboard = ({ file, analysis }) => {
     };
 
     // Helper: Render Trends
+    const [trendMetric, setTrendMetric] = useState(null);
+    const [trendWindow, setTrendWindow] = useState([0, 12]);
     const renderTrends = (trends) => {
         if (!Array.isArray(trends) || trends.length === 0) return null;
         if (trends.length < 3) {
@@ -202,30 +276,87 @@ const EducationDashboard = ({ file, analysis }) => {
                 </div>
             );
         }
+        // Find numeric keys for plotting
+        const numericKeys = Object.keys(trends[0] || {}).filter(k => typeof trends[0][k] === 'number');
+        const allKeys = Object.keys(trends[0] || {});
+        const mainKey = trendMetric || numericKeys[0] || allKeys[1];
+        const xKey = allKeys[0];
+        // Window logic
+        const dataLength = trends.length;
+        const showSlider = dataLength > 12;
+        const [start, end] = trendWindow;
+        const visibleData = showSlider ? trends.slice(start, end) : trends;
+        // Dropdown for metric selection
+        const handleMetricChange = (e) => setTrendMetric(e.target.value);
+        // Slider for window selection
+        const handleWindowChange = (e) => {
+            const val = Number(e.target.value);
+            setTrendWindow([val, Math.min(val + 12, dataLength)]);
+        };
         return (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8 w-full">
-                        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                    <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Trends
-                        </h3>
-                <div className="h-[350px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={trends} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
-                                    <defs>
-                                <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#7400B8" stopOpacity={0.8}/>
-                                            <stop offset="95%" stopColor="#7400B8" stopOpacity={0}/>
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                    <XAxis dataKey="date" />
-                                    <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Area type="monotone" dataKey="total" stroke="#7400B8" fill="url(#colorTrend)" strokeWidth={3} />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Trends
+                    </h3>
+                    <div className="flex items-center gap-2">
+                        <label htmlFor="trend-metric" className="text-sm font-semibold text-[#7400B8] mr-1">Metric:</label>
+                        <select
+                            id="trend-metric"
+                            value={mainKey}
+                            onChange={handleMetricChange}
+                            className="rounded-full px-4 py-1.5 text-sm font-medium bg-white border-2 border-[#7400B8]/30 focus:border-[#7400B8] focus:ring-2 focus:ring-[#7400B8]/20 text-[#7400B8] transition-all duration-200 outline-none shadow-sm cursor-pointer hover:border-[#9B4DCA] hover:bg-[#F3E8FF]"
+                            style={{ minWidth: 120 }}
+                        >
+                            {numericKeys.map((k) => (
+                                <option key={k} value={k}>{k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+                {showSlider && (
+                    <div className="mb-4 flex items-center gap-2">
+                        <label htmlFor="trend-slider" className="text-xs text-gray-500">Window:</label>
+                        <input
+                            id="trend-slider"
+                            type="range"
+                            min={0}
+                            max={dataLength - 12}
+                            value={start}
+                            onChange={handleWindowChange}
+                            className="w-full max-w-xs accent-[#7400B8]"
+                        />
+                        <span className="text-xs text-gray-500">{start + 1} - {end}</span>
+                    </div>
+                )}
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={mainKey}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.4 }}
+                        className="h-[350px] w-full"
+                    >
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={visibleData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#7400B8" stopOpacity={0.8}/>
+                                        <stop offset="95%" stopColor="#7400B8" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                <XAxis dataKey={xKey} />
+                                <YAxis />
+                                <Tooltip />
+                                <Legend />
+                                <Area type="monotone" dataKey={mainKey} stroke="#7400B8" fill="url(#colorTrend)" strokeWidth={3} />
+                            </AreaChart>
+                        </ResponsiveContainer>
                     </motion.div>
+                </AnimatePresence>
+            </motion.div>
         );
     };
 

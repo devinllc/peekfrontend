@@ -339,14 +339,14 @@ const UserDashboard = () => {
 
         return (
             <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3 sm:gap-0">
                     <h2 className="text-xl font-bold text-gray-800">Recent Files</h2>
-                    <div className="flex space-x-2">
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => navigate('/user/data-sources')}
-                            className="px-4 py-2 bg-white/80 text-[#7400B8] border border-[#7400B8] rounded-xl text-sm"
+                            className="px-4 py-2 bg-white/80 text-[#7400B8] border border-[#7400B8] rounded-xl text-sm w-full sm:w-auto"
                         >
                             View All
                         </motion.button>
@@ -354,7 +354,7 @@ const UserDashboard = () => {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => navigate('/user/data-upload')}
-                            className="px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl text-sm"
+                            className="px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl text-sm w-full sm:w-auto"
                         >
                             Upload File
                         </motion.button>
@@ -372,17 +372,17 @@ const UserDashboard = () => {
                             }`}
                             onClick={() => setSelectedFile(file)}
                         >
-                            <div className="flex items-start justify-between">
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] flex items-center justify-center">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                <div className="flex-1 min-w-0 w-full">
+                                    <div className="flex items-center space-x-3 w-full">
+                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] flex items-center justify-center flex-shrink-0">
                                             <FiFile className="w-5 h-5 text-white" />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-base font-semibold text-gray-800 truncate mb-1">
                                                 {file.originalName}
                                             </p>
-                                            <div className="flex items-center gap-4 text-xs">
+                                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs w-full">
                                                 <span className="flex items-center text-gray-600">
                                                     <FiDatabase className="w-3 h-3 mr-1" />
                                                     {file.fileCategory}
@@ -399,7 +399,7 @@ const UserDashboard = () => {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center space-x-2">
+                                <div className="flex flex-col sm:flex-row items-stretch gap-2 w-full sm:w-auto">
                                     {file.analysis ? (
                                         <motion.button
                                             whileHover={{ scale: 1.05 }}
@@ -410,7 +410,7 @@ const UserDashboard = () => {
                                                 setAnalysis(file.analysis);
                                                 setShowAnalysis(true);
                                             }}
-                                            className="px-3 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all duration-200 flex items-center space-x-2 text-xs font-medium shadow-lg"
+                                            className="px-3 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all duration-200 flex items-center justify-center space-x-2 text-xs font-medium shadow-lg w-full sm:w-auto"
                                         >
                                             <FiBarChart2 className="w-4 h-4" />
                                             <span>View Analysis</span>
@@ -423,7 +423,7 @@ const UserDashboard = () => {
                                                 e.stopPropagation();
                                                 handleLoadFileAnalysis(file._id);
                                             }}
-                                            className="px-3 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:shadow-lg transition-all duration-200 flex items-center space-x-2 text-xs font-medium"
+                                            className="px-3 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2 text-xs font-medium w-full sm:w-auto"
                                         >
                                             <FiCpu className="w-4 h-4" />
                                             <span>Analyze</span>
@@ -433,8 +433,8 @@ const UserDashboard = () => {
                             </div>
                         </motion.div>
                     ))}
-                        </div>
-                    </div>
+                </div>
+            </div>
         );
     };
 

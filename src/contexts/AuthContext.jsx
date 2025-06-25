@@ -95,7 +95,6 @@ export const AuthProvider = ({ children }) => {
     // Function to save auth token in both cookie and localStorage
     const saveAuthToken = (token) => {
         if (!token) {
-            console.log('No token provided to saveAuthToken'); // Debug log
             return;
         }
         
@@ -121,7 +120,6 @@ export const AuthProvider = ({ children }) => {
     // Function to clear auth data
     const clearAuthData = () => {
         try {
-            console.log('Clearing auth data...'); // Debug log
             localStorage.removeItem('token');
             document.cookie = 'token=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Strict';
             setUser(null);
@@ -129,7 +127,6 @@ export const AuthProvider = ({ children }) => {
                 clearInterval(tokenRefreshTimer);
                 setTokenRefreshTimer(null);
             }
-            console.log('Auth data cleared'); // Debug log
         } catch (error) {
             console.error('Error clearing auth data:', error);
         }
@@ -138,30 +135,25 @@ export const AuthProvider = ({ children }) => {
     // Function to verify token
     const verifyToken = (token) => {
         if (!token) {
-            console.log('No token provided to verifyToken'); // Debug log
             return false;
         }
         
         try {
             // Simple token validation - check if it exists and has a valid format
             if (typeof token !== 'string' || token.length < 10) {
-                console.log('Invalid token format'); // Debug log
                 return false;
             }
             
             // Check if token is expired (assuming token contains expiration time)
             const tokenData = JSON.parse(atob(token.split('.')[1]));
-            console.log('Token data in verifyToken:', tokenData); // Debug log
             
             // If token doesn't have exp, use iat + 7 days as expiration
             const expirationTime = tokenData.exp ? tokenData.exp * 1000 : (tokenData.iat * 1000) + (7 * 24 * 60 * 60 * 1000);
             const isValid = Date.now() < expirationTime;
             
             if (!isValid) {
-                console.log('Token is expired'); // Debug log
                 clearAuthData();
             } else {
-                console.log('Token is valid'); // Debug log
             }
             
             return isValid;
@@ -222,16 +214,16 @@ export const AuthProvider = ({ children }) => {
         const loadUserData = async () => {
             try {
                 const token = getAuthToken();
-                console.log('Token on load:', token); // Debug log
+           
 
                 if (!token) {
-                    console.log('No token found'); // Debug log
+
                     setLoading(false);
                     return;
                 }
 
                 if (!verifyToken(token)) {
-                    console.log('Token verification failed'); // Debug log
+              
                     clearAuthData();
                     setLoading(false);
                     return;
@@ -239,7 +231,6 @@ export const AuthProvider = ({ children }) => {
 
                 // If we have a valid token, set the user data from token
                 const tokenData = JSON.parse(atob(token.split('.')[1]));
-                console.log('Token data:', tokenData); // Debug log
 
                 setUser({
                     _id: tokenData.id,
@@ -315,18 +306,15 @@ export const AuthProvider = ({ children }) => {
 
             if (response.data.token) {
                 const token = response.data.token;
-                console.log('Login token received:', token); // Debug log
                 
                 // Save token first
                 saveAuthToken(token);
                 
                 // Verify token was saved
                 const savedToken = getAuthToken();
-                console.log('Token after save:', savedToken); // Debug log
                 
                 // Then verify and set user data
                 const tokenData = JSON.parse(atob(token.split('.')[1]));
-                console.log('Login token data:', tokenData); // Debug log
                 
                 setUser({
                     _id: tokenData.id,

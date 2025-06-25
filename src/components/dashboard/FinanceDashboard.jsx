@@ -11,6 +11,9 @@ const FinanceDashboard = ({ file, analysis }) => {
     const [selectedPeriod, setSelectedPeriod] = useState('all');
     const [selectedMetric, setSelectedMetric] = useState('revenue');
     const [showSummary, setShowSummary] = useState(false);
+    const [trendMetric, setTrendMetric] = useState(null);
+    const [trendWindow, setTrendWindow] = useState([0, 12]);
+    const [totalsWindow, setTotalsWindow] = useState({});
 
     if (!file || !analysis) {
         return (
@@ -80,31 +83,79 @@ const FinanceDashboard = ({ file, analysis }) => {
         }
         // Find numeric keys for plotting
         const numericKeys = Object.keys(trends[0] || {}).filter(k => typeof trends[0][k] === 'number');
-        const mainKey = numericKeys[0] || Object.keys(trends[0])[1];
-    return (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8 w-full">
-                    <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                    <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Trends
+        const allKeys = Object.keys(trends[0] || {});
+        const mainKey = trendMetric || numericKeys[0] || allKeys[1];
+        const xKey = allKeys[0];
+        // Window logic
+        const dataLength = trends.length;
+        const showSlider = dataLength > 12;
+        const [start, end] = trendWindow;
+        const visibleData = showSlider ? trends.slice(start, end) : trends;
+        // Dropdown for metric selection
+        const handleMetricChange = (e) => setTrendMetric(e.target.value);
+        // Slider for window selection
+        const handleWindowChange = (e) => {
+            const val = Number(e.target.value);
+            setTrendWindow([val, Math.min(val + 12, dataLength)]);
+        };
+        return (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} key={mainKey} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8 w-full">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Trends
                     </h3>
-                <div className="h-[350px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={trends} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
-                            <defs>
-                                <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#7400B8" stopOpacity={0.8}/>
-                                    <stop offset="95%" stopColor="#7400B8" stopOpacity={0}/>
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                            <XAxis dataKey={Object.keys(trends[0])[0]} />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Area type="monotone" dataKey={mainKey} stroke="#7400B8" fill="url(#colorTrend)" strokeWidth={3} />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                            </div>
-                        </motion.div>
+                    <div className="flex items-center gap-2">
+                        <label htmlFor="trend-metric" className="text-sm text-gray-600 mr-1">Metric:</label>
+                        <select id="trend-metric" value={mainKey} onChange={handleMetricChange} className="border rounded px-2 py-1 text-sm">
+                            {numericKeys.map((k) => (
+                                <option key={k} value={k}>{k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+                {showSlider && (
+                    <div className="mb-4 flex items-center gap-2">
+                        <label htmlFor="trend-slider" className="text-xs text-gray-500">Window:</label>
+                        <input
+                            id="trend-slider"
+                            type="range"
+                            min={0}
+                            max={dataLength - 12}
+                            value={start}
+                            onChange={handleWindowChange}
+                            className="w-full max-w-xs"
+                        />
+                        <span className="text-xs text-gray-500">{start + 1} - {end}</span>
+                    </div>
+                )}
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={mainKey}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.4 }}
+                        className="h-[350px] w-full"
+                    >
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={visibleData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                                <defs>
+                                    <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#7400B8" stopOpacity={0.8}/>
+                                        <stop offset="95%" stopColor="#7400B8" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                <XAxis dataKey={xKey} />
+                                <YAxis />
+                                <Tooltip />
+                                <Legend />
+                                <Area type="monotone" dataKey={mainKey} stroke="#7400B8" fill="url(#colorTrend)" strokeWidth={3} />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </motion.div>
+                </AnimatePresence>
+            </motion.div>
         );
     };
 
@@ -147,24 +198,24 @@ const FinanceDashboard = ({ file, analysis }) => {
     // High/Low Performers
     const renderPerformerSection = (title, data, labelKey, valueKey, color) => {
         if (!data || !Array.isArray(data) || data.length === 0) return null;
-                                            return (
+        return (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 flex flex-col items-start mb-8 w-full">
-                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                     <FiTrendingUp className="w-6 h-6 text-[#7400B8]" /> {title}
-                            </h3>
+                </h3>
                 <div className="w-full">
                     <ResponsiveContainer width="100%" height={220}>
                         <BarChart data={data} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                             <XAxis type="number" />
                             <YAxis dataKey={labelKey} type="category" width={120} />
                             <Tooltip />
-                                        <Legend />
+                            <Legend />
                             <Bar dataKey={valueKey} fill={color} radius={[0, 8, 8, 0]} barSize={28} />
                         </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </motion.div>
+                    </ResponsiveContainer>
+                </div>
+            </motion.div>
         );
     };
 
@@ -173,41 +224,113 @@ const FinanceDashboard = ({ file, analysis }) => {
         if (!totals || Object.keys(totals).length === 0) return null;
         return (
             <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8">
-                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                     <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Totals
-                            </h3>
+                </h3>
                 <div className="flex flex-col gap-8 w-full">
                     {Object.entries(totals).map(([key, value], idx) => {
+                        // Chart for array of objects with two keys
                         if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && Object.keys(value[0]).length === 2) {
                             const [labelKey, valueKey] = Object.keys(value[0]);
+                            const dataLength = value.length;
+                            const showSlider = dataLength > 12;
+                            const windowState = totalsWindow[key] || [0, 12];
+                            const [start, end] = windowState;
+                            const visibleData = showSlider ? value.slice(start, end) : value;
+                            const handleTotalsWindowChange = (e) => {
+                                const val = Number(e.target.value);
+                                setTotalsWindow(prev => ({ ...prev, [key]: [val, Math.min(val + 12, dataLength)] }));
+                            };
                             return (
                                 <div key={key} className="w-full flex flex-col items-center justify-center h-full flex-1 overflow-visible">
                                     <h4 className="font-bold mb-2 text-center w-full break-words">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                    {showSlider && (
+                                        <div className="mb-2 flex items-center gap-2 w-full max-w-md mx-auto">
+                                            <label htmlFor={`totals-slider-${key}`} className="text-xs text-gray-500">Window:</label>
+                                            <input
+                                                id={`totals-slider-${key}`}
+                                                type="range"
+                                                min={0}
+                                                max={dataLength - 12}
+                                                value={start}
+                                                onChange={handleTotalsWindowChange}
+                                                className="w-full max-w-xs"
+                                            />
+                                            <span className="text-xs text-gray-500">{start + 1} - {end}</span>
+                                        </div>
+                                    )}
                                     <div className="w-full flex items-center justify-center h-full overflow-visible">
                                         <ResponsiveContainer width="100%" height={300}>
-                                            <LineChart data={value} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                                <XAxis dataKey={labelKey} tick={{ fontSize: 12 }} interval={0} angle={value.length > 8 ? -30 : 0} textAnchor={value.length > 8 ? 'end' : 'middle'} height={value.length > 8 ? 60 : 30} />
+                                            <LineChart data={visibleData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                                <XAxis dataKey={labelKey} tick={{ fontSize: 12 }} interval={0} angle={visibleData.length > 8 ? -30 : 0} textAnchor={visibleData.length > 8 ? 'end' : 'middle'} height={visibleData.length > 8 ? 60 : 30} />
                                                 <YAxis />
                                                 <Tooltip />
-                                        <Legend />
+                                                <Legend />
                                                 <Line type="monotone" dataKey={valueKey} stroke="#7400B8" strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 8 }} />
                                             </LineChart>
-                                </ResponsiveContainer>
+                                        </ResponsiveContainer>
                                     </div>
                                 </div>
                             );
                         }
                         // Fallback: table or primitive
+                        if (typeof value === 'object' && value !== null && Array.isArray(Object.values(value)[0])) {
+                            const dataLength = Object.values(value)[0].length;
+                            const showSlider = dataLength > 12;
+                            const windowState = totalsWindow[key] || [0, 12];
+                            const [start, end] = windowState;
+                            const visibleRows = showSlider ? Array.from({length: end - start}, (_, i) => start + i) : Array.from({length: dataLength}, (_, i) => i);
+                            const handleTotalsWindowChange = (e) => {
+                                const val = Number(e.target.value);
+                                setTotalsWindow(prev => ({ ...prev, [key]: [val, Math.min(val + 12, dataLength)] }));
+                            };
+                            return (
+                                <div key={key} className="w-full">
+                                    <h4 className="font-bold mb-2">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                    {showSlider && (
+                                        <div className="mb-2 flex items-center gap-2 w-full max-w-md mx-auto">
+                                            <label htmlFor={`totals-slider-table-${key}`} className="text-xs text-gray-500">Window:</label>
+                                            <input
+                                                id={`totals-slider-table-${key}`}
+                                                type="range"
+                                                min={0}
+                                                max={dataLength - 12}
+                                                value={start}
+                                                onChange={handleTotalsWindowChange}
+                                                className="w-full max-w-xs"
+                                            />
+                                            <span className="text-xs text-gray-500">{start + 1} - {end}</span>
+                                        </div>
+                                    )}
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full text-xs">
+                                            <thead>
+                                                <tr>
+                                                    {Object.keys(value).map((col, i) => <th key={i} className="px-2 py-1 border-b text-left">{col}</th>)}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {visibleRows.map((rowIdx) => (
+                                                    <tr key={rowIdx}>
+                                                        {Object.keys(value).map((col, i) => <td key={i} className="px-2 py-1 border-b">{value[col][rowIdx]}</td>)}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            );
+                        }
                         return (
                             <div key={key} className="w-full">
                                 <h4 className="font-bold mb-2">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
                                 <p>{JSON.stringify(value)}</p>
-                                    </div>
+                            </div>
                         );
                     })}
-                                    </div>
-                                </div>
+                </div>
+            </div>
         );
     };
 
@@ -259,7 +382,7 @@ const FinanceDashboard = ({ file, analysis }) => {
                                                     ))}
                                                 </tbody>
                                             </table>
-                                        </div>
+                                    </div>
                                     </>
                                 )}
                             </div>
@@ -278,8 +401,8 @@ const FinanceDashboard = ({ file, analysis }) => {
                 <h4 className="font-bold mb-2">Hypotheses</h4>
                 <ul className="list-disc list-inside">
                     {hypothesis.map((h, i) => <li key={i}>{h}</li>)}
-                            </ul>
-                        </div>
+                </ul>
+            </div>
         );
     };
 
@@ -352,7 +475,7 @@ const FinanceDashboard = ({ file, analysis }) => {
                                                 ))}
                                             </tbody>
                                         </table>
-                                    </div>
+                            </div>
                                 ) : (
                                     <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(value, null, 2)}</pre>
                                 )}
@@ -372,12 +495,12 @@ const FinanceDashboard = ({ file, analysis }) => {
             {insights.lowPerformers?.bottom_Month && renderPerformerSection('Bottom Months', insights.lowPerformers.bottom_Month, 'Month', 'Revenue', '#C084FC')}
             {renderTotals(insights.totals)}
             {renderTrends(insights.trends)}
-            {renderSummary(summary)}
-            {renderHypotheses(insights.hypothesis)}
             {renderSection('Forecast', insights.forecast)}
             {renderSection('Segments', insights.segments)}
             {renderVariance(insights.variance)}
-            </motion.div>
+            {renderSummary(summary)}
+            {renderHypotheses(insights.hypothesis)}
+        </motion.div>
     );
 };
 

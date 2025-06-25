@@ -145,101 +145,99 @@ const DataSources = ({ userFiles = [], isLoading = true, handleLoadFileAnalysis,
                 }
             />
 
-            {/* Dashboard Summary */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="px-8 pb-6 mt-8"
-            >
-                <div className="max-w-7xl mx-auto">
-                    <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20">
-                        <div className="flex items-center space-x-4 mb-6">
-                            <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-xl flex items-center justify-center">
-                                <FiFileText className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-800">Dashboard Summary</h2>
-                                <p className="text-gray-600 text-sm">Quick overview of your data and analytics</p>
-                            </div>
-            </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                            <motion.div
-                                whileHover={{ y: -5 }}
-                                className="bg-gradient-to-br from-[#F9F4FF] to-white p-4 lg:p-6 rounded-2xl border border-[#7400B8]/10 shadow-md"
-                            >
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="font-semibold text-gray-700 text-sm lg:text-base">Total Files</h3>
-                                    <div className="w-8 h-8 lg:w-10 lg:h-10 bg-[#7400B8]/10 rounded-xl flex items-center justify-center">
-                                        <FiFileText className="w-4 h-4 lg:w-5 lg:h-5 text-[#7400B8]" />
-                                    </div>
-                                </div>
-                                <p className="text-2xl lg:text-3xl font-bold text-[#7400B8]">{userFiles?.length || 0}</p>
-                                <p className="text-xs lg:text-sm text-gray-500 mt-2">
-                                    {userFiles?.length === 1 ? '1 file uploaded' : `${userFiles?.length || 0} files uploaded`}
-                                </p>
-                            </motion.div>
-
-                            <motion.div
-                                whileHover={{ y: -5 }}
-                                className="bg-gradient-to-br from-[#F9F4FF] to-white p-4 lg:p-6 rounded-2xl border border-[#7400B8]/10 shadow-md"
-                            >
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="font-semibold text-gray-700 text-sm lg:text-base">Analyzed Files</h3>
-                                    <div className="w-8 h-8 lg:w-10 lg:h-10 bg-[#7400B8]/10 rounded-xl flex items-center justify-center">
-                                        <FiBarChart2 className="w-4 h-4 lg:w-5 lg:h-5 text-[#7400B8]" />
-                                    </div>
-                                </div>
-                                <p className="text-2xl lg:text-3xl font-bold text-[#7400B8]">
-                                    {userFiles?.filter(file => file.analysis)?.length || 0}
-                                </p>
-                                <p className="text-xs lg:text-sm text-gray-500 mt-2">
-                                    {Math.round(((userFiles?.filter(file => file.analysis)?.length || 0) / (userFiles?.length || 1)) * 100)}% analyzed
-                                </p>
-                            </motion.div>
-
-                            <motion.div
-                                whileHover={{ y: -5 }}
-                                className="bg-gradient-to-br from-[#F9F4FF] to-white p-4 lg:p-6 rounded-2xl border border-[#7400B8]/10 shadow-md"
-                            >
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="font-semibold text-gray-700 text-sm lg:text-base">Total Storage</h3>
-                                    <div className="w-8 h-8 lg:w-10 lg:h-10 bg-[#7400B8]/10 rounded-xl flex items-center justify-center">
-                                        <FiDatabase className="w-4 h-4 lg:w-5 lg:h-5 text-[#7400B8]" />
-                                    </div>
-                                </div>
-                                <p className="text-2xl lg:text-3xl font-bold text-[#7400B8]">
-                                    {formatFileSize(userFiles?.reduce((acc, file) => acc + (file.sizeInBytes || 0), 0) || 0)}
-                                </p>
-                                <p className="text-xs lg:text-sm text-gray-500 mt-2">
-                                    Used storage space
-                                </p>
-                            </motion.div>
-
-                            <motion.div
-                                whileHover={{ y: -5 }}
-                                className="bg-gradient-to-br from-[#F9F4FF] to-white p-4 lg:p-6 rounded-2xl border border-[#7400B8]/10 shadow-md"
-                            >
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="font-semibold text-gray-700 text-sm lg:text-base">Processing</h3>
-                                    <div className="w-8 h-8 lg:w-10 lg:h-10 bg-[#7400B8]/10 rounded-xl flex items-center justify-center">
-                                        <FiActivity className="w-4 h-4 lg:w-5 lg:h-5 text-[#7400B8]" />
-                                    </div>
-                                </div>
-                                <p className="text-2xl lg:text-3xl font-bold text-[#7400B8]">{isLoadingAnalysis ? '1' : '0'}</p>
-                                <p className="text-xs lg:text-sm text-gray-500 mt-2">
-                                    {isLoadingAnalysis ? 'Analysis in progress' : 'No active analysis'}
-                                </p>
-                            </motion.div>
-                        </div>
-                    </div>
-                </div>
-            </motion.div>
-
             {/* Content */}
-            <div className="flex-1 px-8 pb-8 overflow-hidden">
-                <div className="max-w-7xl mx-auto h-full">
+            <div className="flex-1 px-8 pb-8 mt-4 overflow-y-auto">
+                <div className="max-w-7xl mx-auto">
+                    {/* Dashboard Summary (scrolls away on mobile) */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="mb-6"
+                    >
+                        <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20">
+                            <div className="flex items-center space-x-4 mb-6">
+                                <div className="w-12 h-12 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-xl flex items-center justify-center">
+                                    <FiFileText className="w-6 h-6 text-white" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-800">Dashboard Summary</h2>
+                                    <p className="text-gray-600 text-sm">Quick overview of your data and analytics</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                                <motion.div
+                                    whileHover={{ y: -5 }}
+                                    className="bg-gradient-to-br from-[#F9F4FF] to-white p-4 lg:p-6 rounded-2xl border border-[#7400B8]/10 shadow-md"
+                                >
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="font-semibold text-gray-700 text-sm lg:text-base">Total Files</h3>
+                                        <div className="w-8 h-8 lg:w-10 lg:h-10 bg-[#7400B8]/10 rounded-xl flex items-center justify-center">
+                                            <FiFileText className="w-4 h-4 lg:w-5 lg:h-5 text-[#7400B8]" />
+                                        </div>
+                                    </div>
+                                    <p className="text-2xl lg:text-3xl font-bold text-[#7400B8]">{userFiles?.length || 0}</p>
+                                    <p className="text-xs lg:text-sm text-gray-500 mt-2">
+                                        {userFiles?.length === 1 ? '1 file uploaded' : `${userFiles?.length || 0} files uploaded`}
+                                    </p>
+                                </motion.div>
+
+                                <motion.div
+                                    whileHover={{ y: -5 }}
+                                    className="bg-gradient-to-br from-[#F9F4FF] to-white p-4 lg:p-6 rounded-2xl border border-[#7400B8]/10 shadow-md"
+                                >
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="font-semibold text-gray-700 text-sm lg:text-base">Analyzed Files</h3>
+                                        <div className="w-8 h-8 lg:w-10 lg:h-10 bg-[#7400B8]/10 rounded-xl flex items-center justify-center">
+                                            <FiBarChart2 className="w-4 h-4 lg:w-5 lg:h-5 text-[#7400B8]" />
+                                        </div>
+                                    </div>
+                                    <p className="text-2xl lg:text-3xl font-bold text-[#7400B8]">
+                                        {userFiles?.filter(file => file.analysis)?.length || 0}
+                                    </p>
+                                    <p className="text-xs lg:text-sm text-gray-500 mt-2">
+                                        {Math.round(((userFiles?.filter(file => file.analysis)?.length || 0) / (userFiles?.length || 1)) * 100)}% analyzed
+                                    </p>
+                                </motion.div>
+
+                                <motion.div
+                                    whileHover={{ y: -5 }}
+                                    className="bg-gradient-to-br from-[#F9F4FF] to-white p-4 lg:p-6 rounded-2xl border border-[#7400B8]/10 shadow-md"
+                                >
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="font-semibold text-gray-700 text-sm lg:text-base">Total Storage</h3>
+                                        <div className="w-8 h-8 lg:w-10 lg:h-10 bg-[#7400B8]/10 rounded-xl flex items-center justify-center">
+                                            <FiDatabase className="w-4 h-4 lg:w-5 lg:h-5 text-[#7400B8]" />
+                                        </div>
+                                    </div>
+                                    <p className="text-2xl lg:text-3xl font-bold text-[#7400B8]">
+                                        {formatFileSize(userFiles?.reduce((acc, file) => acc + (file.sizeInBytes || 0), 0) || 0)}
+                                    </p>
+                                    <p className="text-xs lg:text-sm text-gray-500 mt-2">
+                                        Used storage space
+                                    </p>
+                                </motion.div>
+
+                                <motion.div
+                                    whileHover={{ y: -5 }}
+                                    className="bg-gradient-to-br from-[#F9F4FF] to-white p-4 lg:p-6 rounded-2xl border border-[#7400B8]/10 shadow-md"
+                                >
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="font-semibold text-gray-700 text-sm lg:text-base">Processing</h3>
+                                        <div className="w-8 h-8 lg:w-10 lg:h-10 bg-[#7400B8]/10 rounded-xl flex items-center justify-center">
+                                            <FiActivity className="w-4 h-4 lg:w-5 lg:h-5 text-[#7400B8]" />
+                                        </div>
+                                    </div>
+                                    <p className="text-2xl lg:text-3xl font-bold text-[#7400B8]">{isLoadingAnalysis ? '1' : '0'}</p>
+                                    <p className="text-xs lg:text-sm text-gray-500 mt-2">
+                                        {isLoadingAnalysis ? 'Analysis in progress' : 'No active analysis'}
+                                    </p>
+                                </motion.div>
+                            </div>
+                        </div>
+                    </motion.div>
+                    {/* File List (scrolls up under summary) */}
                     {isLoading ? (
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
@@ -253,7 +251,7 @@ const DataSources = ({ userFiles = [], isLoading = true, handleLoadFileAnalysis,
                                 <p className="text-gray-600 font-medium">Loading your data sources...</p>
                             </div>
                         </motion.div>
-            ) : error ? (
+                    ) : error ? (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -268,20 +266,20 @@ const DataSources = ({ userFiles = [], isLoading = true, handleLoadFileAnalysis,
                             </div>
                         </motion.div>
                     ) : (
-                        <div className="h-full">
+                        <div>
                             {userFiles.length > 0 ? (
-                                <div className="h-full">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 h-full overflow-y-auto custom-scrollbar pr-0 sm:pr-2">
+                                <div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
                                         {userFiles.map((file, index) => (
-                                    <motion.div
-                                        key={file._id}
+                                            <motion.div
+                                                key={file._id}
                                                 initial={{ opacity: 0, y: 20 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{ delay: index * 0.05 }}
                                                 whileHover={{ y: -5, scale: 1.02 }}
-                                        onClick={() => handleFileSelect(file)}
-                                                className={`bg-gradient-to-br from-[#F9F4FF] to-white p-3 sm:p-4 lg:p-6 rounded-2xl cursor-pointer transition-all duration-300 border flex flex-col justify-between h-40 sm:h-48 lg:h-52 ${
-                                            selectedFile?._id === file._id
+                                                onClick={() => handleFileSelect(file)}
+                                                className={`bg-gradient-to-br from-[#F9F4FF] to-white p-3 sm:p-4 lg:p-6 rounded-2xl cursor-pointer transition-all duration-300 border flex flex-col justify-between min-h-[120px] sm:h-48 lg:h-52 ${
+                                                    selectedFile?._id === file._id
                                                         ? 'border-[#7400B8]/50 shadow-lg'
                                                         : 'border-[#7400B8]/10 hover:border-[#7400B8]/30 hover:shadow-md'
                                                 }`}
@@ -291,7 +289,7 @@ const DataSources = ({ userFiles = [], isLoading = true, handleLoadFileAnalysis,
                                                         <div className="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-xl bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] flex items-center justify-center">
                                                             <FiFile className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-white" />
                                                         </div>
-                                            <div className="flex-1 min-w-0">
+                                                        <div className="flex-1 min-w-0">
                                                             <p className="text-xs sm:text-sm lg:text-base font-semibold text-gray-800 truncate">
                                                                 {file.originalName}
                                                             </p>
@@ -299,7 +297,7 @@ const DataSources = ({ userFiles = [], isLoading = true, handleLoadFileAnalysis,
                                                     </div>
                                                     <div className="space-y-1 sm:space-y-2 lg:space-y-3">
                                                         <div className="flex items-center text-xs text-gray-600">
-                                                                <FiDatabase className="w-3 h-3 mr-1" />
+                                                            <FiDatabase className="w-3 h-3 mr-1" />
                                                             <span className="truncate">{file.fileCategory}</span>
                                                         </div>
                                                         <div className="flex items-center text-xs text-gray-600">
@@ -312,7 +310,7 @@ const DataSources = ({ userFiles = [], isLoading = true, handleLoadFileAnalysis,
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="mt-2 sm:mt-3 lg:mt-4">
+                                                <div className="mt-2 sm:mt-3  lg:mt-4">
                                                     {hasAnalysis(file) ? (
                                                         <motion.button
                                                             whileHover={{ scale: 1.05 }}
@@ -337,11 +335,11 @@ const DataSources = ({ userFiles = [], isLoading = true, handleLoadFileAnalysis,
                                                             <FiCpu className="w-3 h-3 sm:w-4 sm:h-4 lg:w-4 lg:h-4" />
                                                         <span>Analyze</span>
                                                         </motion.button>
-                                                )}
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </div>
+                                                    )}
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
                                 </div>
                             ) : (
                                 <motion.div
@@ -365,10 +363,10 @@ const DataSources = ({ userFiles = [], isLoading = true, handleLoadFileAnalysis,
                                     </motion.button>
                                 </motion.div>
                             )}
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
+            </div>
 
             <style>{`
                 .custom-scrollbar::-webkit-scrollbar {

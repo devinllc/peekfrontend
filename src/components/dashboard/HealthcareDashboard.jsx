@@ -56,6 +56,13 @@ const HealthcareDashboard = ({ file, analysis }) => {
         ...field,
     }));
 
+    // Utility for safe rendering
+    const renderValue = (v) => {
+        if (v === null || v === undefined) return '';
+        if (typeof v === 'object') return <span className="font-mono text-xs bg-gray-100 px-1 rounded">{JSON.stringify(v)}</span>;
+        return String(v);
+    };
+
     // Helper to render summary field
     const renderSummaryField = (field) => {
         if (field.type === 'numeric') {
@@ -96,7 +103,7 @@ const HealthcareDashboard = ({ file, analysis }) => {
                         <span className="text-gray-600">Top values:</span>
                         <ul className="ml-2 mt-1 list-disc text-xs text-gray-700">
                             {field.top_values?.map((v, i) => (
-                                <li key={i}>{v.value} <span className="text-[#7400B8]">({v.count})</span></li>
+                                <li key={i}>{renderValue(v.value)} <span className="text-[#7400B8]">({renderValue(v.count)})</span></li>
                             ))}
                         </ul>
                     </div>
@@ -295,8 +302,8 @@ const HealthcareDashboard = ({ file, analysis }) => {
             <ul className="space-y-2 mt-4">
                 {correlations.map((c, i) => (
                     <li key={i} className="flex justify-between text-sm text-gray-700">
-                        <span className="font-medium text-gray-600">{c.between}</span>
-                        <span className="font-bold text-[#7400B8]">{c.correlation}</span>
+                        <span className="font-medium text-gray-600">{renderValue(c.between)}</span>
+                        <span className="font-bold text-[#7400B8]">{renderValue(c.correlation)}</span>
                     </li>
                 ))}
             </ul>
@@ -321,13 +328,47 @@ const HealthcareDashboard = ({ file, analysis }) => {
             <ul className="space-y-2 mt-4">
                 {Object.entries(forecasts).map(([key, value], i) => (
                     <li key={i} className="flex justify-between text-sm text-gray-700">
-                        <span className="font-medium text-gray-600">{key.replace(/_/g, ' ')}</span>
-                        <span className="font-bold text-[#7400B8]">{value}</span>
+                        <span className="font-medium text-gray-600">{renderValue(key.replace(/_/g, ' '))}</span>
+                        <span className="font-bold text-[#7400B8]">{renderValue(value)}</span>
                     </li>
                 ))}
             </ul>
         </motion.div>
     );
+
+    // Add a helper to render a bar chart for array of objects with two keys
+    const renderBarChart = (data, color = '#7400B8') => {
+        if (!Array.isArray(data) || data.length === 0) return null;
+        const keys = Object.keys(data[0] || {});
+        if (keys.length !== 2) return null;
+        const [labelKey, valueKey] = keys;
+        // Check if valueKey is numeric in all rows
+        if (!data.every(d => typeof d[valueKey] === 'number')) return null;
+        return (
+            <div className="w-full h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data} layout="vertical" margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis type="number" />
+                        <YAxis dataKey={labelKey} type="category" width={120} />
+                        <Tooltip />
+                        <Bar dataKey={valueKey} fill={color} radius={[0, 8, 8, 0]} barSize={28}>
+                            {data.map((_, idx) => (
+                                <Cell key={`cell-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                            ))}
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+        );
+    };
+
+    // Add a rounding helper near the top (with other helpers):
+    const round4 = (v) => {
+        if (typeof v === 'number') return Number(v.toFixed(4));
+        if (typeof v === 'string' && !isNaN(Number(v))) return Number(Number(v).toFixed(4));
+        return v;
+    };
 
     return (
         <>
@@ -359,7 +400,7 @@ const HealthcareDashboard = ({ file, analysis }) => {
                                         <p className="text-sm font-medium text-gray-600">{k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
                             </div>
                                 </div>
-                                <p className="text-2xl font-bold text-[#7400B8]">{formatNumber(v)}</p>
+                                <p className="text-2xl font-bold text-[#7400B8]">{typeof v === 'number' || (!isNaN(Number(v)) && v !== null && v !== undefined) ? round4(v) : renderValue(v)}</p>
                         </motion.div>
                         ))}
                     </div>
@@ -389,9 +430,14 @@ const HealthcareDashboard = ({ file, analysis }) => {
                         </h3>
                             <div className="space-y-2">
                                 {Object.entries(highPerformers).map(([k, v], idx) => (
-                                    <div key={k} className="flex justify-between">
-                                        <span className="text-gray-600">{k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
-                                        <span className="font-bold text-green-600">{formatNumber(v)}</span>
+                                    <div key={k} className="mb-4">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-gray-600">{k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
+                                        </div>
+                                        {Array.isArray(v) && v.length > 0 && typeof v[0] === 'object' && Object.keys(v[0]).length === 2 && typeof Object.values(v[0])[1] === 'number'
+                                            ? renderBarChart(v, '#16a34a')
+                                            : <span className="font-bold text-green-600">{renderValue(v)}</span>
+                                        }
                                     </div>
                                 ))}
                             </div>
@@ -411,9 +457,14 @@ const HealthcareDashboard = ({ file, analysis }) => {
                             </h3>
                             <div className="space-y-2">
                                 {Object.entries(lowPerformers).map(([k, v], idx) => (
-                                    <div key={k} className="flex justify-between">
-                                        <span className="text-gray-600">{k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
-                                        <span className="font-bold text-red-600">{formatNumber(v)}</span>
+                                    <div key={k} className="mb-4">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-gray-600">{k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
+                                        </div>
+                                        {Array.isArray(v) && v.length > 0 && typeof v[0] === 'object' && Object.keys(v[0]).length === 2 && typeof Object.values(v[0])[1] === 'number'
+                                            ? renderBarChart(v, '#e11d48')
+                                            : <span className="font-bold text-red-600">{renderValue(v)}</span>
+                                        }
                                     </div>
                                 ))}
                             </div>
@@ -500,7 +551,7 @@ const HealthcareDashboard = ({ file, analysis }) => {
                                 {hypothesis.map((item, index) => (
                                     <div key={index} className="flex items-start gap-2 text-sm text-gray-700">
                                         <span className="text-[#7400B8] mt-0.5">•</span>
-                                        <span>{item}</span>
+                                        <span>{renderValue(item)}</span>
                                     </div>
                                 ))}
                             </div>
