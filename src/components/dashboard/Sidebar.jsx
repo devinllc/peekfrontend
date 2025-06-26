@@ -181,6 +181,85 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
                                 </Link>
                             </motion.div>
                         ))}
+                        {/* Admin Dashboard link for admin users only */}
+                        {user && user.role === 'admin' && (
+                            <motion.div
+                                key="/user/admin-dashboard"
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: menuItems.length * 0.1 }}
+                                onClick={() => {
+                                    navigate('/user/admin-dashboard');
+                                    if (window.innerWidth < 1024) setSidebarOpen(false);
+                                }}
+                            >
+                                <Link
+                                    to="/user/admin-dashboard"
+                                    className={`group flex items-center px-4 py-4 rounded-2xl transition-all duration-300 ${
+                                        isActive('/user/admin-dashboard')
+                                            ? 'bg-white/20 text-white shadow-xl backdrop-blur-sm'
+                                            : 'text-white/80 hover:bg-white/10 hover:text-white'
+                                    } ${!sidebarOpen ? 'justify-center' : ''}`}
+                                >
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 flex-shrink-0 ${
+                                        isActive('/user/admin-dashboard')
+                                            ? 'bg-white/20'
+                                            : 'bg-white/10 group-hover:bg-white/20'
+                                    }`}>
+                                        <FiBarChart2 className="w-5 h-5" />
+                                    </div>
+                                    {sidebarOpen && (
+                                        <div className="ml-4 flex-1">
+                                            <p className="font-semibold text-sm">Admin Dashboard</p>
+                                            <p className={`text-xs ${
+                                                isActive('/user/admin-dashboard') ? 'text-white/90' : 'text-white/60'
+                                            }`}>
+                                                Manage Users
+                                            </p>
+                                        </div>
+                                    )}
+                                </Link>
+                            </motion.div>
+                        )}
+                        {user && user.role === 'admin' && (
+                            <motion.div
+                                key="/user/admin-testimonials"
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: menuItems.length * 0.1 + 0.1 }}
+                                onClick={() => {
+                                    navigate('/user/admin-testimonials');
+                                    if (window.innerWidth < 1024) setSidebarOpen(false);
+                                }}
+                            >
+                                <Link
+                                    to="/user/admin-testimonials"
+                                    className={`group flex items-center px-4 py-4 rounded-2xl transition-all duration-300 ${
+                                        isActive('/user/admin-testimonials')
+                                            ? 'bg-white/20 text-white shadow-xl backdrop-blur-sm'
+                                            : 'text-white/80 hover:bg-white/10 hover:text-white'
+                                    } ${!sidebarOpen ? 'justify-center' : ''}`}
+                                >
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 flex-shrink-0 ${
+                                        isActive('/user/admin-testimonials')
+                                            ? 'bg-white/20'
+                                            : 'bg-white/10 group-hover:bg-white/20'
+                                    }`}>
+                                        <FiUser className="w-5 h-5" />
+                                    </div>
+                                    {sidebarOpen && (
+                                        <div className="ml-4 flex-1">
+                                            <p className="font-semibold text-sm">Testimonials</p>
+                                            <p className={`text-xs ${
+                                                isActive('/user/admin-testimonials') ? 'text-white/90' : 'text-white/60'
+                                            }`}>
+                                                Manage Testimonials
+                                            </p>
+                                        </div>
+                                    )}
+                                </Link>
+                            </motion.div>
+                        )}
                     </nav>
 
                     {/* User Profile */}

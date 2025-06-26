@@ -388,13 +388,45 @@ const Profile = () => {
                 failReason: razorpayResponse.failReason || '',
                 test: true
             };
-            await axios.post(`${API_BASE_URL}/subscribe/`, body, { headers: { 'Authorization': `Bearer ${token}` } });
+            
+            console.log('🔵 [SUBSCRIPTION] Sending API request:', {
+                plan,
+                status,
+                body,
+                timestamp: new Date().toISOString()
+            });
+            
+            const response = await axios.post(`${API_BASE_URL}/subscribe/`, body, { headers: { 'Authorization': `Bearer ${token}` } });
+            
+            console.log('✅ [SUBSCRIPTION] API Response Success:', {
+                status: response.status,
+                data: response.data,
+                headers: response.headers,
+                timestamp: new Date().toISOString()
+            });
+            
             setUpgradeSuccess(status === 'success' ? 'Plan upgraded successfully!' : 'Payment failed or cancelled.');
+            
             // Refresh plan data
+            console.log('🔄 [SUBSCRIPTION] Refreshing plan data...');
             const planRes = await axios.get(`${API_BASE_URL}/subscribe/`, { headers: { 'Authorization': `Bearer ${token}` } });
+            
+            console.log('📊 [SUBSCRIPTION] Plan data refreshed:', {
+                status: planRes.status,
+                data: planRes.data,
+                timestamp: new Date().toISOString()
+            });
+            
             setPlanData(planRes.data);
             await fetchUsageData();
         } catch (err) {
+            console.error('❌ [SUBSCRIPTION] API Error:', {
+                message: err.message,
+                response: err.response?.data,
+                status: err.response?.status,
+                headers: err.response?.headers,
+                timestamp: new Date().toISOString()
+            });
             setUpgradeError(err?.response?.data?.message || err.message || 'Upgrade failed');
         } finally {
             setUpgradeLoading(false);

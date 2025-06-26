@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthRedirect from './components/AuthRedirect';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminRoute from './components/AdminRoute';
 
 // Pages
 import LandingPage from './components/LandingPage';
@@ -84,6 +86,9 @@ function App() {
 
           {/* Protected Routes with Dashboard Layout */}
           <Route path="/user/*" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
+
+          {/* Admin Dashboard Route */}
+          <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
 
           {/* Catch All */}
           <Route path="*" element={<Navigate to="/" replace />} />

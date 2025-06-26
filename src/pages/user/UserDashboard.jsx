@@ -20,6 +20,8 @@ import ManufacturingDashboard from '../../components/dashboard/ManufacturingDash
 import HealthcareDashboard from '../../components/dashboard/HealthcareDashboard';
 import Settings from '../../components/dashboard/Settings';
 import AIAnalyst from '../../components/dashboard/AIAnalyst';
+import AdminDashboard from '../admin/AdminDashboard';
+import AdminTestimonials from '../admin/AdminTestimonials';
 
 const UserDashboard = () => {
     const location = useLocation();
@@ -743,6 +745,8 @@ const UserDashboard = () => {
                                 <Route path="data-upload" element={<DataUpload />} />
                                 <Route path="profile" element={<Profile />} />
                                 <Route path="settings" element={<Settings />} />
+                                <Route path="admin-dashboard" element={user && user.role === 'admin' ? <AdminDashboard /> : <Navigate to="/user/dashboard" replace />} />
+                                <Route path="admin-testimonials" element={user && user.role === 'admin' ? <AdminTestimonials /> : <Navigate to="/user/dashboard" replace />} />
                                 <Route path="*" element={<Navigate to="dashboard" replace />} />
                             </Routes>
                 </main>
