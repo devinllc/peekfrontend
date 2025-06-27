@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiUser, FiMail, FiShield } from 'react-icons/fi';
+import toast from 'react-hot-toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -23,7 +24,7 @@ const AdminDashboard = () => {
             const res = await axios.get(`${API_BASE_URL}/admin/users?userId=${user.id}`);
             setUsers(res.data.Data || res.data.users || []);
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to fetch users');
+            toast.error(err.response?.data?.message || 'Failed to fetch users');
         } finally {
             setLoading(false);
         }
@@ -41,10 +42,10 @@ const AdminDashboard = () => {
         setSuccess('');
         try {
             await axios.delete(`${API_BASE_URL}/admin/users/${id}/?userId=${user.id}`);
-            setSuccess('User deleted successfully');
+            toast.success('User deleted successfully');
             setUsers(users.filter(u => u._id !== id && u.id !== id));
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to delete user');
+            toast.error(err.response?.data?.message || 'Failed to delete user');
         } finally {
             setActionLoading(null);
         }
@@ -56,10 +57,10 @@ const AdminDashboard = () => {
         setSuccess('');
         try {
             await axios.patch(`${API_BASE_URL}/admin/role/${id}/?userId=${user.id}`, { role: newRole });
-            setSuccess('Role updated successfully');
+            toast.success('Role updated successfully');
             setUsers(users.map(u => (u._id === id || u.id === id) ? { ...u, role: newRole } : u));
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to update role');
+            toast.error(err.response?.data?.message || 'Failed to update role');
         } finally {
             setActionLoading(null);
         }
@@ -71,10 +72,10 @@ const AdminDashboard = () => {
         setSuccess('');
         try {
             await axios.patch(`${API_BASE_URL}/admin/users/${id}/?userId=${user.id}`, updatedFields);
-            setSuccess('User updated successfully');
+            toast.success('User updated successfully');
             fetchUsers();
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to update user');
+            toast.error(err.response?.data?.message || 'Failed to update user');
         } finally {
             setActionLoading(null);
         }
@@ -96,11 +97,14 @@ const AdminDashboard = () => {
                 <h1 className="text-3xl font-bold mb-6 text-[#7400B8]">Admin Dashboard</h1>
                 {loading ? (
                     <div className="flex justify-center items-center h-40">
-                        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#7400B8]" />
+                        <div className="w-16 h-16 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full flex items-center justify-center">
+                            <svg className="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                            </svg>
+                        </div>
                     </div>
-                ) : error ? (
-                    <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600">{error}</div>
-                ) : (
+                ) : error ? null : (
                     <div className="overflow-x-auto">
                         <table className="min-w-full w-full bg-white rounded-xl overflow-hidden shadow text-sm">
                             <thead>
@@ -163,7 +167,7 @@ const AdminDashboard = () => {
                         </table>
                     </div>
                 )}
-                {success && <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl text-green-700">{success}</div>}
+                {success && null}
             </div>
 
             {/* User Details Modal */}

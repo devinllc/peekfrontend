@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { FiBarChart2, FiCpu, FiActivity, FiFile, FiDownload, FiCalendar, FiDatabase, FiMessageSquare } from 'react-icons/fi';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 // Import components
 import Sidebar from '../../components/dashboard/Sidebar';
@@ -182,41 +183,42 @@ const UserDashboard = () => {
 
     // Function to fetch user files
     const fetchUserFiles = async () => {
-            if (!user?._id) return;
+        if (!user?._id) return;
+        setIsLoadingFiles(true);
+        setFileError('');
+        try {
+            const result = await getAllUserFiles(user._id);
+            if (result.success && result.data?.files) {
+                const files = result.data.files.map(file => ({
+                    ...file,
+                    displayName: file.originalName || 'Unnamed File',
+                    fileSize: file.sizeInBytes ? `${(file.sizeInBytes / (1024 * 1024)).toFixed(2)} MB` : 'Unknown Size',
+                    category: file.fileCategory || 'General',
+                    uploadDate: new Date(file.uploadedAt).toLocaleDateString()
+                }));
             
-            setIsLoadingFiles(true);
-            setFileError('');
-            try {
-                const result = await getAllUserFiles(user._id);
-                if (result.success && result.data?.files) {
-                    const files = result.data.files.map(file => ({
-                        ...file,
-                        displayName: file.originalName || 'Unnamed File',
-                        fileSize: file.sizeInBytes ? `${(file.sizeInBytes / (1024 * 1024)).toFixed(2)} MB` : 'Unknown Size',
-                        category: file.fileCategory || 'General',
-                        uploadDate: new Date(file.uploadedAt).toLocaleDateString()
-                    }));
-                
-                // Sort files by upload date (newest first)
-                const sortedFiles = [...files].sort((a, b) => 
-                    new Date(b.uploadedAt) - new Date(a.uploadedAt)
-                );
-                
-                setUserFiles(sortedFiles);
-                filesFetchedRef.current = true;
-                
-                if (sortedFiles.length > 0 && !selectedFile) {
-                    setSelectedFile(sortedFiles[0]);
-                    }
-                } else {
-                    setFileError(result.error || "Error fetching files");
-                }
-            } catch (err) {
-                setFileError(err.message || "Error fetching files");
-            } finally {
-                setIsLoadingFiles(false);
+            // Sort files by upload date (newest first)
+            const sortedFiles = [...files].sort((a, b) => 
+                new Date(b.uploadedAt) - new Date(a.uploadedAt)
+            );
+            
+            setUserFiles(sortedFiles);
+            filesFetchedRef.current = true;
+            
+            if (sortedFiles.length > 0 && !selectedFile) {
+                setSelectedFile(sortedFiles[0]);
             }
-        };
+        } else {
+            setFileError(result.error || "Error fetching files");
+            toast.error(result.error || "Error fetching files");
+        }
+    } catch (err) {
+        setFileError(err.message || "Error fetching files");
+        toast.error(err.message || "Error fetching files");
+    } finally {
+        setIsLoadingFiles(false);
+    }
+};
 
     // Fetch user files immediately when component mounts or when triggered by file upload
     useEffect(() => {
@@ -279,9 +281,11 @@ const UserDashboard = () => {
             // Always navigate to dashboard to show analysis
             // Add analysisComplete=true flag to prevent re-analysis
             navigate(`/user/dashboard?fileId=${fileId}&analysisComplete=true`);
+            toast.success('Analysis completed successfully!');
             
         } catch (err) {
             setAnalysisError(err.response?.data?.message || 'Failed to load analysis');
+            toast.error(err.response?.data?.message || 'Failed to load analysis');
         } finally {
             setIsLoadingAnalysis(false);
         }
@@ -307,12 +311,12 @@ const UserDashboard = () => {
         
         if (isLoadingFiles) {
             return (
-                <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-bold text-gray-800">Recent Files</h2>
-                    </div>
-                    <div className="flex justify-center py-8">
-                        <div className="w-10 h-10 border-2 border-[#7400B8] border-t-transparent rounded-full animate-spin"></div>
+                <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 flex items-center justify-center">
+                    <div className="w-16 h-16 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full flex items-center justify-center">
+                        <svg className="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                        </svg>
                     </div>
                 </div>
             );
@@ -461,7 +465,7 @@ const UserDashboard = () => {
             return (
                 <div className="flex justify-center items-center h-full">
                     <p>No analysis data available.</p>
-                                        </div>
+                </div>
             );
         }
 
@@ -611,14 +615,14 @@ const UserDashboard = () => {
                                     <div className="flex mb-3 items-center justify-between">
                                         <span className="text-sm font-medium text-[#7400B8]">Processing</span>
                                         <span className="text-sm text-gray-500">Analyzing...</span>
-                                            </div>
+                                    </div>
                                     <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
                                         <div className="h-full bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full animate-progress"></div>
                                     </div>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
                 </motion.div>
             );
         }
@@ -691,8 +695,8 @@ const UserDashboard = () => {
             <div className="flex h-screen overflow-hidden">
                 <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
                 <main className={`flex-1 overflow-y-auto transition-all duration-300 w-full ml-0 ${sidebarOpen ? 'lg:ml-72' : 'lg:ml-20'}`}>
-                            <Routes>
-                                <Route index element={
+                    <Routes>
+                        <Route index element={
                             <div className="h-full flex flex-col">
                                 {/* Header */}
                                 <Header
@@ -711,9 +715,9 @@ const UserDashboard = () => {
                                         <DashboardContent />
                                     </div>
                                 </div>
-                                        </div>
-                                } />
-                                <Route path="dashboard" element={
+                            </div>
+                        } />
+                        <Route path="dashboard" element={
                             <div className="h-full flex flex-col">
                                 {/* Header */}
                                 <Header
@@ -732,7 +736,7 @@ const UserDashboard = () => {
                                         <DashboardContent />
                                     </div>
                                 </div>
-                                        </div>
+                            </div>
                         } />
                         <Route path="data-sources" element={
                             <DataSources 
@@ -742,13 +746,13 @@ const UserDashboard = () => {
                                 isLoadingAnalysis={isLoadingAnalysis}
                             />
                         } />
-                                <Route path="data-upload" element={<DataUpload />} />
-                                <Route path="profile" element={<Profile />} />
-                                <Route path="settings" element={<Settings />} />
-                                <Route path="admin-dashboard" element={user && user.role === 'admin' ? <AdminDashboard /> : <Navigate to="/user/dashboard" replace />} />
-                                <Route path="admin-testimonials" element={user && user.role === 'admin' ? <AdminTestimonials /> : <Navigate to="/user/dashboard" replace />} />
-                                <Route path="*" element={<Navigate to="dashboard" replace />} />
-                            </Routes>
+                        <Route path="data-upload" element={<DataUpload />} />
+                        <Route path="profile" element={<Profile />} />
+                        <Route path="settings" element={<Settings />} />
+                        <Route path="admin-dashboard" element={user && user.role === 'admin' ? <AdminDashboard /> : <Navigate to="/user/dashboard" replace />} />
+                        <Route path="admin-testimonials" element={user && user.role === 'admin' ? <AdminTestimonials /> : <Navigate to="/user/dashboard" replace />} />
+                        <Route path="*" element={<Navigate to="dashboard" replace />} />
+                    </Routes>
                 </main>
             </div>
         </div>

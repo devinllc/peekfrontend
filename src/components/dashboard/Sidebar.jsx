@@ -6,6 +6,7 @@ import {
     FiPieChart, FiTrendingUp, FiLogOut, FiMenu, FiX, FiChevronLeft, FiChevronRight, FiDatabase, FiUpload
 } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     const navigate = useNavigate();
@@ -21,8 +22,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
         e.stopPropagation();
         try {
             logout();
+            toast.success('Logged out successfully');
         } catch (err) {
             console.error('Logout error:', err);
+            toast.error('Logout failed');
             window.location.href = '/';
         }
     };

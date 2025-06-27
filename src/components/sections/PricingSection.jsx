@@ -30,7 +30,7 @@ const PLAN_DEFAULTS = {
         },
     },
     premium: {
-        price: 99000,
+        price: 99,
         billingInterval: 'monthly',
         limits: {
             uploads: 100,
@@ -51,7 +51,7 @@ const PLAN_DEFAULTS = {
         },
     },
     enterprise: {
-        price: 499000,
+        price: 499,
         billingInterval: 'monthly',
         limits: {
             uploads: 1000,
@@ -151,8 +151,8 @@ const PricingSection = () => {
                                     <h3 className="text-2xl font-bold text-gray-800 mb-2">{plan.name}</h3>
                                     <p className="text-gray-600 mb-6">{plan.description}</p>
                                     <div className="mb-6">
-                                        <span className="text-5xl font-bold text-gray-800">{PLAN_DEFAULTS[plan.planKey].price}</span>
-                                        <span className="text-gray-600">{PLAN_DEFAULTS[plan.planKey].billingInterval}</span>
+                                        <span className="text-5xl font-bold text-gray-800">{plan.planKey === 'free' ? '₹0' : `₹${PLAN_DEFAULTS[plan.planKey].price}`}</span>
+                                        <span className="text-gray-600">/month</span>
                                     </div>
                                     <ul className="space-y-4 mb-8">
                                         {Object.entries(PLAN_DEFAULTS[plan.planKey].features).map(([feature, enabled]) => (

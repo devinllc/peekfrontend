@@ -56,7 +56,7 @@ const Navigation = ({ isScrolled, heroRef, aboutRef, featuresRef }) => {
       
       if (item === 'How It Works') {
         sections.forEach(section => {
-          if (section.textContent.includes('How PeekBI Works')) {
+          if (section.textContent.includes('How PeekBI Works') || section.textContent.includes('Upload Your File')) {
             scrollTarget = section;
           }
         });

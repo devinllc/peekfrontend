@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { FiMail, FiLock, FiUser, FiArrowLeft } from 'react-icons/fi';
+import toast from 'react-hot-toast';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -30,12 +31,13 @@ const Login = () => {
         try {
             const result = await login(formData.email, formData.password);
             if (result.success) {
+                toast.success('Login successful!');
                 navigate('/user/data-upload');
             } else {
-                setError(result.error);
+                toast.error(result.error || 'Login failed');
             }
         } catch (err) {
-            setError(err.message || 'Login failed');
+            toast.error(err.message || 'Login failed');
         } finally {
             setLoading(false);
         }
@@ -75,16 +77,6 @@ const Login = () => {
                     {/* Content */}
                     <div className="p-4 sm:p-8">
                         <div className="w-full max-w-md mx-auto">
-                            {error && (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="mb-6 p-4 bg-red-50/80 backdrop-blur-sm border border-red-200 rounded-xl text-red-600 text-sm"
-                                >
-                                    {error}
-                                </motion.div>
-                            )}
-
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 {/* Email Field */}
                                 <div className="space-y-2">

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { FiUpload, FiFile, FiDatabase, FiCheckCircle, FiX, FiFileText, FiCpu, FiShoppingCart, FiDollarSign, FiActivity, FiPackage, FiBook, FiCheck } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 const INDUSTRY_CATEGORIES = {
     finance: {
@@ -115,7 +116,6 @@ const DataUpload = () => {
     // Handle file upload
     const uploadFiles = async () => {
         if (files.length === 0 || !selectedIndustry) return;
-        
         setUploadStep('uploading');
         setUploading(true);
         setApiLogs([]); // Clear previous logs
@@ -124,17 +124,13 @@ const DataUpload = () => {
         const responses = [];
         const category = selectedIndustry.charAt(0).toUpperCase() + selectedIndustry.slice(1).toLowerCase();
         try {
-            // Add initial log with unique ID
             setApiLogs(prev => [...prev, {
                 id: generateLogId(),
                 type: 'info',
                 message: `Starting upload for ${files[0].name}...`,
                 timestamp: new Date().toISOString()
             }]);
-
             const file = files[0];
-            
-            // Add preparing log with unique ID
             setApiLogs(prev => [...prev, {
                 id: generateLogId(),
                 type: 'info',
@@ -143,51 +139,39 @@ const DataUpload = () => {
             }]);
 
             const response = await uploadFile(user._id, file, category);
-            
-            // Normalize the response to handle the confusing API response
             const isSuccessful = response.success === true || 
-                               (response.success === false && response.error === "File uploaded successfully.");
-
-            // Add a log entry about the response status
+                (response.success === false && response.error === "File uploaded successfully.");
             setApiLogs(prev => [...prev, {
                 id: generateLogId(),
                 type: 'info',
                 message: `Server response: ${response.error || 'Success'}`,
                 timestamp: new Date().toISOString()
             }]);
-
             if (isSuccessful) {
-                // Normalize the response to always indicate success
                 const normalizedResponse = {
                     ...response,
                     success: true,
                     message: response.error || 'File uploaded successfully'
                 };
-
                 responses.push({
                     fileName: file.name,
                     response: normalizedResponse
                 });
-
-                // Add success log with unique ID
                 setApiLogs(prev => [...prev, {
                     id: generateLogId(),
                     type: 'success',
                     message: `Successfully uploaded ${file.name}`,
                     timestamp: new Date().toISOString()
                 }]);
-
                 uploadedCount++;
                 setUploadProgress(100);
-
-                // Add completion log with unique ID
                 setApiLogs(prev => [...prev, {
                     id: generateLogId(),
                     type: 'success',
                     message: 'Upload completed successfully! Redirecting to dashboard...',
                     timestamp: new Date().toISOString()
                 }]);
-
+                toast.success('File uploaded successfully!');
                 setTimeout(() => {
                     setUploading(false);
                     navigate('/user/dashboard', {
@@ -195,18 +179,14 @@ const DataUpload = () => {
                             uploadedFiles: files.map(f => f.name),
                             responses: responses,
                             industry: selectedIndustry,
-                            refreshFiles: true // Add flag to trigger file refresh
+                            refreshFiles: true
                         }
                     });
                 }, 500);
             } else {
-                // Handle actual error case
-                const errorMessage = response.error || 'Upload failed';
-                throw new Error(errorMessage);
+                throw new Error(response.error || 'Upload failed');
             }
         } catch (err) {
-            console.error('Upload failed:', err);
-            // Add error log with unique ID
             setApiLogs(prev => [...prev, {
                 id: generateLogId(),
                 type: 'error',
@@ -216,6 +196,7 @@ const DataUpload = () => {
             setMessage('Upload failed. Please try again.');
             setUploading(false);
             setUploadStep('select');
+            toast.error(err.message || 'Upload failed');
         }
     };
 
@@ -234,6 +215,26 @@ const DataUpload = () => {
             }
         });
     };
+
+    // Add loading spinner overlay (like Profile) when uploading
+    if (uploading || uploadStep === 'uploading') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-6 flex items-center justify-center">
+                <div className="max-w-md w-full mx-auto">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8 flex flex-col items-center justify-center">
+                        <div className="w-16 h-16 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full flex items-center justify-center mb-6">
+                            <svg className="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                            </svg>
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Uploading your files...</h2>
+                        <p className="text-gray-600 mb-2">Please wait while we process your data</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="h-full">

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FiPlus, FiCpu, FiDownload, FiCalendar, FiFile, FiDatabase, FiBarChart2, FiCheck, FiLoader, FiFileText, FiActivity } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import Header from './Header';
+import toast from 'react-hot-toast';
 
 const DataSources = ({ userFiles = [], isLoading = true, handleLoadFileAnalysis, isLoadingAnalysis = false }) => {
     const navigate = useNavigate();
@@ -67,7 +68,12 @@ const DataSources = ({ userFiles = [], isLoading = true, handleLoadFileAnalysis,
         const fileToAnalyze = userFiles.find(f => f._id === fileId);
         setSelectedFile(fileToAnalyze);
         // Call the parent component's analysis handler
-        handleLoadFileAnalysis(fileId);
+        try {
+            handleLoadFileAnalysis(fileId);
+            toast.success('Analysis started!');
+        } catch (err) {
+            toast.error(err.message || 'Failed to start analysis');
+        }
     };
 
     // Check if a file has analysis data
@@ -86,7 +92,6 @@ const DataSources = ({ userFiles = [], isLoading = true, handleLoadFileAnalysis,
     // Show loading analysis UI for selected file
     const renderAnalysisLoading = () => {
         if (!selectedFile || !isLoadingAnalysis) return null;
-        
         return (
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -121,6 +126,29 @@ const DataSources = ({ userFiles = [], isLoading = true, handleLoadFileAnalysis,
             </motion.div>
         );
     };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-6 flex items-center justify-center">
+                <div className="max-w-md w-full mx-auto">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8 flex flex-col items-center justify-center">
+                        <div className="w-16 h-16 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full flex items-center justify-center mb-6">
+                            <svg className="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                            </svg>
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Loading your data sources...</h2>
+                        <p className="text-gray-600 mb-2">Please wait while we fetch your files</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        toast.error(error);
+    }
 
     return (
         <div className="h-full flex flex-col">
@@ -238,20 +266,7 @@ const DataSources = ({ userFiles = [], isLoading = true, handleLoadFileAnalysis,
                         </div>
                     </motion.div>
                     {/* File List (scrolls up under summary) */}
-                    {isLoading ? (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="flex items-center justify-center py-16"
-                        >
-                            <div className="flex flex-col items-center space-y-4">
-                                <div className="w-16 h-16 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full flex items-center justify-center">
-                                    <FiLoader className="w-8 h-8 text-white animate-spin" />
-                                </div>
-                                <p className="text-gray-600 font-medium">Loading your data sources...</p>
-                            </div>
-                        </motion.div>
-                    ) : error ? (
+                    {error ? (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}

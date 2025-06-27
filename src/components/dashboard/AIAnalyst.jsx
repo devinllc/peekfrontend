@@ -8,6 +8,7 @@ import {
 } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 const chartColors = [
     '#7400B8', '#9B4DCA', '#C77DFF', '#E0AAFF', '#F8F4FF',
     '#8B5CF6', '#A855F7', '#C084FC', '#DDD6FE', '#F3E8FF',
@@ -416,7 +417,6 @@ Provide a comprehensive, helpful response that addresses the user's question whi
 
     const handleSendMessage = async (promptText = input) => {
         if (!promptText.trim()) return;
-
         const userMessage = {
             id: Date.now(),
             type: 'user',
@@ -426,10 +426,10 @@ Provide a comprehensive, helpful response that addresses the user's question whi
         setMessages(prev => [...prev, userMessage]);
         setInput('');
         setIsLoading(true);
-
         // Track AI prompt usage before calling AI
         const usageResult = await trackAIPromptUsageWithRetry(1);
         if (!usageResult.success) {
+            toast.error(usageResult.message || 'You have reached your AI prompt limit or there was an error. Please try again later.');
             setMessages(prev => [
                 ...prev,
                 {

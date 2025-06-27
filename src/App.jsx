@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AuthRedirect from './components/AuthRedirect';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminRoute from './components/AdminRoute';
+import { Toaster } from 'react-hot-toast';
 
 // Pages
 import LandingPage from './components/LandingPage';
@@ -15,6 +16,7 @@ import PrivacyPolicy from './pages/policies/PrivacyPolicy';
 import TermsAndConditions from './pages/policies/TermsAndConditions';
 import CancellationAndRefund from './pages/policies/CancellationAndRefund';
 import ContactUs from './pages/policies/ContactUs';
+import HowItWorksDetails from './pages/HowItWorksDetails';
 
 import './App.css'
 import { gsap } from 'gsap';
@@ -63,6 +65,7 @@ function App() {
 
   return (
     <AuthProvider>
+      <Toaster position="top-right" toastOptions={{ duration: 4000, style: { fontSize: '1rem', borderRadius: '1rem' } }} />
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           {/* Public routes */}
@@ -83,6 +86,7 @@ function App() {
           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
           <Route path="/cancellation-and-refund" element={<CancellationAndRefund />} />
           <Route path="/contact-us" element={<ContactUs />} />
+          <Route path="/how-it-works-details" element={<HowItWorksDetails />} />
 
           {/* Protected Routes with Dashboard Layout */}
           <Route path="/user/*" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />

@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiEdit, FiTrash2, FiX, FiStar } from 'react-icons/fi';
+import toast from 'react-hot-toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -26,7 +27,7 @@ const AdminTestimonials = () => {
             const res = await axios.get(`${API_BASE_URL}/admin/testimonials?userId=${user.id}`);
             setTestimonials(Array.isArray(res.data) ? res.data : (res.data.Data || res.data.testimonials || []));
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to fetch testimonials');
+            toast.error(err.response?.data?.message || 'Failed to fetch testimonials');
         } finally {
             setLoading(false);
         }
@@ -54,11 +55,11 @@ const AdminTestimonials = () => {
         if (!selected) return;
         try {
             await axios.put(`${API_BASE_URL}/admin/testimonials/${selected._id}/?userId=${user.id}`, form);
-            setSuccess('Testimonial updated');
+            toast.success('Testimonial updated');
             closeModal();
             fetchTestimonials();
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to update testimonial');
+            toast.error(err.response?.data?.message || 'Failed to update testimonial');
         }
     };
     const confirmDelete = (id) => setDeleteId(id);
@@ -67,11 +68,11 @@ const AdminTestimonials = () => {
         setDeleteLoading(true);
         try {
             await axios.delete(`${API_BASE_URL}/admin/testimonials/${deleteId}/?userId=${user.id}`);
-            setSuccess('Testimonial deleted');
+            toast.success('Testimonial deleted');
             setDeleteId(null);
             fetchTestimonials();
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to delete testimonial');
+            toast.error(err.response?.data?.message || 'Failed to delete testimonial');
         } finally {
             setDeleteLoading(false);
         }
@@ -82,11 +83,14 @@ const AdminTestimonials = () => {
             <h1 className="text-3xl font-bold mb-6 text-[#7400B8]">Manage Testimonials</h1>
             {loading ? (
                 <div className="flex justify-center items-center h-40">
-                    <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#7400B8]" />
+                    <div className="w-16 h-16 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full flex items-center justify-center">
+                        <svg className="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                        </svg>
+                    </div>
                 </div>
-            ) : error ? (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600">{error}</div>
-            ) : (
+            ) : error ? null : (
                 <div className="overflow-x-auto">
                     <table className="min-w-full w-full bg-white rounded-xl overflow-hidden shadow text-sm">
                         <thead>
@@ -129,7 +133,7 @@ const AdminTestimonials = () => {
                     </table>
                 </div>
             )}
-            {success && <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl text-green-700">{success}</div>}
+            {success && null}
             {/* Edit Modal */}
             <AnimatePresence>
                 {showModal && (

@@ -5,6 +5,7 @@ import { FiUser, FiMail, FiCalendar, FiShield, FiDatabase, FiCreditCard, FiCheck
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import Header from './Header';
+import toast from 'react-hot-toast';
 
 const API_BASE_URL = 'https://api.peekbi.com';
 
@@ -84,6 +85,9 @@ const PLAN_DEFAULTS = {
 function generatePaymentId() {
     return 'test_' + Math.random().toString(36).substring(2, 15) + Date.now();
 }
+
+// Razorpay integration: use only the real/live key
+const RAZORPAY_LIVE_KEY = 'rzp_live_vb2QqoCvfoLgQk';
 
 const Profile = () => {
     const { user: authUser, logout, updateProfile } = useAuth();
@@ -212,9 +216,9 @@ const Profile = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError(null);
+        setIsUpdating(true);
         try {
-            setIsUpdating(true);
-            
             // Get the user ID from authUser, checking both id and _id properties
             const userId = authUser?.id || authUser?._id;
             
@@ -247,15 +251,16 @@ const Profile = () => {
                     console.log('Updated profile data:', result.user);
                     setUser(result.user);
                     setIsEditing(false);
+                    toast.success('Profile updated successfully!');
                 } else {
-                    setError('Update successful but no user data returned');
+                    toast.error('Update successful but no user data returned');
                 }
             } else {
-                setError(result?.error || 'Failed to update profile');
+                toast.error(result?.error || 'Failed to update profile');
             }
         } catch (err) {
             console.error('Error updating profile:', err);
-            setError(err.message || 'Failed to update profile');
+            toast.error(err.message || 'Failed to update profile');
         } finally {
             setIsUpdating(false);
         }
@@ -270,12 +275,12 @@ const Profile = () => {
                 return;
             }
             const options = {
-                key: 'rzp_test_uHLEyEPCcVnh5M',
+                key: RAZORPAY_LIVE_KEY,
                 amount: 0, // Zero amount for free plan
                 currency: 'INR',
                 name: 'PeekBI',
                 description: 'Free Plan Subscription',
-                image: '/vite.svg',
+                image: '/logos.png',
                 handler: function (response) {
                     handleSubscribePaid('free', response, 'success');
                 },
@@ -302,33 +307,30 @@ const Profile = () => {
             rzp.on('payment.failed', function (response) {
                 setIsPaymentLoading(false);
                 handleSubscribePaid('free', { ...response.error, failReason: response.error.description || 'Payment failed' }, 'failed');
-                alert('Payment failed: ' + (response.error.description || 'Unknown error'));
+                toast.error('Payment failed: ' + (response.error.description || 'Unknown error'));
             });
             rzp.open();
         } catch (err) {
             setIsPaymentLoading(false);
-            alert('Unable to open payment gateway. Please try again or contact support.');
+            toast.error('Unable to open payment gateway. Please try again or contact support.');
         }
     };
 
     const handleRazorpayPayment = async () => {
         try {
             setIsPaymentLoading(true);
-            
-            // Check if Razorpay is loaded
             if (!window.Razorpay) {
-                console.error('Razorpay not loaded');
                 alert('Payment system is not available. Please refresh the page and try again.');
+                setIsPaymentLoading(false);
                 return;
             }
-
             const options = {
-                key: 'rzp_test_uHLEyEPCcVnh5M', // Replace with your Razorpay key
-                amount: PLAN_DEFAULTS[selectedPlan].price, // Amount in paise
+                key: RAZORPAY_LIVE_KEY,
+                amount: PLAN_DEFAULTS[selectedPlan].price,
                 currency: 'INR',
                 name: 'PeekBI',
                 description: `${selectedPlan} Plan Subscription`,
-                image: '/vite.svg', // Your logo
+                image: '/logos.png',
                 handler: function (response) {
                     handleSubscribePaid(selectedPlan, response, 'success');
                 },
@@ -345,27 +347,21 @@ const Profile = () => {
                 },
                 modal: {
                     ondismiss: function() {
-                        console.log('Payment modal dismissed');
                         setIsPaymentLoading(false);
-                        // Call API with failed status and message
                         handleSubscribePaid(selectedPlan, { failReason: 'User cancelled payment' }, 'failed');
                         alert('Payment was cancelled. You can try again anytime.');
                     }
                 }
             };
-
-            console.log('Opening Razorpay', options);
             const rzp = new window.Razorpay(options);
-            // Listen for payment failures
             rzp.on('payment.failed', function (response) {
                 setIsPaymentLoading(false);
                 handleSubscribePaid(selectedPlan, { ...response.error, failReason: response.error.description || 'Payment failed' }, 'failed');
-                alert('Payment failed: ' + (response.error.description || 'Unknown error'));
+                toast.error('Payment failed: ' + (response.error.description || 'Unknown error'));
             });
             rzp.open();
         } catch (error) {
-            console.error('Error opening Razorpay:', error);
-            alert('Unable to open payment gateway. Please try again or contact support.');
+            toast.error('Unable to open payment gateway. Please try again or contact support.');
         } finally {
             setIsPaymentLoading(false);
         }
@@ -373,7 +369,7 @@ const Profile = () => {
 
     const handleSubscribePaid = async (plan, razorpayResponse, status) => {
         setUpgradeLoading(true);
-        setIsPaymentLoading(false); // Reset payment loading state
+        setIsPaymentLoading(false);
         setUpgradeError(null);
         setUpgradeSuccess(null);
         try {
@@ -385,8 +381,7 @@ const Profile = () => {
                 razorpayOrderId: razorpayResponse.razorpay_order_id || generatePaymentId(),
                 razorpaySignature: razorpayResponse.razorpay_signature || 'test_signature',
                 status,
-                failReason: razorpayResponse.failReason || '',
-                test: true
+                failReason: razorpayResponse.failReason || ''
             };
             
             console.log('🔵 [SUBSCRIPTION] Sending API request:', {
@@ -405,7 +400,11 @@ const Profile = () => {
                 timestamp: new Date().toISOString()
             });
             
-            setUpgradeSuccess(status === 'success' ? 'Plan upgraded successfully!' : 'Payment failed or cancelled.');
+            if (status === 'success') {
+                toast.success('Plan upgraded successfully!');
+            } else {
+                toast.error('Payment failed or cancelled.');
+            }
             
             // Refresh plan data
             console.log('🔄 [SUBSCRIPTION] Refreshing plan data...');
@@ -427,7 +426,7 @@ const Profile = () => {
                 headers: err.response?.headers,
                 timestamp: new Date().toISOString()
             });
-            setUpgradeError(err?.response?.data?.message || err.message || 'Upgrade failed');
+            toast.error(err?.response?.data?.message || err.message || 'Upgrade failed');
         } finally {
             setUpgradeLoading(false);
             setShowUpgrade(false);
@@ -437,22 +436,19 @@ const Profile = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-6">
-                <div className="max-w-6xl mx-auto">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8"
-                    >
-                        <div className="flex items-center justify-center h-64">
-                            <div className="flex flex-col items-center space-y-4">
-                                <div className="w-16 h-16 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full flex items-center justify-center">
-                                    <FiLoader className="w-8 h-8 text-white animate-spin" />
-                                </div>
-                                <p className="text-gray-600 font-medium">Loading profile...</p>
+            <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-6 flex items-center justify-center">
+                <div className="max-w-6xl mx-auto w-full">
+                    <div className="flex items-center justify-center h-64">
+                        <div className="flex flex-col items-center space-y-4">
+                            <div className="w-16 h-16 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full flex items-center justify-center">
+                                <svg className="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                                </svg>
                             </div>
+                            <p className="text-gray-600 font-medium">Loading profile...</p>
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             </div>
         );
@@ -460,23 +456,20 @@ const Profile = () => {
 
     if (error) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-6">
-                <div className="max-w-6xl mx-auto">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8"
-                    >
-                        <div className="flex items-center justify-center h-64">
-                            <div className="text-center">
-                                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <FiX className="w-8 h-8 text-red-500" />
-                                </div>
-                                <h3 className="text-lg font-semibold text-gray-800 mb-2">Error Loading Profile</h3>
-                                <p className="text-gray-600">{error}</p>
+            <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-6 flex items-center justify-center">
+                <div className="max-w-6xl mx-auto w-full">
+                    <div className="flex items-center justify-center h-64">
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                                </svg>
                             </div>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-2">Error Loading Profile</h3>
+                            <p className="text-gray-600">{error}</p>
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             </div>
         );
@@ -484,29 +477,26 @@ const Profile = () => {
 
     if (!user) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-6">
-                <div className="max-w-6xl mx-auto">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 p-8"
-                    >
-                        <div className="flex items-center justify-center h-64">
-                <div className="text-center">
-                                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <FiUser className="w-8 h-8 text-yellow-500" />
-                                </div>
-                                <h3 className="text-lg font-semibold text-gray-800 mb-2">No Profile Data</h3>
-                                <p className="text-gray-600">Unable to load user profile data</p>
-                    <button
-                        onClick={() => navigate('/user/dashboard')}
-                                    className="mt-4 px-4 py-2 bg-[#7400B8] text-white rounded-xl"
-                    >
-                        Return to Dashboard
-                    </button>
+            <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-6 flex items-center justify-center">
+                <div className="max-w-6xl mx-auto w-full">
+                    <div className="flex items-center justify-center h-64">
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg className="w-8 h-8 text-yellow-500" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                                </svg>
                             </div>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-2">No Profile Data</h3>
+                            <p className="text-gray-600">Unable to load user profile data</p>
+                            <button
+                                onClick={() => navigate('/user/dashboard')}
+                                className="mt-4 px-4 py-2 bg-[#7400B8] text-white rounded-xl"
+                            >
+                                Return to Dashboard
+                            </button>
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             </div>
         );
@@ -874,8 +864,6 @@ const Profile = () => {
                                 >
                                     {upgradeLoading ? 'Subscribing...' : 'Subscribe to Free Plan'}
                                 </button>
-                                {upgradeError && <p className="text-red-600 mt-2">{upgradeError}</p>}
-                                {upgradeSuccess && <p className="text-green-600 mt-2">{upgradeSuccess}</p>}
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
@@ -919,7 +907,7 @@ const Profile = () => {
                                         </div>
                                         <div className="flex justify-between items-center p-3 bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 rounded-xl">
                                             <dt className="text-gray-700 font-bold">Price</dt>
-                                            <dd className="font-bold text-[#7400B8]">${(planData.currentPlan.price / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}/month</dd>
+                                            <dd className="font-bold text-[#7400B8]">₹{(planData.currentPlan.price / 100).toLocaleString('en-IN', {minimumFractionDigits: 0})}/month</dd>
                                         </div>
                                     </dl>
                                     {/* Payment History */}
@@ -930,7 +918,7 @@ const Profile = () => {
                                                 {planData.paymentHistory.slice(0, 3).map((p, idx) => (
                                                     <li key={p._id || idx} className="flex justify-between items-center bg-gray-50/80 rounded-lg px-3 py-2">
                                                         <span>{new Date(p.date).toLocaleDateString()}</span>
-                                                        <span>${(p.amount / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                                        <span>₹{(p.amount / 100).toLocaleString('en-IN', {minimumFractionDigits: 0})}</span>
                                                         <span className={p.status === 'success' ? 'text-green-600' : 'text-red-600'}>{p.status}</span>
                                                     </li>
                                                 ))}
@@ -1004,66 +992,52 @@ const Profile = () => {
                         {/* Upgrade Modal */}
                         {showUpgrade && (
                             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                                <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative">
-                                    <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700" onClick={() => setShowUpgrade(false)}>&times;</button>
-                                    <h3 className="text-lg font-bold mb-4">Upgrade Plan</h3>
-                                    <div className="mb-4">
-                                        <label className="block text-sm font-medium mb-2">Select Plan</label>
-                                        <select
-                                            className="w-full px-4 py-2 border rounded-xl"
-                                            value={selectedPlan}
-                                            onChange={e => setSelectedPlan(e.target.value)}
-                                        >
-                                            {PLAN_OPTIONS.map(opt => (
-                                                <option key={opt.name} value={opt.name}>{opt.label}</option>
-                                            ))}
-                                        </select>
+                                <div className="bg-white rounded-2xl shadow-2xl p-0 max-w-2xl w-full relative overflow-hidden border border-[#7400B8]/10">
+                                    <button className="absolute top-4 right-4 text-gray-400 hover:text-[#7400B8] transition-all z-20" onClick={() => setShowUpgrade(false)}><span className="text-2xl">&times;</span></button>
+                                    <div className="bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] py-6 px-8 text-white rounded-t-2xl">
+                                        <h3 className="text-2xl font-bold mb-1">Upgrade Plan</h3>
+                                        <p className="text-white/80 text-base">Choose the plan that fits your business</p>
                                     </div>
-                                    {/* Show plan details */}
-                                    {PLAN_DEFAULTS[selectedPlan] && (
-                                        <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                            <div className="mb-2 flex items-center justify-between">
-                                                <span className="font-bold text-lg text-[#7400B8]">{selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} Plan</span>
-                                                <span className="font-bold text-gray-800 text-lg">
-                                                    {PLAN_DEFAULTS[selectedPlan].price === 0 ? 'Free' : `₹${(PLAN_DEFAULTS[selectedPlan].price / 100).toLocaleString('en-IN', {minimumFractionDigits: 0})}/mo`}
-                                                </span>
+                                    <div className="p-8 flex flex-col md:flex-row gap-8">
+                                        {PLAN_OPTIONS.map(opt => (
+                                            <div key={opt.name} className={`flex-1 rounded-2xl shadow-lg border-2 ${selectedPlan === opt.name ? 'border-[#7400B8]' : 'border-gray-200'} bg-white/90 transition-all duration-200 cursor-pointer hover:shadow-xl`} onClick={() => setSelectedPlan(opt.name)}>
+                                                <div className={`p-6 flex flex-col items-center ${selectedPlan === opt.name ? 'bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10' : ''}`}>
+                                                    <h4 className="text-xl font-bold text-[#7400B8] mb-2">{opt.label}</h4>
+                                                    <div className="mb-2 text-3xl font-bold text-gray-800">{PLAN_DEFAULTS[opt.name].price === 0 ? 'Free' : `₹${(PLAN_DEFAULTS[opt.name].price / 100).toLocaleString('en-IN', {minimumFractionDigits: 0})}`}</div>
+                                                    <div className="text-xs text-gray-500 mb-2">/month</div>
+                                                    <ul className="mb-2 space-y-1 text-sm">
+                                                        {Object.entries(PLAN_DEFAULTS[opt.name].features).map(([feature, enabled]) => (
+                                                            <li key={feature} className="flex items-center gap-2">
+                                                                <span className={`w-2 h-2 rounded-full ${enabled ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                                                                <span className={enabled ? 'text-gray-700' : 'text-gray-400'}>{feature.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                    <ul className="mb-2 space-y-1 text-xs text-gray-600">
+                                                        {Object.entries(PLAN_DEFAULTS[opt.name].limits).map(([k, v]) => (
+                                                            <li key={k}><span className="font-medium">{k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</span> {v}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
                                             </div>
-                                            <div className="mb-2">
-                                                <span className="font-semibold text-gray-700">Limits:</span>
-                                                <ul className="list-disc list-inside text-sm text-gray-700 ml-2">
-                                                    {Object.entries(PLAN_DEFAULTS[selectedPlan].limits).map(([k, v]) => (
-                                                        <li key={k}><span className="font-medium">{k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</span> {v}</li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                            <div>
-                                                <span className="font-semibold text-gray-700">Features:</span>
-                                                <ul className="list-disc list-inside text-sm text-gray-700 ml-2">
-                                                    {Object.entries(PLAN_DEFAULTS[selectedPlan].features).map(([k, v]) => (
-                                                        <li key={k} className={v ? 'text-green-700' : 'text-gray-400'}>
-                                                            <span className="font-medium">{k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</span> {v ? 'Yes' : 'No'}
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    )}
-                                    <button
-                                        className="w-full py-3 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl font-bold mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        onClick={() => {
-                                            if (selectedPlan === 'free') {
-                                                handleSubscribeFree();
-                                            } else {
-                                                handleRazorpayPayment();
-                                            }
-                                        }}
-                                        disabled={upgradeLoading || isPaymentLoading}
-                                    >
-                                        {upgradeLoading ? (selectedPlan === 'free' ? 'Subscribing...' : 'Processing...') : 
-                                         isPaymentLoading ? 'Opening Payment Gateway...' : 'Confirm Upgrade'}
-                                    </button>
-                                    {upgradeError && <p className="text-red-600 mt-2">{upgradeError}</p>}
-                                    {upgradeSuccess && <p className="text-green-600 mt-2">{upgradeSuccess}</p>}
+                                        ))}
+                                    </div>
+                                    <div className="px-8 pb-8">
+                                        <button
+                                            className="w-full py-3 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl font-bold mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            onClick={() => {
+                                                if (selectedPlan === 'free') {
+                                                    handleSubscribeFree();
+                                                } else {
+                                                    handleRazorpayPayment();
+                                                }
+                                            }}
+                                            disabled={upgradeLoading || isPaymentLoading}
+                                        >
+                                            {upgradeLoading ? (selectedPlan === 'free' ? 'Subscribing...' : 'Processing...') : 
+                                             isPaymentLoading ? 'Opening Payment Gateway...' : 'Confirm Upgrade'}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -1139,7 +1113,7 @@ const Profile = () => {
                                         <tr key={p._id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                                             <td className="py-1 sm:py-2 px-2 sm:px-4">{idx + 1}</td>
                                             <td className="py-1 sm:py-2 px-2 sm:px-4">{new Date(p.date).toLocaleDateString()}</td>
-                                            <td className="py-1 sm:py-2 px-2 sm:px-4">${(p.amount / 100).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                                            <td className="py-1 sm:py-2 px-2 sm:px-4">₹{(p.amount / 100).toLocaleString('en-IN', {minimumFractionDigits: 0})}</td>
                                             <td className={p.status === 'success' ? 'text-green-600' : 'text-red-600'}>{p.status}</td>
                                         </tr>
                                     ))}

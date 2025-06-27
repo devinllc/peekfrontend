@@ -5,9 +5,21 @@ import {
     BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
     ResponsiveContainer, ComposedChart, Cell, Area, AreaChart, PieChart, Pie
 } from 'recharts';
+import toast from 'react-hot-toast';
 
 const Analysis = ({ selectedFile, analysis, onBack }) => {
-    if (!selectedFile || !analysis) return null;
+    if (!selectedFile || !analysis) {
+        return (
+            <div className="min-h-[40vh] flex items-center justify-center">
+                <div className="w-16 h-16 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full flex items-center justify-center">
+                    <svg className="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                </div>
+            </div>
+        );
+    }
 
     // Enhanced color palette for pie charts
     const pieColors = [

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { FiUser, FiMail, FiLock, FiPhone, FiBriefcase, FiHome, FiArrowLeft } from 'react-icons/fi';
+import toast from 'react-hot-toast';
 
 const Register = () => {
     const navigate = useNavigate();
@@ -33,12 +34,13 @@ const Register = () => {
         try {
             const result = await register(formData);
             if (result.success) {
+                toast.success('Account created!');
                 navigate('/user/dashboard');
             } else {
-                setError(result.error);
+                toast.error(result.error || 'Registration failed');
             }
         } catch (err) {
-            setError(err.message || 'Registration failed');
+            toast.error(err.message || 'Registration failed');
         } finally {
             setLoading(false);
         }
@@ -78,16 +80,6 @@ const Register = () => {
                     {/* Content */}
                     <div className="p-4 sm:p-8">
                         <div className="w-full max-w-lg mx-auto">
-                            {error && (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="mb-6 bg-red-50/80 backdrop-blur-sm border border-red-200 text-red-600 px-4 py-3 rounded-xl"
-                                >
-                                    {error}
-                                </motion.div>
-                            )}
-
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {/* Name */}
