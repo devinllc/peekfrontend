@@ -32,3 +32,4 @@ retailv1.1.1
 v1.1.2
 v.1.1.3 payment
 v.1.1.4 admin
+v.1.1.5 how it works and toster
