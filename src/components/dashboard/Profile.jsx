@@ -276,13 +276,14 @@ const Profile = () => {
             }
             const options = {
                 key: RAZORPAY_LIVE_KEY,
-                amount: 100, // 1 rupee for free plan (minimum amount required by Razorpay)
+                amount: 100, // 1 rupee for free plan
                 currency: 'INR',
                 name: 'PeekBI',
                 description: 'Free Plan Subscription',
                 image: '/logos.png',
                 handler: function (response) {
                     console.log('🔵 [FREE PLAN] Razorpay Response:', response);
+                    // Send only real Razorpay data, no fallbacks
                     handleSubscribePaid('free', response, 'success');
                 },
                 prefill: {
