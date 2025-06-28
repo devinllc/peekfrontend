@@ -30,6 +30,10 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
         }
     };
 
+    const handleLogoClick = () => {
+        navigate('/');
+    };
+
     const isActive = (path) => {
         return location.pathname === path;
     };
@@ -94,7 +98,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="flex items-center space-x-3"
+                                className="flex items-center space-x-3 cursor-pointer"
+                                onClick={handleLogoClick}
                             >
                                 <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shadow-lg backdrop-blur-sm overflow-hidden">
                                     <img 
@@ -119,7 +124,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shadow-lg backdrop-blur-sm mx-auto overflow-hidden"
+                                className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shadow-lg backdrop-blur-sm mx-auto overflow-hidden cursor-pointer"
+                                onClick={handleLogoClick}
                             >
                                 <img 
                                     src="/assets/logo.svg" 

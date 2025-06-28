@@ -17,6 +17,7 @@ import TermsAndConditions from './pages/policies/TermsAndConditions';
 import CancellationAndRefund from './pages/policies/CancellationAndRefund';
 import ContactUs from './pages/policies/ContactUs';
 import HowItWorksDetails from './pages/HowItWorksDetails';
+import AllTestimonials from './pages/AllTestimonials';
 
 import './App.css'
 import { gsap } from 'gsap';
@@ -87,6 +88,7 @@ function App() {
           <Route path="/cancellation-and-refund" element={<CancellationAndRefund />} />
           <Route path="/contact-us" element={<ContactUs />} />
           <Route path="/how-it-works-details" element={<HowItWorksDetails />} />
+          <Route path="/testimonials" element={<AllTestimonials />} />
 
           {/* Protected Routes with Dashboard Layout */}
           <Route path="/user/*" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />

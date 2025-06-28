@@ -90,13 +90,15 @@ const Navigation = ({ isScrolled, heroRef, aboutRef, featuresRef }) => {
       <div className="container mx-auto px-4 max-w-[1200px]">
         <div className="flex items-center justify-between h-24">
           <div className="flex items-center">
-            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center shadow-lg backdrop-blur-sm overflow-hidden">
+            <div 
+              className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center shadow-lg backdrop-blur-sm overflow-hidden cursor-pointer"
+              onClick={goHome}
+            >
               <img
                 src="/assets/logo.svg"
                 alt="PeekBI Logo"
                 style={{ width: '68px', height: '68px' }}
                 className="object-cover"
-                onClick={goHome}
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.src = "/assets/logo.png";

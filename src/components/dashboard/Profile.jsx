@@ -17,7 +17,7 @@ const PLAN_OPTIONS = [
 
 const PLAN_DEFAULTS = {
     free: {
-        price: 0,
+        price: 1,
         billingInterval: 'monthly',
         limits: {
             uploads: 10,
@@ -276,12 +276,13 @@ const Profile = () => {
             }
             const options = {
                 key: RAZORPAY_LIVE_KEY,
-                amount: 0, // Zero amount for free plan
+                amount: 1, // 1 paisa for free plan (minimum amount required by Razorpay)
                 currency: 'INR',
                 name: 'PeekBI',
                 description: 'Free Plan Subscription',
                 image: '/logos.png',
                 handler: function (response) {
+                    console.log('🔵 [FREE PLAN] Razorpay Response:', response);
                     handleSubscribePaid('free', response, 'success');
                 },
                 prefill: {
@@ -375,11 +376,13 @@ const Profile = () => {
         try {
             const token = localStorage.getItem('token');
             if (!token) throw new Error('No token');
+            
+            // Only send real Razorpay data, no fallback generation
             const body = {
                 planName: plan,
-                razorpayPaymentId: razorpayResponse.razorpay_payment_id || generatePaymentId(),
-                razorpayOrderId: razorpayResponse.razorpay_order_id || generatePaymentId(),
-                razorpaySignature: razorpayResponse.razorpay_signature || 'test_signature',
+                razorpayPaymentId: razorpayResponse.razorpay_payment_id,
+                razorpayOrderId: razorpayResponse.razorpay_order_id,
+                razorpaySignature: razorpayResponse.razorpay_signature,
                 status,
                 failReason: razorpayResponse.failReason || ''
             };
@@ -939,36 +942,108 @@ const Profile = () => {
                                 >
                                     <div className="flex justify-between items-center mb-6">
                                         <h4 className="font-bold text-gray-800 text-lg">Plan Features</h4>
-                                        <button
-                                            className="flex items-center px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:from-[#9B4DCA] hover:to-[#C77DFF] transition-all duration-200 font-medium shadow-lg"
-                                            onClick={() => setShowUpgrade(true)}
-                                        >
-                                            <FiArrowUpCircle className="mr-2" /> Upgrade Plan
-                                        </button>
-                                    </div>
-                                    <ul className="space-y-4 text-sm">
-                                        {planData.currentPlan.features && Object.entries(planData.currentPlan.features).map(([feature, enabled], index) => (
-                                            <motion.li 
-                                                key={feature} 
-                                                className="flex items-center space-x-3 p-3 rounded-xl"
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: index * 0.1 }}
+                                        <div className="relative">
+                                            <select
+                                                value={selectedPlan}
+                                                onChange={(e) => setSelectedPlan(e.target.value)}
+                                                className="px-4 py-2 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent transition-all duration-200 font-medium shadow-lg appearance-none pr-10"
                                             >
-                                                {enabled ?
-                                                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                                                        <FiCheck className="w-4 h-4 text-white" />
-                                                    </div> :
-                                                    <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
-                                                        <FiX className="w-4 h-4 text-white" />
+                                                {PLAN_OPTIONS.map(opt => (
+                                                    <option key={opt.name} value={opt.name}>
+                                                        {opt.label} - ₹{PLAN_DEFAULTS[opt.name].price === 0 ? 'Free' : (PLAN_DEFAULTS[opt.name].price / 100).toLocaleString('en-IN', {minimumFractionDigits: 0})}/month
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Selected Plan Details */}
+                                    <div className="mb-6 p-6 bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 rounded-2xl border border-[#7400B8]/20">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h5 className="text-xl font-bold text-[#7400B8] capitalize">{selectedPlan} Plan</h5>
+                                            <span className="text-2xl font-bold text-gray-800">
+                                                ₹{PLAN_DEFAULTS[selectedPlan].price === 0 ? 'Free' : (PLAN_DEFAULTS[selectedPlan].price / 100).toLocaleString('en-IN', {minimumFractionDigits: 0})}
+                                                <span className="text-sm text-gray-600">/month</span>
+                                            </span>
+                                        </div>
+                                        
+                                        {/* Plan Limits */}
+                                        <div className="mb-4">
+                                            <h6 className="font-semibold text-gray-700 mb-2">Limits</h6>
+                                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                                {Object.entries(PLAN_DEFAULTS[selectedPlan].limits).map(([key, value]) => (
+                                                    <div key={key} className="flex justify-between items-center p-2 bg-white/60 rounded-lg">
+                                                        <span className="text-gray-600">{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
+                                                        <span className="font-bold text-[#7400B8]">{value}</span>
                                                     </div>
-                                                }
-                                                <span className={`font-medium ${enabled ? "text-gray-800" : "text-gray-500"}`}>
-                                                    {feature.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                </span>
-                                            </motion.li>
-                                        ))}
-                                    </ul>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Plan Features */}
+                                        <div>
+                                            <h6 className="font-semibold text-gray-700 mb-2">Features</h6>
+                                            <ul className="space-y-2 text-sm">
+                                                {Object.entries(PLAN_DEFAULTS[selectedPlan].features).map(([feature, enabled], index) => (
+                                                    <motion.li 
+                                                        key={feature} 
+                                                        className="flex items-center space-x-3"
+                                                        initial={{ opacity: 0, x: -20 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        transition={{ delay: index * 0.1 }}
+                                                    >
+                                                        {enabled ?
+                                                            <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                                                                <FiCheck className="w-3 h-3 text-white" />
+                                                            </div> :
+                                                            <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                                                                <FiX className="w-3 h-3 text-white" />
+                                                            </div>
+                                                        }
+                                                        <span className={`font-medium ${enabled ? "text-gray-800" : "text-gray-500"}`}>
+                                                            {feature.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                        </span>
+                                                    </motion.li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Upgrade Button */}
+                                    <button
+                                        className="w-full py-3 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl hover:from-[#9B4DCA] hover:to-[#C77DFF] transition-all duration-200 font-medium shadow-lg flex items-center justify-center space-x-2"
+                                        onClick={() => {
+                                            if (selectedPlan === 'free') {
+                                                handleSubscribeFree();
+                                            } else {
+                                                handleRazorpayPayment();
+                                            }
+                                        }}
+                                        disabled={upgradeLoading || isPaymentLoading}
+                                    >
+                                        {upgradeLoading ? (
+                                            <>
+                                                <FiLoader className="w-5 h-5 animate-spin" />
+                                                <span>{selectedPlan === 'free' ? 'Subscribing...' : 'Processing...'}</span>
+                                            </>
+                                        ) : isPaymentLoading ? (
+                                            <>
+                                                <FiLoader className="w-5 h-5 animate-spin" />
+                                                <span>Opening Payment Gateway...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FiArrowUpCircle className="w-5 h-5" />
+                                                <span>Upgrade to {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} Plan</span>
+                                            </>
+                                        )}
+                                    </button>
+                                    
                                     {/* Usage Statistics */}
                                     {usageData && (
                                         <div className="mt-8">
@@ -987,58 +1062,6 @@ const Profile = () => {
                                         </div>
                                     )}
                                 </motion.div>
-                            </div>
-                        )}
-                        {/* Upgrade Modal */}
-                        {showUpgrade && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                                <div className="bg-white rounded-2xl shadow-2xl p-0 max-w-2xl w-full relative overflow-hidden border border-[#7400B8]/10">
-                                    <button className="absolute top-4 right-4 text-gray-400 hover:text-[#7400B8] transition-all z-20" onClick={() => setShowUpgrade(false)}><span className="text-2xl">&times;</span></button>
-                                    <div className="bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] py-6 px-8 text-white rounded-t-2xl">
-                                        <h3 className="text-2xl font-bold mb-1">Upgrade Plan</h3>
-                                        <p className="text-white/80 text-base">Choose the plan that fits your business</p>
-                                    </div>
-                                    <div className="p-8 flex flex-col md:flex-row gap-8">
-                                        {PLAN_OPTIONS.map(opt => (
-                                            <div key={opt.name} className={`flex-1 rounded-2xl shadow-lg border-2 ${selectedPlan === opt.name ? 'border-[#7400B8]' : 'border-gray-200'} bg-white/90 transition-all duration-200 cursor-pointer hover:shadow-xl`} onClick={() => setSelectedPlan(opt.name)}>
-                                                <div className={`p-6 flex flex-col items-center ${selectedPlan === opt.name ? 'bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10' : ''}`}>
-                                                    <h4 className="text-xl font-bold text-[#7400B8] mb-2">{opt.label}</h4>
-                                                    <div className="mb-2 text-3xl font-bold text-gray-800">{PLAN_DEFAULTS[opt.name].price === 0 ? 'Free' : `₹${(PLAN_DEFAULTS[opt.name].price / 100).toLocaleString('en-IN', {minimumFractionDigits: 0})}`}</div>
-                                                    <div className="text-xs text-gray-500 mb-2">/month</div>
-                                                    <ul className="mb-2 space-y-1 text-sm">
-                                                        {Object.entries(PLAN_DEFAULTS[opt.name].features).map(([feature, enabled]) => (
-                                                            <li key={feature} className="flex items-center gap-2">
-                                                                <span className={`w-2 h-2 rounded-full ${enabled ? 'bg-green-500' : 'bg-gray-300'}`}></span>
-                                                                <span className={enabled ? 'text-gray-700' : 'text-gray-400'}>{feature.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                    <ul className="mb-2 space-y-1 text-xs text-gray-600">
-                                                        {Object.entries(PLAN_DEFAULTS[opt.name].limits).map(([k, v]) => (
-                                                            <li key={k}><span className="font-medium">{k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</span> {v}</li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="px-8 pb-8">
-                                        <button
-                                            className="w-full py-3 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl font-bold mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                            onClick={() => {
-                                                if (selectedPlan === 'free') {
-                                                    handleSubscribeFree();
-                                                } else {
-                                                    handleRazorpayPayment();
-                                                }
-                                            }}
-                                            disabled={upgradeLoading || isPaymentLoading}
-                                        >
-                                            {upgradeLoading ? (selectedPlan === 'free' ? 'Subscribing...' : 'Processing...') : 
-                                             isPaymentLoading ? 'Opening Payment Gateway...' : 'Confirm Upgrade'}
-                                        </button>
-                                    </div>
-                                </div>
                             </div>
                         )}
                     </div>

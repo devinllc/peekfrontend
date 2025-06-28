@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const AuthContext = createContext(null);
 
-const API_BASE_URL = 'https://api.peekbi.com';
+const API_BASE_URL = 'http://ap.peekbi.com';
 
 // Helper functions for localStorage and cookies
 const setLocalStorage = (key, value) => {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { FiMenu, FiX, FiArrowLeft, FiMessageSquare } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 
 const Header = ({ 
     title, 
@@ -13,6 +14,12 @@ const Header = ({
     setSidebarOpen = null,
     onBack = null
 }) => {
+    const navigate = useNavigate();
+
+    const handleLogoClick = () => {
+        navigate('/');
+    };
+
     return (
         <div className={`bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] p-4 sm:p-8 text-white shadow-xl ${className}`}>
             <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-0">
@@ -37,7 +44,10 @@ const Header = ({
                             {sidebarOpen ? <FiX className="w-5 h-5 sm:w-6 sm:h-6" /> : <FiMenu className="w-5 h-5 sm:w-6 sm:h-6" />}
                         </motion.button>
                     )}
-                    <div className="w-10 h-10 sm:w-16 sm:h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm overflow-hidden">
+                    <div 
+                        className="w-10 h-10 sm:w-16 sm:h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm overflow-hidden cursor-pointer"
+                        onClick={handleLogoClick}
+                    >
                         <img 
                             src="/assets/logo.svg" 
                             alt="PeekBI Logo" 

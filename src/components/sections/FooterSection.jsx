@@ -1,9 +1,15 @@
+import React from 'react';
 import { motion } from 'framer-motion';
-import { FiTwitter, FiLinkedin, FiFacebook, FiInstagram, FiYoutube } from 'react-icons/fi';
-import { Link } from 'react-router-dom';
+import { FiTwitter, FiLinkedin, FiFacebook, FiInstagram, FiYoutube, FiGithub } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
 
 const FooterSection = () => {
+    const navigate = useNavigate();
     const currentYear = new Date().getFullYear();
+
+    const handleLogoClick = () => {
+        navigate('/');
+    };
 
     const footerLinks = [
         {
@@ -48,11 +54,11 @@ const FooterSection = () => {
     ];
 
     const socialLinks = [
-        { icon: <FiTwitter />, url: '#', name: 'Twitter' },
-        { icon: <FiLinkedin />, url: '#', name: 'LinkedIn' },
-        { icon: <FiFacebook />, url: '#', name: 'Facebook' },
-        { icon: <FiInstagram />, url: '#', name: 'Instagram' },
-        { icon: <FiYoutube />, url: '#', name: 'YouTube' }
+        { name: 'Twitter', url: '#', icon: <FiTwitter className="w-4 h-4 sm:w-5 sm:h-5" /> },
+        { name: 'Facebook', url: '#', icon: <FiFacebook className="w-4 h-4 sm:w-5 sm:h-5" /> },
+        { name: 'Instagram', url: '#', icon: <FiInstagram className="w-4 h-4 sm:w-5 sm:h-5" /> },
+        { name: 'LinkedIn', url: '#', icon: <FiLinkedin className="w-4 h-4 sm:w-5 sm:h-5" /> },
+        { name: 'GitHub', url: '#', icon: <FiGithub className="w-4 h-4 sm:w-5 sm:h-5" /> },
     ];
 
     return (
@@ -62,7 +68,10 @@ const FooterSection = () => {
                 <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 md:gap-8">
                     {/* Brand Column */}
                     <div className="col-span-2 md:col-span-3 lg:col-span-2">
-                        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center shadow-lg backdrop-blur-sm overflow-hidden">
+                        <div 
+                            className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center shadow-lg backdrop-blur-sm overflow-hidden cursor-pointer"
+                            onClick={handleLogoClick}
+                        >
                             <img
                                 src="/assets/logo.svg"
                                 alt="PeekBI Logo"

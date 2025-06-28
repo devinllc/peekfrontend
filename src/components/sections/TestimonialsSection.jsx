@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiStar, FiX } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -132,7 +133,9 @@ const TestimonialsSection = () => {
                         ))}
                     </div>
                     <div className="flex justify-center mt-8">
-                        <a href="/testimonials" className="bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white px-6 py-3 rounded-full font-semibold shadow hover:from-[#9B4DCA] hover:to-[#C77DFF] transition-all">View All Testimonials</a>
+                        <Link to="/testimonials" className="bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white px-6 py-3 rounded-full font-semibold shadow hover:from-[#9B4DCA] hover:to-[#C77DFF] transition-all">
+                            View All Testimonials
+                        </Link>
                     </div>
                     </>
                 )}

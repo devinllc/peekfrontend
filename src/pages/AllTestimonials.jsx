@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { FiStar, FiArrowLeft } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -30,7 +31,9 @@ const AllTestimonials = () => {
             </div>
             <div className="container mx-auto px-4 max-w-[1200px]">
                 <div className="flex items-center mb-8">
-                    <a href="/" className="flex items-center gap-2 text-[#7400B8] font-semibold hover:underline"><FiArrowLeft /> Back to Home</a>
+                    <Link to="/" className="flex items-center gap-2 text-[#7400B8] font-semibold hover:underline">
+                        <FiArrowLeft /> Back to Home
+                    </Link>
                 </div>
                 <motion.div
                     className="text-center mb-16"
