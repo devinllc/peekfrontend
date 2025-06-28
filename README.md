@@ -34,4 +34,6 @@ v.1.1.3 payment
 v.1.1.4 admin
 v.1.1.5 how it works and toster
 v.1.1.5 how it works and toster
+v.1.1.6. razorpays
+
 
