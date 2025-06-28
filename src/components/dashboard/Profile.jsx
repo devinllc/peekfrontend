@@ -17,7 +17,7 @@ const PLAN_OPTIONS = [
 
 const PLAN_DEFAULTS = {
     free: {
-        price: 1,
+        price: 100,
         billingInterval: 'monthly',
         limits: {
             uploads: 10,
@@ -276,7 +276,7 @@ const Profile = () => {
             }
             const options = {
                 key: RAZORPAY_LIVE_KEY,
-                amount: 1, // 1 paisa for free plan (minimum amount required by Razorpay)
+                amount: 100, // 1 rupee for free plan (minimum amount required by Razorpay)
                 currency: 'INR',
                 name: 'PeekBI',
                 description: 'Free Plan Subscription',
