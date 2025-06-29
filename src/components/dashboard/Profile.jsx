@@ -7,7 +7,7 @@ import axios from 'axios';
 import Header from './Header';
 import toast from 'react-hot-toast';
 
-const API_BASE_URL = 'https://api.peekbi.com';
+const API_BASE_URL = 'https://ap.peekbi.com';
 
 const PLAN_OPTIONS = [
   { name: 'free', label: 'Free' },
@@ -217,7 +217,7 @@ const Profile = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(null);
-        setIsUpdating(true);
+            setIsUpdating(true);
         try {
             // Get the user ID from authUser, checking both id and _id properties
             const userId = authUser?.id || authUser?._id;
@@ -266,193 +266,288 @@ const Profile = () => {
         }
     };
 
-    const handleSubscribeFree = async () => {
+    // Load Razorpay SDK dynamically
+    const loadRazorpaySDK = () => {
+        return new Promise((resolve, reject) => {
+            if (window.Razorpay) {
+                resolve(window.Razorpay);
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.onload = () => resolve(window.Razorpay);
+            script.onerror = () => reject(new Error('Failed to load Razorpay SDK'));
+            document.body.appendChild(script);
+        });
+    };
+
+    // Create order with backend
+    const createOrder = async (planName) => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('No authentication token found');
+        }
+
+        const response = await fetch(`${API_BASE_URL}/subscribe/create-order`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ planName })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to create order');
+        }
+
+        return await response.json();
+    };
+
+    // Subscribe to plan
+    const subscribeToPlan = async (planName, paymentData, status = 'success', failReason = '') => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('No authentication token found');
+        }
+
+        // Always send all fields to backend for complete transaction tracking
+        const requestBody = {
+            planName,
+            razorpayPaymentId: paymentData?.razorpay_payment_id || null,
+            razorpayOrderId: paymentData?.razorpay_order_id || null,
+            razorpaySignature: paymentData?.razorpay_signature || null,
+            status,
+            failReason
+        };
+
+        console.log('🔵 [SUBSCRIPTION] Sending to backend:', requestBody);
+
+        const response = await fetch(`${API_BASE_URL}/subscribe/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Subscription failed');
+        }
+
+        return await response.json();
+    };
+
+    // Handle subscription process
+    const handleSubscription = async (planName) => {
         setIsPaymentLoading(true);
-        try {
-            if (!window.Razorpay) {
-                alert('Payment system is not available. Please refresh the page and try again.');
-                setIsPaymentLoading(false);
-                return;
-            }
-            const options = {
-                key: RAZORPAY_LIVE_KEY,
-                amount: 100, // 1 rupee for free plan
-                currency: 'INR',
-                name: 'PeekBI',
-                description: 'Free Plan Subscription',
-                image: '/logos.png',
-                handler: function (response) {
-                    console.log('🔵 [FREE PLAN] Razorpay Response:', response);
-                    // Send only real Razorpay data, no fallbacks
-                    handleSubscribePaid('free', response, 'success');
-                },
-                prefill: {
-                    name: user?.name || '',
-                    email: user?.email || '',
-                    contact: user?.phone || ''
-                },
-                notes: {
-                    address: 'PeekBI Subscription'
-                },
-                theme: {
-                    color: '#7400B8'
-                },
-                modal: {
-                    ondismiss: function() {
-                        setIsPaymentLoading(false);
-                        handleSubscribePaid('free', { failReason: 'User cancelled payment' }, 'failed');
-                        alert('Payment was cancelled. You can try again anytime.');
-                    }
-                }
-            };
-            const rzp = new window.Razorpay(options);
-            rzp.on('payment.failed', function (response) {
-                setIsPaymentLoading(false);
-                handleSubscribePaid('free', { ...response.error, failReason: response.error.description || 'Payment failed' }, 'failed');
-                toast.error('Payment failed: ' + (response.error.description || 'Unknown error'));
-            });
-            rzp.open();
-        } catch (err) {
-            setIsPaymentLoading(false);
-            toast.error('Unable to open payment gateway. Please try again or contact support.');
-        }
-    };
-
-    const handleRazorpayPayment = async () => {
-        try {
-            setIsPaymentLoading(true);
-            if (!window.Razorpay) {
-                alert('Payment system is not available. Please refresh the page and try again.');
-                setIsPaymentLoading(false);
-                return;
-            }
-            const options = {
-                key: RAZORPAY_LIVE_KEY,
-                amount: PLAN_DEFAULTS[selectedPlan].price,
-                currency: 'INR',
-                name: 'PeekBI',
-                description: `${selectedPlan} Plan Subscription`,
-                image: '/logos.png',
-                handler: function (response) {
-                    handleSubscribePaid(selectedPlan, response, 'success');
-                },
-                prefill: {
-                    name: user?.name || '',
-                    email: user?.email || '',
-                    contact: user?.phone || ''
-                },
-                notes: {
-                    address: 'PeekBI Subscription'
-                },
-                theme: {
-                    color: '#7400B8'
-                },
-                modal: {
-                    ondismiss: function() {
-                        setIsPaymentLoading(false);
-                        handleSubscribePaid(selectedPlan, { failReason: 'User cancelled payment' }, 'failed');
-                        alert('Payment was cancelled. You can try again anytime.');
-                    }
-                }
-            };
-            const rzp = new window.Razorpay(options);
-            rzp.on('payment.failed', function (response) {
-                setIsPaymentLoading(false);
-                handleSubscribePaid(selectedPlan, { ...response.error, failReason: response.error.description || 'Payment failed' }, 'failed');
-                toast.error('Payment failed: ' + (response.error.description || 'Unknown error'));
-            });
-            rzp.open();
-        } catch (error) {
-            toast.error('Unable to open payment gateway. Please try again or contact support.');
-        } finally {
-            setIsPaymentLoading(false);
-        }
-    };
-
-    const handleSubscribePaid = async (plan, razorpayResponse, status) => {
-        setUpgradeLoading(true);
-        setIsPaymentLoading(false);
         setUpgradeError(null);
         setUpgradeSuccess(null);
+
+        // Variables to track payment data
+        let paymentData = null;
+        let orderData = null;
+        let paymentInitiated = false;
+
         try {
-            const token = localStorage.getItem('token');
-            if (!token) throw new Error('No token');
-            
-            // Only send real Razorpay data, no fallback generation
-            const body = {
-                planName: plan,
-                razorpayPaymentId: razorpayResponse.razorpay_payment_id,
-                razorpayOrderId: razorpayResponse.razorpay_order_id,
-                razorpaySignature: razorpayResponse.razorpay_signature,
-                status,
-                failReason: razorpayResponse.failReason || ''
+            // Step 1: Create order with backend
+            console.log('🔵 [SUBSCRIPTION] Creating order for plan:', planName);
+            orderData = await createOrder(planName);
+            console.log('🔵 [SUBSCRIPTION] Order created:', orderData);
+
+            // Step 2: Load Razorpay SDK
+            console.log('🔵 [SUBSCRIPTION] Loading Razorpay SDK...');
+            const Razorpay = await loadRazorpaySDK();
+
+            // Step 3: Configure Razorpay options
+            const options = {
+                key: RAZORPAY_LIVE_KEY,
+                amount: orderData.amount,
+                currency: orderData.currency,
+                order_id: orderData.orderId,
+                name: 'PeekBI',
+                description: `${planName} Plan Subscription`,
+                image: '/logos.png',
+                prefill: {
+                    name: user?.name || '',
+                    email: user?.email || '',
+                    contact: user?.phone || ''
+                },
+                notes: {
+                    address: 'PeekBI Subscription'
+                },
+                theme: {
+                    color: '#7400B8'
+                },
+                handler: async function (response) {
+                    console.log('🔵 [SUBSCRIPTION] Payment success:', response);
+                    paymentData = response; // Store payment data
+                    paymentInitiated = true;
+                    
+                    try {
+                        // Step 4: Send success data to backend
+                        await subscribeToPlan(planName, response, 'success');
+                        toast.success('Plan subscribed successfully!');
+                        
+                        // Refresh plan data
+                        const planRes = await axios.get(`${API_BASE_URL}/subscribe/`, { 
+                            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } 
+                        });
+                        setPlanData(planRes.data);
+                        await fetchUsageData();
+                        
+                    } catch (error) {
+                        console.error('❌ [SUBSCRIPTION] Success handler error:', error);
+                        toast.error(error.message || 'Subscription failed');
+                    } finally {
+                        setIsPaymentLoading(false);
+                        setShowUpgrade(false);
+                        setSelectedPlanFromQuery(null);
+                    }
+                },
+                modal: {
+                    ondismiss: function () {
+                        console.log('🔵 [SUBSCRIPTION] Payment cancelled/dismissed');
+                        setIsPaymentLoading(false);
+                        
+                        // Always send payment data to backend, even if cancelled
+                        const finalPaymentData = paymentData || {
+                            razorpay_payment_id: null,
+                            razorpay_order_id: orderData.orderId,
+                            razorpay_signature: null
+                        };
+                        
+                        console.log('🔵 [SUBSCRIPTION] Sending final payment data:', finalPaymentData);
+                        
+                        subscribeToPlan(planName, finalPaymentData, 'failed', 'Payment cancelled by user')
+                        .then(() => {
+                            toast.error('Payment was cancelled');
+                        })
+                        .catch((error) => {
+                            console.error('❌ [SUBSCRIPTION] Cancel handler error:', error);
+                            toast.error('Failed to record cancelled payment');
+                        })
+                        .finally(() => {
+                            setShowUpgrade(false);
+                            setSelectedPlanFromQuery(null);
+                        });
+                    }
+                }
             };
+
+            // Step 6: Open Razorpay checkout
+            console.log('🔵 [SUBSCRIPTION] Opening Razorpay checkout...');
+            const rzp = new Razorpay(options);
             
-            console.log('🔵 [SUBSCRIPTION] Sending API request:', {
-                plan,
-                status,
-                body,
-                timestamp: new Date().toISOString()
+            // Add comprehensive event listeners to capture all payment data
+            rzp.on('payment.init', function (response) {
+                console.log('🔵 [SUBSCRIPTION] Payment initiated:', response);
+                paymentInitiated = true;
+                // Store initial payment data
+                paymentData = {
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_order_id: orderData.orderId,
+                    razorpay_signature: response.razorpay_signature
+                };
             });
             
-            const response = await axios.post(`${API_BASE_URL}/subscribe/`, body, { headers: { 'Authorization': `Bearer ${token}` } });
-            
-            console.log('✅ [SUBSCRIPTION] API Response Success:', {
-                status: response.status,
-                data: response.data,
-                headers: response.headers,
-                timestamp: new Date().toISOString()
+            rzp.on('payment.authorized', function (response) {
+                console.log('🔵 [SUBSCRIPTION] Payment authorized:', response);
+                paymentInitiated = true;
+                // Update payment data with final values
+                paymentData = response;
             });
             
-            if (status === 'success') {
-                toast.success('Plan upgraded successfully!');
-            } else {
-                toast.error('Payment failed or cancelled.');
-            }
-            
-            // Refresh plan data
-            console.log('🔄 [SUBSCRIPTION] Refreshing plan data...');
-            const planRes = await axios.get(`${API_BASE_URL}/subscribe/`, { headers: { 'Authorization': `Bearer ${token}` } });
-            
-            console.log('📊 [SUBSCRIPTION] Plan data refreshed:', {
-                status: planRes.status,
-                data: planRes.data,
-                timestamp: new Date().toISOString()
+            rzp.on('payment.failed', function (response) {
+                console.log('🔵 [SUBSCRIPTION] Payment failed:', response);
+                paymentInitiated = true;
+                // Store failed payment data
+                paymentData = {
+                    razorpay_payment_id: response.error.metadata?.payment_id || null,
+                    razorpay_order_id: orderData.orderId,
+                    razorpay_signature: null
+                };
+                
+                // Send failed payment data to backend
+                subscribeToPlan(planName, paymentData, 'failed', response.error.description || 'Payment failed')
+                .then(() => {
+                    toast.error('Payment failed: ' + (response.error.description || 'Unknown error'));
+                })
+                .catch((error) => {
+                    console.error('❌ [SUBSCRIPTION] Failed payment handler error:', error);
+                    toast.error('Failed to record failed payment');
+                })
+                .finally(() => {
+                    setIsPaymentLoading(false);
+                    setShowUpgrade(false);
+                    setSelectedPlanFromQuery(null);
+                });
             });
             
-            setPlanData(planRes.data);
-            await fetchUsageData();
-        } catch (err) {
-            console.error('❌ [SUBSCRIPTION] API Error:', {
-                message: err.message,
-                response: err.response?.data,
-                status: err.response?.status,
-                headers: err.response?.headers,
-                timestamp: new Date().toISOString()
+            rzp.on('payment.cancelled', function (response) {
+                console.log('🔵 [SUBSCRIPTION] Payment cancelled:', response);
+                paymentInitiated = true;
+                // Store cancelled payment data
+                paymentData = {
+                    razorpay_payment_id: response.error?.metadata?.payment_id || null,
+                    razorpay_order_id: orderData.orderId,
+                    razorpay_signature: null
+                };
+                
+                // Send cancelled payment data to backend
+                subscribeToPlan(planName, paymentData, 'failed', 'Payment cancelled by user')
+                .then(() => {
+                    toast.error('Payment was cancelled');
+                })
+                .catch((error) => {
+                    console.error('❌ [SUBSCRIPTION] Cancelled payment handler error:', error);
+                    toast.error('Failed to record cancelled payment');
+                })
+                .finally(() => {
+                    setIsPaymentLoading(false);
+                    setShowUpgrade(false);
+                    setSelectedPlanFromQuery(null);
+                });
             });
-            toast.error(err?.response?.data?.message || err.message || 'Upgrade failed');
-        } finally {
-            setUpgradeLoading(false);
-            setShowUpgrade(false);
-            setSelectedPlanFromQuery(null);
+            
+            rzp.open();
+
+        } catch (error) {
+            console.error('❌ [SUBSCRIPTION] Error:', error);
+            toast.error(error.message || 'Failed to start subscription process');
+            setIsPaymentLoading(false);
         }
+    };
+
+    // Handle free plan subscription
+    const handleSubscribeFree = async () => {
+        await handleSubscription('free');
+    };
+
+    // Handle paid plan subscription
+    const handleRazorpayPayment = async () => {
+        await handleSubscription(selectedPlan);
     };
 
     if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-6 flex items-center justify-center">
                 <div className="max-w-6xl mx-auto w-full">
-                    <div className="flex items-center justify-center h-64">
-                        <div className="flex flex-col items-center space-y-4">
-                            <div className="w-16 h-16 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full flex items-center justify-center">
+                        <div className="flex items-center justify-center h-64">
+                            <div className="flex flex-col items-center space-y-4">
+                                <div className="w-16 h-16 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] rounded-full flex items-center justify-center">
                                 <svg className="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
                                 </svg>
+                                </div>
+                                <p className="text-gray-600 font-medium">Loading profile...</p>
                             </div>
-                            <p className="text-gray-600 font-medium">Loading profile...</p>
                         </div>
-                    </div>
                 </div>
             </div>
         );
@@ -462,18 +557,18 @@ const Profile = () => {
         return (
             <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-6 flex items-center justify-center">
                 <div className="max-w-6xl mx-auto w-full">
-                    <div className="flex items-center justify-center h-64">
-                        <div className="text-center">
-                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <div className="flex items-center justify-center h-64">
+                            <div className="text-center">
+                                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
                                 </svg>
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-800 mb-2">Error Loading Profile</h3>
+                                <p className="text-gray-600">{error}</p>
                             </div>
-                            <h3 className="text-lg font-semibold text-gray-800 mb-2">Error Loading Profile</h3>
-                            <p className="text-gray-600">{error}</p>
                         </div>
-                    </div>
                 </div>
             </div>
         );
@@ -483,24 +578,24 @@ const Profile = () => {
         return (
             <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-6 flex items-center justify-center">
                 <div className="max-w-6xl mx-auto w-full">
-                    <div className="flex items-center justify-center h-64">
-                        <div className="text-center">
-                            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <svg className="w-8 h-8 text-yellow-500" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
                                 </svg>
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-800 mb-2">No Profile Data</h3>
+                                <p className="text-gray-600">Unable to load user profile data</p>
+                    <button
+                        onClick={() => navigate('/user/dashboard')}
+                                    className="mt-4 px-4 py-2 bg-[#7400B8] text-white rounded-xl"
+                    >
+                        Return to Dashboard
+                    </button>
                             </div>
-                            <h3 className="text-lg font-semibold text-gray-800 mb-2">No Profile Data</h3>
-                            <p className="text-gray-600">Unable to load user profile data</p>
-                            <button
-                                onClick={() => navigate('/user/dashboard')}
-                                className="mt-4 px-4 py-2 bg-[#7400B8] text-white rounded-xl"
-                            >
-                                Return to Dashboard
-                            </button>
                         </div>
-                    </div>
                 </div>
             </div>
         );
@@ -959,7 +1054,7 @@ const Profile = () => {
                                                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                                 </svg>
-                                            </div>
+                                    </div>
                                         </div>
                                     </div>
                                     
@@ -991,27 +1086,27 @@ const Profile = () => {
                                             <h6 className="font-semibold text-gray-700 mb-2">Features</h6>
                                             <ul className="space-y-2 text-sm">
                                                 {Object.entries(PLAN_DEFAULTS[selectedPlan].features).map(([feature, enabled], index) => (
-                                                    <motion.li 
-                                                        key={feature} 
+                                            <motion.li 
+                                                key={feature} 
                                                         className="flex items-center space-x-3"
-                                                        initial={{ opacity: 0, x: -20 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        transition={{ delay: index * 0.1 }}
-                                                    >
-                                                        {enabled ?
+                                                initial={{ opacity: 0, x: -20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: index * 0.1 }}
+                                            >
+                                                {enabled ?
                                                             <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
                                                                 <FiCheck className="w-3 h-3 text-white" />
-                                                            </div> :
+                                                    </div> :
                                                             <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
                                                                 <FiX className="w-3 h-3 text-white" />
-                                                            </div>
-                                                        }
-                                                        <span className={`font-medium ${enabled ? "text-gray-800" : "text-gray-500"}`}>
-                                                            {feature.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                        </span>
-                                                    </motion.li>
-                                                ))}
-                                            </ul>
+                                                    </div>
+                                                }
+                                                <span className={`font-medium ${enabled ? "text-gray-800" : "text-gray-500"}`}>
+                                                    {feature.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                </span>
+                                            </motion.li>
+                                        ))}
+                                    </ul>
                                         </div>
                                     </div>
                                     
@@ -1065,7 +1160,7 @@ const Profile = () => {
                                 </motion.div>
                             </div>
                         )}
-                    </div>
+                                    </div>
                 </div>
             </div>
             <style>{`
