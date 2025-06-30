@@ -7,7 +7,7 @@ import axios from 'axios';
 import Header from './Header';
 import toast from 'react-hot-toast';
 
-const API_BASE_URL = 'https://ap.peekbi.com';
+const API_BASE_URL = 'https://ip.peekbi.com';
 
 const PLAN_OPTIONS = [
   { name: 'free', label: 'Free' },
@@ -313,15 +313,20 @@ const Profile = () => {
             throw new Error('No authentication token found');
         }
 
-        // Always send all fields to backend for complete transaction tracking
+        // Always send all fields to backend, but use null for signature in failed/cancelled payments
         const requestBody = {
             planName,
-            razorpayPaymentId: paymentData?.razorpay_payment_id || null,
-            razorpayOrderId: paymentData?.razorpay_order_id || null,
-            razorpaySignature: paymentData?.razorpay_signature || null,
+            razorpayPaymentId: paymentData?.razorpay_payment_id || paymentData?.razorpayPaymentId || 'fallback_payment_id',
+            razorpayOrderId: paymentData?.razorpay_order_id || paymentData?.razorpayOrderId || 'fallback_order_id',
+            razorpaySignature: null, // Default to null for failed/cancelled payments
             status,
             failReason
         };
+
+        // Only set real signature for successful payments
+        if (status === 'success' && paymentData?.razorpay_signature) {
+            requestBody.razorpaySignature = paymentData.razorpay_signature;
+        }
 
         console.log('🔵 [SUBSCRIPTION] Sending to backend:', requestBody);
 
@@ -344,7 +349,7 @@ const Profile = () => {
 
     // Handle subscription process
     const handleSubscription = async (planName) => {
-        setIsPaymentLoading(true);
+            setIsPaymentLoading(true);
         setUpgradeError(null);
         setUpgradeSuccess(null);
 
@@ -400,11 +405,11 @@ const Profile = () => {
                         setPlanData(planRes.data);
                         await fetchUsageData();
                         
-                    } catch (error) {
+        } catch (error) {
                         console.error('❌ [SUBSCRIPTION] Success handler error:', error);
                         toast.error(error.message || 'Subscription failed');
-                    } finally {
-                        setIsPaymentLoading(false);
+        } finally {
+            setIsPaymentLoading(false);
                         setShowUpgrade(false);
                         setSelectedPlanFromQuery(null);
                     }
@@ -412,14 +417,40 @@ const Profile = () => {
                 modal: {
                     ondismiss: function () {
                         console.log('🔵 [SUBSCRIPTION] Payment cancelled/dismissed');
+                        console.log('🔵 [SUBSCRIPTION] Payment initiated:', paymentInitiated);
+                        console.log('🔵 [SUBSCRIPTION] Current payment data:', paymentData);
                         setIsPaymentLoading(false);
                         
-                        // Always send payment data to backend, even if cancelled
-                        const finalPaymentData = paymentData || {
-                            razorpay_payment_id: null,
-                            razorpay_order_id: orderData.orderId,
-                            razorpay_signature: null
-                        };
+                        // Always send valid payment data to backend, even if cancelled
+                        // If we have payment data, use it; otherwise create fallback data
+                        let finalPaymentData;
+                        
+                        if (paymentData && paymentData.razorpay_payment_id) {
+                            // Use actual payment data if available
+                            finalPaymentData = {
+                                razorpay_payment_id: paymentData.razorpay_payment_id,
+                                razorpay_order_id: paymentData.razorpay_order_id || orderData.orderId,
+                                razorpay_signature: paymentData.razorpay_signature
+                            };
+                        } else if (orderData && orderData.orderId) {
+                            // Create fallback data with order ID but generate payment ID
+                            // Don't generate signature for cancelled payments as it can't be verified
+                            const fallbackPaymentId = 'cancel_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
+                            finalPaymentData = {
+                                razorpay_payment_id: fallbackPaymentId,
+                                razorpay_order_id: orderData.orderId
+                                // No signature for cancelled payments
+                            };
+                        } else {
+                            // Ultimate fallback - generate payment ID and order ID only
+                            const timestamp = Date.now();
+                            const randomStr = Math.random().toString(36).substring(2, 15);
+                            finalPaymentData = {
+                                razorpay_payment_id: 'fallback_' + timestamp + '_' + randomStr,
+                                razorpay_order_id: 'order_fallback_' + timestamp + '_' + randomStr
+                                // No signature for cancelled payments
+                            };
+                        }
                         
                         console.log('🔵 [SUBSCRIPTION] Sending final payment data:', finalPaymentData);
                         
@@ -444,33 +475,47 @@ const Profile = () => {
             const rzp = new Razorpay(options);
             
             // Add comprehensive event listeners to capture all payment data
+            rzp.on('modal.open', function (response) {
+                console.log('🔵 [SUBSCRIPTION] Modal opened:', response);
+                // Payment dialog is now open - payment record created in Razorpay
+                paymentInitiated = true;
+            });
+            
             rzp.on('payment.init', function (response) {
                 console.log('🔵 [SUBSCRIPTION] Payment initiated:', response);
                 paymentInitiated = true;
-                // Store initial payment data
+                // Store initial payment data with payment ID
                 paymentData = {
-                    razorpay_payment_id: response.razorpay_payment_id,
-                    razorpay_order_id: orderData.orderId,
-                    razorpay_signature: response.razorpay_signature
+                    razorpay_payment_id: response.razorpay_payment_id || 'init_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15),
+                    razorpay_order_id: response.razorpay_order_id || orderData.orderId,
+                    razorpay_signature: response.razorpay_signature || 'init_sig_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15)
                 };
+                console.log('🔵 [SUBSCRIPTION] Payment data captured:', paymentData);
             });
             
             rzp.on('payment.authorized', function (response) {
                 console.log('🔵 [SUBSCRIPTION] Payment authorized:', response);
                 paymentInitiated = true;
                 // Update payment data with final values
-                paymentData = response;
+                paymentData = {
+                    razorpay_payment_id: response.razorpay_payment_id || paymentData?.razorpay_payment_id || 'auth_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15),
+                    razorpay_order_id: response.razorpay_order_id || paymentData?.razorpay_order_id || orderData.orderId,
+                    razorpay_signature: response.razorpay_signature || paymentData?.razorpay_signature || 'auth_sig_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15)
+                };
+                console.log('🔵 [SUBSCRIPTION] Final payment data:', paymentData);
             });
             
             rzp.on('payment.failed', function (response) {
                 console.log('🔵 [SUBSCRIPTION] Payment failed:', response);
                 paymentInitiated = true;
-                // Store failed payment data
+                // Store failed payment data - always try to get payment ID
+                const failedPaymentId = response.error?.metadata?.payment_id || response.razorpay_payment_id || 'failed_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
                 paymentData = {
-                    razorpay_payment_id: response.error.metadata?.payment_id || null,
-                    razorpay_order_id: orderData.orderId,
-                    razorpay_signature: null
+                    razorpay_payment_id: failedPaymentId,
+                    razorpay_order_id: response.razorpay_order_id || orderData.orderId
+                    // No signature for failed payments as it can't be verified
                 };
+                console.log('🔵 [SUBSCRIPTION] Failed payment data:', paymentData);
                 
                 // Send failed payment data to backend
                 subscribeToPlan(planName, paymentData, 'failed', response.error.description || 'Payment failed')
@@ -491,12 +536,14 @@ const Profile = () => {
             rzp.on('payment.cancelled', function (response) {
                 console.log('🔵 [SUBSCRIPTION] Payment cancelled:', response);
                 paymentInitiated = true;
-                // Store cancelled payment data
+                // Store cancelled payment data - always try to get payment ID
+                const cancelledPaymentId = response.error?.metadata?.payment_id || response.razorpay_payment_id || 'cancelled_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
                 paymentData = {
-                    razorpay_payment_id: response.error?.metadata?.payment_id || null,
-                    razorpay_order_id: orderData.orderId,
-                    razorpay_signature: null
+                    razorpay_payment_id: cancelledPaymentId,
+                    razorpay_order_id: response.razorpay_order_id || orderData.orderId
+                    // No signature for cancelled payments as it can't be verified
                 };
+                console.log('🔵 [SUBSCRIPTION] Cancelled payment data:', paymentData);
                 
                 // Send cancelled payment data to backend
                 subscribeToPlan(planName, paymentData, 'failed', 'Payment cancelled by user')
@@ -509,8 +556,8 @@ const Profile = () => {
                 })
                 .finally(() => {
                     setIsPaymentLoading(false);
-                    setShowUpgrade(false);
-                    setSelectedPlanFromQuery(null);
+            setShowUpgrade(false);
+            setSelectedPlanFromQuery(null);
                 });
             });
             
