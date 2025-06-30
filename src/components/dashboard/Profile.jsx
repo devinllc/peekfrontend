@@ -111,6 +111,7 @@ const Profile = () => {
     const [selectedPlanFromQuery, setSelectedPlanFromQuery] = useState(null);
     const [showAllLogins, setShowAllLogins] = useState(false);
     const [showAllTransactions, setShowAllTransactions] = useState(false);
+    const [profileFetched, setProfileFetched] = useState(false);
 
     const formatLastLogin = (lastLogin) => {
         if (!lastLogin) return 'Never';
@@ -119,46 +120,34 @@ const Profile = () => {
     };
 
     useEffect(() => {
+        if (!profileFetched && (authUser?.id || authUser?._id)) {
         const fetchProfileData = async () => {
-            if (!authUser?.id && !authUser?._id) {
-                setLoading(false);
-                return;
-            }
-
             try {
                 setLoading(true);
                 const token = localStorage.getItem('token');
-                if (!token) {
-                    throw new Error('No authentication token found');
-                }
-
+                    if (!token) throw new Error('No authentication token found');
                 const userId = authUser?.id || authUser?._id;
                 const response = await axios.get(`${API_BASE_URL}/users/${userId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                        headers: { 'Authorization': `Bearer ${token}` }
                 });
-
                 if (response.data.status === 'success' && response.data.user) {
                     setUser(response.data.user);
                     setFormData(response.data.user);
                 } else {
-                    // Fallback to authUser if API doesn't return expected data
                     setUser(authUser);
                     setFormData(authUser);
                 }
             } catch (err) {
-                console.error('Error fetching profile:', err);
-                // Fallback to authUser if fetch fails
                 setUser(authUser);
                 setFormData(authUser);
             } finally {
                 setLoading(false);
+                    setProfileFetched(true);
             }
         };
-
         fetchProfileData();
-    }, []); // Empty dependency array - only run once on mount
+        }
+    }, [authUser, profileFetched]);
 
     // Fetch usage data
     const fetchUsageData = async () => {
@@ -172,7 +161,7 @@ const Profile = () => {
         }
     };
 
-    useEffect(() => {
+    // Fetch plan data (top-level, not inside useEffect)
         const fetchPlanAndUsage = async () => {
             try {
                 const token = localStorage.getItem('token');
@@ -183,6 +172,8 @@ const Profile = () => {
                 // Optionally handle error
             }
         };
+
+    useEffect(() => {
         fetchPlanAndUsage();
         fetchUsageData();
     }, []);
@@ -219,16 +210,8 @@ const Profile = () => {
         setError(null);
             setIsUpdating(true);
         try {
-            // Get the user ID from authUser, checking both id and _id properties
             const userId = authUser?.id || authUser?._id;
-            
-            if (!userId) {
-                throw new Error('User ID is required');
-            }
-
-            console.log('Submitting form data:', formData);
-            
-            // Ensure we're sending the right fields in the right format
+            if (!userId) throw new Error('User ID is required');
             const dataToSend = {
                 name: formData.name,
                 email: formData.email,
@@ -238,28 +221,16 @@ const Profile = () => {
                 phone: formData.phone,
                 companyName: formData.companyName
             };
-
-            console.log('Sending update data:', dataToSend);
-
-            // Use updateProfile from AuthContext instead of direct axios call
             const result = await updateProfile(userId, dataToSend);
-            console.log('Update profile result:', result);
-
-            if (result && result.success) {
-                if (result.user) {
-                    // If user data is returned, use it
-                    console.log('Updated profile data:', result.user);
+            if (result && result.success && result.user) {
                     setUser(result.user);
                     setIsEditing(false);
-                    toast.success('Profile updated successfully!');
+                toast.success('Profile updated successfully!');
+                setProfileFetched(false);
                 } else {
-                    toast.error('Update successful but no user data returned');
-                }
-            } else {
                 toast.error(result?.error || 'Failed to update profile');
             }
         } catch (err) {
-            console.error('Error updating profile:', err);
             toast.error(err.message || 'Failed to update profile');
         } finally {
             setIsUpdating(false);
@@ -409,6 +380,7 @@ const Profile = () => {
                         console.error('❌ [SUBSCRIPTION] Success handler error:', error);
                         toast.error(error.message || 'Subscription failed');
         } finally {
+                        refetchPlanAndUsage();
             setIsPaymentLoading(false);
                         setShowUpgrade(false);
                         setSelectedPlanFromQuery(null);
@@ -420,52 +392,27 @@ const Profile = () => {
                         console.log('🔵 [SUBSCRIPTION] Payment initiated:', paymentInitiated);
                         console.log('🔵 [SUBSCRIPTION] Current payment data:', paymentData);
                         setIsPaymentLoading(false);
-                        
-                        // Always send valid payment data to backend, even if cancelled
-                        // If we have payment data, use it; otherwise create fallback data
-                        let finalPaymentData;
-                        
-                        if (paymentData && paymentData.razorpay_payment_id) {
-                            // Use actual payment data if available
-                            finalPaymentData = {
-                                razorpay_payment_id: paymentData.razorpay_payment_id,
-                                razorpay_order_id: paymentData.razorpay_order_id || orderData.orderId,
-                                razorpay_signature: paymentData.razorpay_signature
-                            };
-                        } else if (orderData && orderData.orderId) {
-                            // Create fallback data with order ID but generate payment ID
-                            // Don't generate signature for cancelled payments as it can't be verified
-                            const fallbackPaymentId = 'cancel_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
-                            finalPaymentData = {
-                                razorpay_payment_id: fallbackPaymentId,
-                                razorpay_order_id: orderData.orderId
-                                // No signature for cancelled payments
-                            };
+                        // Only send to backend if we have real payment_id and order_id
+                        if (paymentData && paymentData.razorpay_payment_id && paymentData.razorpay_order_id) {
+                            console.log('🔵 [SUBSCRIPTION] Sending real payment data on dismiss:', paymentData);
+                            subscribeToPlan(planName, paymentData, 'failed', 'Payment dialog dismissed by user')
+                            .then(() => {
+                                toast.error('Payment was cancelled');
+                            })
+                            .catch((error) => {
+                                console.error('❌ [SUBSCRIPTION] Cancel handler error:', error);
+                                toast.error('Failed to record cancelled payment');
+                            })
+                            .finally(() => {
+                                refetchPlanAndUsage();
+                                setShowUpgrade(false);
+                                setSelectedPlanFromQuery(null);
+                            });
                         } else {
-                            // Ultimate fallback - generate payment ID and order ID only
-                            const timestamp = Date.now();
-                            const randomStr = Math.random().toString(36).substring(2, 15);
-                            finalPaymentData = {
-                                razorpay_payment_id: 'fallback_' + timestamp + '_' + randomStr,
-                                razorpay_order_id: 'order_fallback_' + timestamp + '_' + randomStr
-                                // No signature for cancelled payments
-                            };
-                        }
-                        
-                        console.log('🔵 [SUBSCRIPTION] Sending final payment data:', finalPaymentData);
-                        
-                        subscribeToPlan(planName, finalPaymentData, 'failed', 'Payment cancelled by user')
-                        .then(() => {
-                            toast.error('Payment was cancelled');
-                        })
-                        .catch((error) => {
-                            console.error('❌ [SUBSCRIPTION] Cancel handler error:', error);
-                            toast.error('Failed to record cancelled payment');
-                        })
-                        .finally(() => {
+                            // No real payment attempt, just close modal
                             setShowUpgrade(false);
                             setSelectedPlanFromQuery(null);
-                        });
+                        }
                     }
                 }
             };
@@ -484,11 +431,11 @@ const Profile = () => {
             rzp.on('payment.init', function (response) {
                 console.log('🔵 [SUBSCRIPTION] Payment initiated:', response);
                 paymentInitiated = true;
-                // Store initial payment data with payment ID
+                // Store real payment data as soon as dialog opens
                 paymentData = {
-                    razorpay_payment_id: response.razorpay_payment_id || 'init_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15),
-                    razorpay_order_id: response.razorpay_order_id || orderData.orderId,
-                    razorpay_signature: response.razorpay_signature || 'init_sig_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15)
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_signature: null
                 };
                 console.log('🔵 [SUBSCRIPTION] Payment data captured:', paymentData);
             });
@@ -508,16 +455,13 @@ const Profile = () => {
             rzp.on('payment.failed', function (response) {
                 console.log('🔵 [SUBSCRIPTION] Payment failed:', response);
                 paymentInitiated = true;
-                // Store failed payment data - always try to get payment ID
-                const failedPaymentId = response.error?.metadata?.payment_id || response.razorpay_payment_id || 'failed_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
+                // Use real payment and order IDs from Razorpay
                 paymentData = {
-                    razorpay_payment_id: failedPaymentId,
-                    razorpay_order_id: response.razorpay_order_id || orderData.orderId
-                    // No signature for failed payments as it can't be verified
+                    razorpay_payment_id: response.error?.metadata?.payment_id || response.razorpay_payment_id,
+                    razorpay_order_id: response.error?.metadata?.order_id || response.razorpay_order_id,
+                    razorpay_signature: null // No signature for failed/cancelled
                 };
                 console.log('🔵 [SUBSCRIPTION] Failed payment data:', paymentData);
-                
-                // Send failed payment data to backend
                 subscribeToPlan(planName, paymentData, 'failed', response.error.description || 'Payment failed')
                 .then(() => {
                     toast.error('Payment failed: ' + (response.error.description || 'Unknown error'));
@@ -527,6 +471,7 @@ const Profile = () => {
                     toast.error('Failed to record failed payment');
                 })
                 .finally(() => {
+                    refetchPlanAndUsage();
                     setIsPaymentLoading(false);
                     setShowUpgrade(false);
                     setSelectedPlanFromQuery(null);
@@ -536,16 +481,12 @@ const Profile = () => {
             rzp.on('payment.cancelled', function (response) {
                 console.log('🔵 [SUBSCRIPTION] Payment cancelled:', response);
                 paymentInitiated = true;
-                // Store cancelled payment data - always try to get payment ID
-                const cancelledPaymentId = response.error?.metadata?.payment_id || response.razorpay_payment_id || 'cancelled_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15);
                 paymentData = {
-                    razorpay_payment_id: cancelledPaymentId,
-                    razorpay_order_id: response.razorpay_order_id || orderData.orderId
-                    // No signature for cancelled payments as it can't be verified
+                    razorpay_payment_id: response.error?.metadata?.payment_id || response.razorpay_payment_id,
+                    razorpay_order_id: response.error?.metadata?.order_id || response.razorpay_order_id,
+                    razorpay_signature: null
                 };
                 console.log('🔵 [SUBSCRIPTION] Cancelled payment data:', paymentData);
-                
-                // Send cancelled payment data to backend
                 subscribeToPlan(planName, paymentData, 'failed', 'Payment cancelled by user')
                 .then(() => {
                     toast.error('Payment was cancelled');
@@ -555,6 +496,7 @@ const Profile = () => {
                     toast.error('Failed to record cancelled payment');
                 })
                 .finally(() => {
+                    refetchPlanAndUsage();
                     setIsPaymentLoading(false);
             setShowUpgrade(false);
             setSelectedPlanFromQuery(null);
@@ -578,6 +520,12 @@ const Profile = () => {
     // Handle paid plan subscription
     const handleRazorpayPayment = async () => {
         await handleSubscription(selectedPlan);
+    };
+
+    // Refetch subscription and usage after every payment modal event
+    const refetchPlanAndUsage = async () => {
+        await fetchPlanAndUsage();
+        await fetchUsageData();
     };
 
     if (loading) {
@@ -1063,7 +1011,7 @@ const Profile = () => {
                                             <ul className="space-y-2 text-xs">
                                                 {planData.paymentHistory.slice(0, 3).map((p, idx) => (
                                                     <li key={p._id || idx} className="flex justify-between items-center bg-gray-50/80 rounded-lg px-3 py-2">
-                                                        <span>{new Date(p.date).toLocaleDateString()}</span>
+                                                        <span>{new Date(p.date).toLocaleString()}</span>
                                                         <span>₹{(p.amount / 100).toLocaleString('en-IN', {minimumFractionDigits: 0})}</span>
                                                         <span className={p.status === 'success' ? 'text-green-600' : 'text-red-600'}>{p.status}</span>
                                                     </li>
@@ -1278,7 +1226,7 @@ const Profile = () => {
                                     {planData.paymentHistory.map((p, idx) => (
                                         <tr key={p._id || idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                                             <td className="py-1 sm:py-2 px-2 sm:px-4">{idx + 1}</td>
-                                            <td className="py-1 sm:py-2 px-2 sm:px-4">{new Date(p.date).toLocaleDateString()}</td>
+                                            <td className="py-1 sm:py-2 px-2 sm:px-4">{new Date(p.date).toLocaleString()}</td>
                                             <td className="py-1 sm:py-2 px-2 sm:px-4">₹{(p.amount / 100).toLocaleString('en-IN', {minimumFractionDigits: 0})}</td>
                                             <td className={p.status === 'success' ? 'text-green-600' : 'text-red-600'}>{p.status}</td>
                                         </tr>
