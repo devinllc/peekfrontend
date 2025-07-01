@@ -66,8 +66,8 @@ const ManufacturingDashboard = ({ file, analysis }) => {
 
     // Helper: Round numbers to 4 decimals
     const round4 = (v) => {
-        if (typeof v === 'number') return Number(v.toFixed(4));
-        if (typeof v === 'string' && !isNaN(Number(v))) return Number(Number(v).toFixed(4));
+        if (typeof v === 'number') return Number(v.toFixed(3));
+        if (typeof v === 'string' && !isNaN(Number(v))) return Number(Number(v).toFixed(3));
         return v;
     };
 
@@ -422,7 +422,30 @@ const ManufacturingDashboard = ({ file, analysis }) => {
         );
     };
 
-    // Helper: Render Summary
+    const friendlyLabel = (key) => {
+        const map = {
+            mean: "Average",
+            median: "Middle Value",
+            std: "Variation",
+            stddev: "Variation",
+            min: "Minimum",
+            max: "Maximum",
+            sum: "Total",
+            count: "Total Entries",
+            mode: "Most Common",
+            percentile: "Percentile",
+            range: "Range",
+            variance: "Spread",
+            skew: "Skewness",
+            kurtosis: "Peakedness",
+        };
+        const cleaned = key.replace(/_/g, '').toLowerCase();
+        for (const [stat, label] of Object.entries(map)) {
+            if (cleaned === stat || cleaned.endsWith(stat) || cleaned.startsWith(stat)) return label;
+        }
+        return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    };
+
     const renderSummary = (summary) => {
         if (!summary || Object.keys(summary).length === 0) return null;
         return (
@@ -435,26 +458,99 @@ const ManufacturingDashboard = ({ file, analysis }) => {
                 </button>
                 {showSummary && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {Object.entries(summary).map(([field, details]) => (
+                        {Object.entries(summary).map(([field, details]) => {
+                            const isPercentField = field.toLowerCase().includes('%') || field.toLowerCase().includes('percent');
+                            const isStatsObject = (obj) => {
+                                if (!obj || typeof obj !== 'object') return false;
+                                const statKeys = ['min', 'max', 'mean', 'median', 'stddev', 'count', 'sum'];
+                                return statKeys.some(k => k in obj);
+                            };
+                            const renderStatsObject = (obj) => (
+                                <ul className="text-sm space-y-1">
+                                    {Object.entries(obj).map(([k, v]) => (
+                                        <li key={k}>
+                                            <span className="font-semibold">{k.toLowerCase() === 'count' ? 'Total Entries' : friendlyLabel(k)}:</span> {typeof v === 'number' ? round4(v) : String(v)}
+                                        </li>
+                                    ))}
+                                </ul>
+                            );
+                            return (
                             <div key={field} className="bg-[#F9F4FF] rounded-2xl p-4 border border-[#7400B8]/10">
-                                <h4 className="font-bold mb-2">{field}</h4>
-                                {/* Numeric summary */}
+                                    <h4 className="font-bold mb-2">{friendlyLabel(field)}</h4>
+                                    {details && typeof details === 'object' && 'type' in details && (
+                                        <>
                                 {details.type === 'numeric' && (
                                     <ul className="text-sm space-y-1">
-                                        <li><span className="font-semibold">Count:</span> {details.count}</li>
-                                        <li><span className="font-semibold">Min:</span> {details.min}</li>
-                                        <li><span className="font-semibold">Max:</span> {details.max}</li>
-                                        <li><span className="font-semibold">Mean:</span> {details.mean}</li>
-                                        <li><span className="font-semibold">Median:</span> {details.median}</li>
-                                        <li><span className="font-semibold">Stddev:</span> {details.stddev}</li>
+                                                    {Object.entries(details).map(([statKey, statValue]) => {
+                                                        if (statKey === 'type') return null;
+                                                        if (statKey.toLowerCase().includes('variation')) {
+                                                            return (
+                                                                <li key={statKey}><span className="font-semibold">{friendlyLabel(statKey)}:</span> {isPercentField ? `${round4(statValue)}%` : round4(statValue)}</li>
+                                                            );
+                                                        }
+                                                        if (Array.isArray(statValue) && statValue.length > 0 && typeof statValue[0] === 'object') {
+                                                            const columns = Object.keys(statValue[0]);
+                                                            return (
+                                                                <li key={statKey} className="mt-2">
+                                                                    <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                    <div className="overflow-x-auto mt-1">
+                                                                        <table className="min-w-full text-xs border border-gray-200 rounded">
+                                                                            <thead>
+                                                                                <tr>
+                                                                                    {columns.map(col => (
+                                                                                        <th key={col} className="px-2 py-1 border-b text-left">{friendlyLabel(col)}</th>
+                                                                                    ))}
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                {statValue.map((row, i) => (
+                                                                                    <tr key={i}>
+                                                                                        {columns.map(col => (
+                                                                                            <td key={col} className="px-2 py-1 border-b">{row[col]}</td>
+                                                                                        ))}
+                                                                                    </tr>
+                                                                                ))}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                </li>
+                                                            );
+                                                        }
+                                                        if (Array.isArray(statValue) && statValue.length > 0 && typeof statValue[0] !== 'object') {
+                                                            return (
+                                                                <li key={statKey} className="mt-2">
+                                                                    <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                    <ul className="ml-2 list-disc list-inside">
+                                                                        {statValue.map((v, idx) => (
+                                                                            <li key={idx}>{String(v)}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </li>
+                                                            );
+                                                        }
+                                                        if (typeof statValue === 'object' && statValue !== null) {
+                                                            return (
+                                                                <li key={statKey} className="mt-2">
+                                                                    <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                    <ul className="ml-2">
+                                                                        {Object.entries(statValue).map(([k, v]) => (
+                                                                            <li key={k}><span className="font-semibold">{friendlyLabel(k)}:</span> {String(v)}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </li>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <li key={statKey}><span className="font-semibold">{statKey.toLowerCase() === 'count' ? 'Total Entries' : friendlyLabel(statKey)}:</span> {String(statValue)}</li>
+                                                        );
+                                                    })}
                                     </ul>
                                 )}
-                                {/* Categorical summary */}
-                                {details.type === 'categorical' && (
-                                    <>
-                                        <div className="mb-2 text-sm"><span className="font-semibold">Unique Count:</span> {details.unique_count}</div>
-                                        <div className="overflow-x-auto">
-                                            <table className="min-w-full text-xs">
+                                            {details.type === 'boolean' && Array.isArray(details.counts) && (
+                                                <div className="mt-2">
+                                                    <span className="font-semibold">Counts:</span>
+                                                    <div className="overflow-x-auto mt-1">
+                                                        <table className="min-w-full text-xs border border-gray-200 rounded">
                                                 <thead>
                                                     <tr>
                                                         <th className="px-2 py-1 border-b text-left">Value</th>
@@ -462,40 +558,129 @@ const ManufacturingDashboard = ({ file, analysis }) => {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {details.top_values && details.top_values.map((v, i) => (
+                                                                {details.counts.map((row, i) => (
+                                                                    <tr key={i}>
+                                                                        <td className="px-2 py-1 border-b">{row.value === true ? 'Yes' : row.value === false ? 'No' : String(row.value)}</td>
+                                                                        <td className="px-2 py-1 border-b">{row.count}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {details.type === 'categorical' && (
+                                                <ul className="text-sm space-y-1">
+                                                    {Object.entries(details).filter(([statKey]) => statKey !== 'type').map(([statKey, statValue]) => {
+                                                        if (Array.isArray(statValue) && statValue.length > 0 && typeof statValue[0] === 'object') {
+                                                            const columns = Object.keys(statValue[0]);
+                                                            return (
+                                                                <li key={statKey} className="mt-2">
+                                                                    <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                    <div className="overflow-x-auto mt-1">
+                                                                        <table className="min-w-full text-xs border border-gray-200 rounded">
+                                                                            <thead>
+                                                                                <tr>
+                                                                                    {columns.map(col => (
+                                                                                        <th key={col} className="px-2 py-1 border-b text-left">{friendlyLabel(col)}</th>
+                                                                                    ))}
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                {statValue.map((row, i) => (
                                                         <tr key={i}>
-                                                            <td className="px-2 py-1 border-b">{v.value}</td>
-                                                            <td className="px-2 py-1 border-b">{v.count}</td>
+                                                                                        {columns.map(col => (
+                                                                                            <td key={col} className="px-2 py-1 border-b">{row[col]}</td>
+                                                                                        ))}
                                                         </tr>
                                                     ))}
                                                 </tbody>
                                             </table>
                                     </div>
+                                                                </li>
+                                                            );
+                                                        }
+                                                        if (Array.isArray(statValue) && statValue.length > 0 && typeof statValue[0] !== 'object') {
+                                                            return (
+                                                                <li key={statKey} className="mt-2">
+                                                                    <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                    <ul className="ml-2 list-disc list-inside">
+                                                                        {statValue.map((v, idx) => (
+                                                                            <li key={idx}>{String(v)}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </li>
+                                                            );
+                                                        }
+                                                        if (typeof statValue === 'object' && statValue !== null) {
+                                                            return (
+                                                                <li key={statKey} className="mt-2">
+                                                                    <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                    <ul className="ml-2">
+                                                                        {Object.entries(statValue).map(([k, v]) => (
+                                                                            <li key={k}><span className="font-semibold">{friendlyLabel(k)}:</span> {String(v)}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </li>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <li key={statKey}><span className="font-semibold">{statKey.toLowerCase() === 'count' ? 'Total Entries' : friendlyLabel(statKey)}:</span> {String(statValue)}</li>
+                                                        );
+                                                    })}
+                                                </ul>
+                                            )}
                                     </>
                                 )}
-                                {/* Boolean summary */}
-                                {details.type === 'boolean' && (
-                                    <div className="overflow-x-auto">
-                                        <table className="min-w-full text-xs">
+                                    {details && typeof details === 'object' && !('type' in details) && isStatsObject(details) && renderStatsObject(details)}
+                                    {Array.isArray(details) && details.length > 0 && typeof details[0] === 'object' && (() => {
+                                        const columns = Object.keys(details[0]);
+                                        return (
+                                            <div className="overflow-x-auto mt-1">
+                                                <table className="min-w-full text-xs border border-gray-200 rounded">
                                             <thead>
                                                 <tr>
-                                                    <th className="px-2 py-1 border-b text-left">Value</th>
-                                                    <th className="px-2 py-1 border-b text-left">Count</th>
+                                                            {columns.map(col => (
+                                                                <th key={col} className="px-2 py-1 border-b text-left">{friendlyLabel(col)}</th>
+                                                            ))}
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {details.counts && details.counts.map((v, i) => (
+                                                        {details.map((row, i) => (
                                                     <tr key={i}>
-                                                        <td className="px-2 py-1 border-b">{String(v.value)}</td>
-                                                        <td className="px-2 py-1 border-b">{v.count}</td>
+                                                                {columns.map(col => (
+                                                                    <td key={col} className="px-2 py-1 border-b">{row[col]}</td>
+                                                                ))}
                                                     </tr>
                                                 ))}
                                             </tbody>
                                         </table>
                                     </div>
+                                        );
+                                    })()}
+                                    {Array.isArray(details) && details.length > 0 && typeof details[0] !== 'object' && (
+                                        <ul className="ml-2 list-disc list-inside">
+                                            {details.map((v, idx) => (
+                                                <li key={idx}>{String(v)}</li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                    {details && typeof details === 'object' && !('type' in details) && !isStatsObject(details) && (
+                                        <ul className="text-sm space-y-1">
+                                            {Object.entries(details).map(([k, v]) => (
+                                                <li key={k}><span className="font-semibold">{friendlyLabel(k)}:</span> {String(v)}</li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                    {(!details || typeof details !== 'object') && (
+                                        <div className="text-sm">{String(details)}</div>
+                                    )}
+                                    {(!details || (typeof details === 'object' && Object.keys(details).length === 0)) && (
+                                        <div className="text-gray-500 text-sm">No data available.</div>
                                 )}
                                 </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
                     </div>

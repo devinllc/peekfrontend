@@ -2,8 +2,8 @@ import { motion } from 'framer-motion';
 import { FiUpload, FiBarChart2, FiZap, FiMessageSquare, FiChevronRight } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
-const steps = [
-    {
+    const steps = [
+        {
         title: 'Upload Your File',
         description: 'Choose your data file (Excel, CSV, etc.) and upload it in one click.',
         icon: <FiUpload className="w-12 h-12 text-[#7400B8]" />,
@@ -66,7 +66,7 @@ const HowItWorksSection = () => {
                                 {/* Icon */}
                                 <div className="flex justify-center mb-6 mt-4">
                                     <div className="w-20 h-20 bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                                        {step.icon}
+                                            {step.icon}
                                     </div>
                                 </div>
                                 
@@ -99,8 +99,8 @@ const HowItWorksSection = () => {
                             Ask AI about sample files or download them to test PeekBI's analysis features. 
                             For best results, use our sample files!
                         </p>
-                    </div>
-                    
+            </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                         {[
                             { name: 'Retail', color: 'from-[#7400B8] to-[#9B4DCA]' },

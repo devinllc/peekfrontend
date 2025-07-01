@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { FiUser, FiMail, FiCalendar, FiShield, FiDatabase, FiCreditCard, FiCheck, FiX, FiEdit, FiSave, FiLoader, FiPhone, FiBriefcase, FiArrowUpCircle } from 'react-icons/fi';
@@ -299,8 +299,6 @@ const Profile = () => {
             requestBody.razorpaySignature = paymentData.razorpay_signature;
         }
 
-        console.log('🔵 [SUBSCRIPTION] Sending to backend:', requestBody);
-
         const response = await fetch(`${API_BASE_URL}/subscribe/`, {
             method: 'POST',
             headers: {
@@ -328,15 +326,29 @@ const Profile = () => {
         let paymentData = null;
         let orderData = null;
         let paymentInitiated = false;
+        const backendCalledRef = { current: false };
+
+        // Helper to call backend only once
+        const callBackendOnce = async (status, paymentDataArg, failReason = '') => {
+            if (backendCalledRef.current) return;
+            backendCalledRef.current = true;
+            try {
+                await subscribeToPlan(planName, paymentDataArg, status, failReason);
+            } catch (error) {
+                toast.error(error.message || 'Subscription failed');
+            } finally {
+                refetchPlanAndUsage();
+                setIsPaymentLoading(false);
+                setShowUpgrade(false);
+                setSelectedPlanFromQuery(null);
+            }
+        };
 
         try {
             // Step 1: Create order with backend
-            console.log('🔵 [SUBSCRIPTION] Creating order for plan:', planName);
             orderData = await createOrder(planName);
-            console.log('🔵 [SUBSCRIPTION] Order created:', orderData);
 
             // Step 2: Load Razorpay SDK
-            console.log('🔵 [SUBSCRIPTION] Loading Razorpay SDK...');
             const Razorpay = await loadRazorpaySDK();
 
             // Step 3: Configure Razorpay options
@@ -360,153 +372,80 @@ const Profile = () => {
                     color: '#7400B8'
                 },
                 handler: async function (response) {
-                    console.log('🔵 [SUBSCRIPTION] Payment success:', response);
-                    paymentData = response; // Store payment data
+                    paymentData = response;
                     paymentInitiated = true;
-                    
-                    try {
-                        // Step 4: Send success data to backend
-                        await subscribeToPlan(planName, response, 'success');
-                        toast.success('Plan subscribed successfully!');
-                        
-                        // Refresh plan data
-                        const planRes = await axios.get(`${API_BASE_URL}/subscribe/`, { 
-                            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } 
-                        });
-                        setPlanData(planRes.data);
-                        await fetchUsageData();
-                        
-        } catch (error) {
-                        console.error('❌ [SUBSCRIPTION] Success handler error:', error);
-                        toast.error(error.message || 'Subscription failed');
-        } finally {
-                        refetchPlanAndUsage();
-            setIsPaymentLoading(false);
-                        setShowUpgrade(false);
-                        setSelectedPlanFromQuery(null);
-                    }
+                    await callBackendOnce('success', response);
+                    toast.success('Plan subscribed successfully!');
                 },
                 modal: {
                     ondismiss: function () {
-                        console.log('🔵 [SUBSCRIPTION] Payment cancelled/dismissed');
-                        console.log('🔵 [SUBSCRIPTION] Payment initiated:', paymentInitiated);
-                        console.log('🔵 [SUBSCRIPTION] Current payment data:', paymentData);
                         setIsPaymentLoading(false);
-                        // Only send to backend if we have real payment_id and order_id
-                        if (paymentData && paymentData.razorpay_payment_id && paymentData.razorpay_order_id) {
-                            console.log('🔵 [SUBSCRIPTION] Sending real payment data on dismiss:', paymentData);
-                            subscribeToPlan(planName, paymentData, 'failed', 'Payment dialog dismissed by user')
-                            .then(() => {
-                                toast.error('Payment was cancelled');
-                            })
-                            .catch((error) => {
-                                console.error('❌ [SUBSCRIPTION] Cancel handler error:', error);
-                                toast.error('Failed to record cancelled payment');
-                            })
-                            .finally(() => {
-                                refetchPlanAndUsage();
-                                setShowUpgrade(false);
-                                setSelectedPlanFromQuery(null);
-                            });
-                        } else {
-                            // No real payment attempt, just close modal
-                            setShowUpgrade(false);
-                            setSelectedPlanFromQuery(null);
+                        // Always call backend on dismiss if not already called
+                        if (!backendCalledRef.current) {
+                            let transactionData = {
+                                razorpay_order_id: orderData.orderId,
+                                razorpay_signature: null
+                            };
+                            if (paymentData && paymentData.razorpay_payment_id) {
+                                transactionData.razorpay_payment_id = paymentData.razorpay_payment_id;
+                            }
+                            callBackendOnce('failed', transactionData, 'Payment dialog dismissed by user');
                         }
                     }
                 }
             };
 
             // Step 6: Open Razorpay checkout
-            console.log('🔵 [SUBSCRIPTION] Opening Razorpay checkout...');
             const rzp = new Razorpay(options);
-            
-            // Add comprehensive event listeners to capture all payment data
-            rzp.on('modal.open', function (response) {
-                console.log('🔵 [SUBSCRIPTION] Modal opened:', response);
-                // Payment dialog is now open - payment record created in Razorpay
+
+            // Add event listeners to capture all payment data
+            rzp.on('modal.open', function () {
                 paymentInitiated = true;
             });
-            
+
             rzp.on('payment.init', function (response) {
-                console.log('🔵 [SUBSCRIPTION] Payment initiated:', response);
                 paymentInitiated = true;
-                // Store real payment data as soon as dialog opens
                 paymentData = {
                     razorpay_payment_id: response.razorpay_payment_id,
                     razorpay_order_id: response.razorpay_order_id,
                     razorpay_signature: null
                 };
-                console.log('🔵 [SUBSCRIPTION] Payment data captured:', paymentData);
             });
-            
+
             rzp.on('payment.authorized', function (response) {
-                console.log('🔵 [SUBSCRIPTION] Payment authorized:', response);
                 paymentInitiated = true;
-                // Update payment data with final values
                 paymentData = {
                     razorpay_payment_id: response.razorpay_payment_id || paymentData?.razorpay_payment_id || 'auth_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15),
                     razorpay_order_id: response.razorpay_order_id || paymentData?.razorpay_order_id || orderData.orderId,
                     razorpay_signature: response.razorpay_signature || paymentData?.razorpay_signature || 'auth_sig_' + Date.now() + '_' + Math.random().toString(36).substring(2, 15)
                 };
-                console.log('🔵 [SUBSCRIPTION] Final payment data:', paymentData);
             });
-            
+
             rzp.on('payment.failed', function (response) {
-                console.log('🔵 [SUBSCRIPTION] Payment failed:', response);
-                paymentInitiated = true;
-                // Use real payment and order IDs from Razorpay
-                paymentData = {
-                    razorpay_payment_id: response.error?.metadata?.payment_id || response.razorpay_payment_id,
-                    razorpay_order_id: response.error?.metadata?.order_id || response.razorpay_order_id,
-                    razorpay_signature: null // No signature for failed/cancelled
-                };
-                console.log('🔵 [SUBSCRIPTION] Failed payment data:', paymentData);
-                subscribeToPlan(planName, paymentData, 'failed', response.error.description || 'Payment failed')
-                .then(() => {
-                    toast.error('Payment failed: ' + (response.error.description || 'Unknown error'));
-                })
-                .catch((error) => {
-                    console.error('❌ [SUBSCRIPTION] Failed payment handler error:', error);
-                    toast.error('Failed to record failed payment');
-                })
-                .finally(() => {
-                    refetchPlanAndUsage();
-                    setIsPaymentLoading(false);
-                    setShowUpgrade(false);
-                    setSelectedPlanFromQuery(null);
-                });
-            });
-            
-            rzp.on('payment.cancelled', function (response) {
-                console.log('🔵 [SUBSCRIPTION] Payment cancelled:', response);
                 paymentInitiated = true;
                 paymentData = {
                     razorpay_payment_id: response.error?.metadata?.payment_id || response.razorpay_payment_id,
                     razorpay_order_id: response.error?.metadata?.order_id || response.razorpay_order_id,
                     razorpay_signature: null
                 };
-                console.log('🔵 [SUBSCRIPTION] Cancelled payment data:', paymentData);
-                subscribeToPlan(planName, paymentData, 'failed', 'Payment cancelled by user')
-                .then(() => {
-                    toast.error('Payment was cancelled');
-                })
-                .catch((error) => {
-                    console.error('❌ [SUBSCRIPTION] Cancelled payment handler error:', error);
-                    toast.error('Failed to record cancelled payment');
-                })
-                .finally(() => {
-                    refetchPlanAndUsage();
-                    setIsPaymentLoading(false);
-            setShowUpgrade(false);
-            setSelectedPlanFromQuery(null);
-                });
+                callBackendOnce('failed', paymentData, response.error.description || 'Payment failed');
+                toast.error('Payment failed: ' + (response.error.description || 'Unknown error'));
             });
-            
+
+            rzp.on('payment.cancelled', function (response) {
+                paymentInitiated = true;
+                paymentData = {
+                    razorpay_payment_id: response.error?.metadata?.payment_id || response.razorpay_payment_id,
+                    razorpay_order_id: response.error?.metadata?.order_id || response.razorpay_order_id,
+                    razorpay_signature: null
+                };
+                callBackendOnce('failed', paymentData, 'Payment cancelled by user');
+                toast.error('Payment was cancelled');
+            });
+
             rzp.open();
 
         } catch (error) {
-            console.error('❌ [SUBSCRIPTION] Error:', error);
             toast.error(error.message || 'Failed to start subscription process');
             setIsPaymentLoading(false);
         }
@@ -525,7 +464,7 @@ const Profile = () => {
     // Refetch subscription and usage after every payment modal event
     const refetchPlanAndUsage = async () => {
         await fetchPlanAndUsage();
-        await fetchUsageData();
+            await fetchUsageData();
     };
 
     if (loading) {

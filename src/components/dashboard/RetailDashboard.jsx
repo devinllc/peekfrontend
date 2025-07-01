@@ -8,6 +8,39 @@ import {
 import AIAnalyst from './AIAnalyst';
 
 const RetailDashboard = ({ file, analysis }) => {
+    // Helper function to round numbers to 3 decimal places
+    const round4 = (v) => {
+        if (typeof v === 'number') return Number(v.toFixed(3));
+        if (typeof v === 'string' && !isNaN(Number(v))) return Number(Number(v).toFixed(3));
+        return v;
+    };
+
+    // Helper function to convert technical/statistical terms to user-friendly labels
+    const friendlyLabel = (key) => {
+        const map = {
+            mean: "Average",
+            median: "Middle Value",
+            std: "Variation",
+            min: "Minimum",
+            max: "Maximum",
+            sum: "Total",
+            count: "Count",
+            mode: "Most Common",
+            percentile: "Percentile",
+            range: "Range",
+            variance: "Spread",
+            skew: "Skewness",
+            kurtosis: "Peakedness",
+            // Add more as needed
+        };
+        const cleaned = key.replace(/_/g, '').toLowerCase();
+        for (const [stat, label] of Object.entries(map)) {
+            if (cleaned === stat || cleaned.endsWith(stat) || cleaned.startsWith(stat)) return label;
+        }
+        // Fallback: prettify
+        return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    };
+
     if (!file || !analysis) {
         return (
             <div className="text-center p-8">
@@ -20,7 +53,7 @@ const RetailDashboard = ({ file, analysis }) => {
     
     // Enhanced color palette for pie charts
     const pieColors = [
-        '#7400B8', '#9B4DCA', '#C77DFF', '#E0AAFF', '#F8F4FF',
+        '#7400B8', '#9B4DCA', '#C77DFF', '#E0AAFF', '#E0AAFF',
         '#8B5CF6', '#A855F7', '#C084FC', '#DDD6FE', '#F3E8FF',
         '#7C3AED', '#9333EA', '#A855F7', '#C084FC', '#DDD6FE'
     ];
@@ -131,8 +164,8 @@ const RetailDashboard = ({ file, analysis }) => {
                                 </div>
                                 <p className="text-2xl font-bold text-[#7400B8]">
                                     {key.includes('total') || key.includes('avg') || key.includes('median') ? 
-                                      `₹${typeof value === 'number' ? value.toLocaleString() : value}` : 
-                                      typeof value === 'number' ? value.toLocaleString() : value}
+                                      `₹${typeof value === 'number' ? round4(value).toLocaleString() : value}` : 
+                                      typeof value === 'number' ? round4(value).toLocaleString() : value}
                                 </p>
                             </motion.div>
                         ))}
@@ -187,7 +220,7 @@ const RetailDashboard = ({ file, analysis }) => {
                             <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                                 <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Totals
                             </h3>
-                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-6 min-h-0 items-center justify-center">
+                            <div className="flex-1 grid grid-cols-1 gap-6 min-h-0 items-center justify-center">
                                 {Object.entries(analysis.insights.totals).map(([key, value], idx) => {
                                     // Pie chart for array of objects with two keys (e.g., sales_by_region)
                                     if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object' && Object.keys(value[0]).length === 2) {
@@ -195,11 +228,12 @@ const RetailDashboard = ({ file, analysis }) => {
                                         return (
                                             <div
                                                 key={key}
-                                                className="col-span-1 flex flex-col items-center justify-center h-full w-full flex-1 overflow-visible"
+                                                className={`${Object.keys(analysis.insights.totals).length === 1 ? 'col-span-1 max-w-lg mx-auto' : 'col-span-1'} flex flex-col items-center justify-center h-full w-full flex-1 overflow-visible`}
                                             >
-                                                <h4 className="font-bold mb-2 text-center w-full break-words">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
-                                                <div className="flex-1 flex items-center justify-center w-full h-full overflow-visible">
-                                                    <ResponsiveContainer width="100%" height="100%">
+                                                <h4 className="font-bold mb-4 text-center w-full break-words">{friendlyLabel(key)}</h4>
+                                                <div className="w-full flex justify-center items-center flex-1">
+                                                    <div className="w-full h-full flex justify-center items-center">
+                                                        <ResponsiveContainer width="100%" height={300}>
                                                         <PieChart>
                                                             <Pie
                                                                 data={value}
@@ -207,7 +241,7 @@ const RetailDashboard = ({ file, analysis }) => {
                                                                 nameKey={nameKey}
                                                                 cx="50%"
                                                                 cy="50%"
-                                                                outerRadius="80%"
+                                                                    outerRadius="70%"
                                                                 fill="#7400B8"
                                                                 label={({ percent, name }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                                                             >
@@ -216,18 +250,103 @@ const RetailDashboard = ({ file, analysis }) => {
                                                                 ))}
                                                             </Pie>
                                                             <Tooltip formatter={(v, n) => [`₹${v.toLocaleString()}`, n]} />
-                                                            <Legend verticalAlign="bottom" align="center" wrapperStyle={{ textAlign: 'center', width: '100%' }} height={36} />
+                                                                <Legend verticalAlign="bottom" align="center" wrapperStyle={{ textAlign: 'center', width: '100%' }} height={60} />
                                                         </PieChart>
                                                     </ResponsiveContainer>
+                                                    </div>
                                                 </div>
                                             </div>
                                         );
                                     }
+                                    
+                                    // Handle array data that can be converted to pie charts (like Sales By Category, Sales By Region)
+                                    if (Array.isArray(value) && value.length >= 2 && Array.isArray(value[0]) && Array.isArray(value[1])) {
+                                        const [labels, data] = value;
+                                        const pieData = labels.map((label, index) => ({
+                                            name: label,
+                                            value: data[index] || 0
+                                        }));
+                                        
+                                        return (
+                                            <div
+                                                key={key}
+                                                className="col-span-1 max-w-lg mx-auto flex flex-col items-center justify-center h-full w-full flex-1 overflow-visible"
+                                            >
+                                                <h4 className="font-bold mb-4 text-center w-full break-words">{friendlyLabel(key)}</h4>
+                                                <div className="w-full flex justify-center items-center flex-1">
+                                                    <div className="w-full h-full flex justify-center items-center">
+                                                        <ResponsiveContainer width="100%" height={300}>
+                                                            <PieChart>
+                                                                <Pie
+                                                                    data={pieData}
+                                                                    dataKey="value"
+                                                                    nameKey="name"
+                                                                    cx="50%"
+                                                                    cy="50%"
+                                                                    outerRadius="70%"
+                                                                    fill="#7400B8"
+                                                                    label={({ percent, name }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                                                >
+                                                                    {pieData.map((entry, i) => (
+                                                                        <Cell key={`cell-${i}`} fill={pieColors[i % pieColors.length]} />
+                                                                    ))}
+                                                                </Pie>
+                                                                <Tooltip formatter={(v, n) => [`₹${v.toLocaleString()}`, n]} />
+                                                                <Legend verticalAlign="bottom" align="center" wrapperStyle={{ textAlign: 'center', width: '100%' }} height={60} />
+                                                            </PieChart>
+                                                        </ResponsiveContainer>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    
+                                    // Handle object with Region and Sales arrays
+                                    if (typeof value === 'object' && value !== null && value.Region && value.Sales && Array.isArray(value.Region) && Array.isArray(value.Sales)) {
+                                        const pieData = value.Region.map((region, index) => ({
+                                            name: region,
+                                            value: value.Sales[index] || 0
+                                        }));
+                                        
+                                        return (
+                                            <div
+                                                key={key}
+                                                className="col-span-1 max-w-lg mx-auto flex flex-col items-center justify-center h-full w-full flex-1 overflow-visible"
+                                            >
+                                                <h4 className="font-bold mb-4 text-center w-full break-words">{friendlyLabel(key)}</h4>
+                                                <div className="w-full flex justify-center items-center flex-1">
+                                                    <div className="w-full h-full flex justify-center items-center">
+                                                        <ResponsiveContainer width="100%" height={300}>
+                                                            <PieChart>
+                                                                <Pie
+                                                                    data={pieData}
+                                                                    dataKey="value"
+                                                                    nameKey="name"
+                                                                    cx="50%"
+                                                                    cy="50%"
+                                                                    outerRadius="70%"
+                                                                    fill="#7400B8"
+                                                                    label={({ percent, name }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                                                >
+                                                                    {pieData.map((entry, i) => (
+                                                                        <Cell key={`cell-${i}`} fill={pieColors[i % pieColors.length]} />
+                                                                    ))}
+                                                                </Pie>
+                                                                <Tooltip formatter={(v, n) => [`₹${v.toLocaleString()}`, n]} />
+                                                                <Legend verticalAlign="bottom" align="center" wrapperStyle={{ textAlign: 'center', width: '100%' }} height={60} />
+                                                            </PieChart>
+                                                        </ResponsiveContainer>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    
                                     // Card for primitives/objects
                                     if (typeof value === 'object' && value !== null) {
                                         return (
-                                            <div key={key} className="col-span-1 h-full w-full">
-                                                <h4 className="font-bold mb-2">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                            <div key={key} className={`${Object.keys(analysis.insights.totals).length === 1 ? 'col-span-1 max-w-lg mx-auto' : 'col-span-1'} h-full w-full`}>
+                                                <h4 className="font-bold mb-2">{friendlyLabel(key)}</h4>
                                                 <ul className="list-disc list-inside">
                                                     {Object.entries(value).map(([k, v]) => (
                                                         <li key={k}><span className="font-semibold">{k}:</span> {typeof v === 'object' ? JSON.stringify(v) : String(v)}</li>
@@ -238,8 +357,8 @@ const RetailDashboard = ({ file, analysis }) => {
                                     }
                                     // Primitive
                                     return (
-                                        <div key={key} className="col-span-1 flex flex-col items-start justify-center h-full w-full">
-                                            <h4 className="font-bold mb-2">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
+                                        <div key={key} className={`${Object.keys(analysis.insights.totals).length === 1 ? 'col-span-1 max-w-lg mx-auto' : 'col-span-1'} flex flex-col items-center justify-center h-full w-full`}>
+                                            <h4 className="font-bold mb-2">{friendlyLabel(key)}</h4>
                                             <p className="text-2xl font-bold text-[#7400B8]">{String(value)}</p>
                                         </div>
                                     );
@@ -806,26 +925,104 @@ const RetailDashboard = ({ file, analysis }) => {
                     {showSummary && (
                         analysis.summary ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                                {Object.entries(analysis.summary).map(([field, details]) => (
+                                {Object.entries(analysis.summary).map(([field, details]) => {
+                                    // Detect if this field is a percentage field
+                                    const isPercentField = field.toLowerCase().includes('%') || field.toLowerCase().includes('percent');
+                                    // Helper: check if object is a stats object (min, max, mean, median, stddev, etc.)
+                                    const isStatsObject = (obj) => {
+                                        if (!obj || typeof obj !== 'object') return false;
+                                        const statKeys = ['min', 'max', 'mean', 'median', 'stddev', 'count', 'sum'];
+                                        return statKeys.some(k => k in obj);
+                                    };
+                                    // Helper: render stats object as a list
+                                    const renderStatsObject = (obj) => (
+                                        <ul className="text-sm space-y-1">
+                                            {Object.entries(obj).map(([k, v]) => (
+                                                <li key={k}>
+                                                    <span className="font-semibold">{k.toLowerCase() === 'count' ? 'Total Entries' : friendlyLabel(k)}:</span> {typeof v === 'number' ? round4(v) : String(v)}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    );
+                                    // Main rendering logic
+                                    return (
                                     <div key={field} className="bg-[#F9F4FF] rounded-2xl p-4 border border-[#7400B8]/10">
-                                        <h4 className="font-bold mb-2">{field}</h4>
-                                        {/* Numeric summary */}
+                                            <h4 className="font-bold mb-2">{friendlyLabel(field)}</h4>
+                                            {/* If details has a type, use existing logic */}
+                                            {details && typeof details === 'object' && 'type' in details && (
+                                                <>
                                         {details.type === 'numeric' && (
                                             <ul className="text-sm space-y-1">
-                                                <li><span className="font-semibold">Count:</span> {details.count}</li>
-                                                <li><span className="font-semibold">Min:</span> {details.min}</li>
-                                                <li><span className="font-semibold">Max:</span> {details.max}</li>
-                                                <li><span className="font-semibold">Mean:</span> {details.mean}</li>
-                                                <li><span className="font-semibold">Median:</span> {details.median}</li>
-                                                <li><span className="font-semibold">Stddev:</span> {details.stddev}</li>
+                                                            {Object.entries(details).map(([statKey, statValue]) => {
+                                                                if (statKey === 'type') return null;
+                                                                if (statKey.toLowerCase().includes('variation')) {
+                                                                    return (
+                                                                        <li key={statKey}><span className="font-semibold">{friendlyLabel(statKey)}:</span> {isPercentField ? `${round4(statValue)}%` : round4(statValue)}</li>
+                                                                    );
+                                                                }
+                                                                if (Array.isArray(statValue) && statValue.length > 0 && typeof statValue[0] === 'object') {
+                                                                    const columns = Object.keys(statValue[0]);
+                                                                    return (
+                                                                        <li key={statKey} className="mt-2">
+                                                                            <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                            <div className="overflow-x-auto mt-1">
+                                                                                <table className="min-w-full text-xs border border-gray-200 rounded">
+                                                                                    <thead>
+                                                                                        <tr>
+                                                                                            {columns.map(col => (
+                                                                                                <th key={col} className="px-2 py-1 border-b text-left">{friendlyLabel(col)}</th>
+                                                                                            ))}
+                                                                                        </tr>
+                                                                                    </thead>
+                                                                                    <tbody>
+                                                                                        {statValue.map((row, i) => (
+                                                                                            <tr key={i}>
+                                                                                                {columns.map(col => (
+                                                                                                    <td key={col} className="px-2 py-1 border-b">{row[col]}</td>
+                                                                                                ))}
+                                                                                            </tr>
+                                                                                        ))}
+                                                                                    </tbody>
+                                                                                </table>
+                                                                            </div>
+                                                                        </li>
+                                                                    );
+                                                                }
+                                                                if (Array.isArray(statValue) && statValue.length > 0 && typeof statValue[0] !== 'object') {
+                                                                    return (
+                                                                        <li key={statKey} className="mt-2">
+                                                                            <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                            <ul className="ml-2 list-disc list-inside">
+                                                                                {statValue.map((v, idx) => (
+                                                                                    <li key={idx}>{String(v)}</li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        </li>
+                                                                    );
+                                                                }
+                                                                if (typeof statValue === 'object' && statValue !== null) {
+                                                                    return (
+                                                                        <li key={statKey} className="mt-2">
+                                                                            <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                            <ul className="ml-2">
+                                                                                {Object.entries(statValue).map(([k, v]) => (
+                                                                                    <li key={k}><span className="font-semibold">{friendlyLabel(k)}:</span> {String(v)}</li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        </li>
+                                                                    );
+                                                                }
+                                                                return (
+                                                                    <li key={statKey}><span className="font-semibold">{statKey.toLowerCase() === 'count' ? 'Total Entries' : friendlyLabel(statKey)}:</span> {String(statValue)}</li>
+                                                                );
+                                                            })}
                                             </ul>
                                         )}
-                                        {/* Categorical summary */}
-                                        {details.type === 'categorical' && (
-                                            <>
-                                                <div className="mb-2 text-sm"><span className="font-semibold">Unique Count:</span> {details.unique_count}</div>
-                                                <div className="overflow-x-auto">
-                                                    <table className="min-w-full text-xs">
+                                                    {details.type === 'boolean' && Array.isArray(details.counts) && (
+                                                        <div className="mt-2">
+                                                            <span className="font-semibold">Counts:</span>
+                                                            <div className="overflow-x-auto mt-1">
+                                                                <table className="min-w-full text-xs border border-gray-200 rounded">
                                                         <thead>
                                                             <tr>
                                                                 <th className="px-2 py-1 border-b text-left">Value</th>
@@ -833,43 +1030,138 @@ const RetailDashboard = ({ file, analysis }) => {
                                                             </tr>
                                                         </thead>
                                                         <tbody>
-                                                            {details.top_values && details.top_values.map((v, i) => (
+                                                                        {details.counts.map((row, i) => (
                                                                 <tr key={i}>
-                                                                    <td className="px-2 py-1 border-b">{v.value}</td>
-                                                                    <td className="px-2 py-1 border-b">{v.count}</td>
+                                                                                <td className="px-2 py-1 border-b">{row.value === true ? 'Yes' : row.value === false ? 'No' : String(row.value)}</td>
+                                                                                <td className="px-2 py-1 border-b">{row.count}</td>
                                                                 </tr>
                                                             ))}
                                                         </tbody>
                                                     </table>
                                                 </div>
-                                            </>
-                                        )}
-                                        {/* Boolean summary */}
-                                        {details.type === 'boolean' && (
-                                            <div className="overflow-x-auto">
-                                                <table className="min-w-full text-xs">
+                                                        </div>
+                                                    )}
+                                                    {details.type === 'categorical' && (
+                                                        <ul className="text-sm space-y-1">
+                                                            {Object.entries(details).filter(([statKey]) => statKey !== 'type').map(([statKey, statValue]) => {
+                                                                if (Array.isArray(statValue) && statValue.length > 0 && typeof statValue[0] === 'object') {
+                                                                    const columns = Object.keys(statValue[0]);
+                                                                    return (
+                                                                        <li key={statKey} className="mt-2">
+                                                                            <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                            <div className="overflow-x-auto mt-1">
+                                                                                <table className="min-w-full text-xs border border-gray-200 rounded">
                                                     <thead>
                                                         <tr>
-                                                            <th className="px-2 py-1 border-b text-left">Value</th>
-                                                            <th className="px-2 py-1 border-b text-left">Count</th>
+                                                                                            {columns.map(col => (
+                                                                                                <th key={col} className="px-2 py-1 border-b text-left">{friendlyLabel(col)}</th>
+                                                                                            ))}
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {details.counts && details.counts.map((v, i) => (
+                                                                                        {statValue.map((row, i) => (
                                                             <tr key={i}>
-                                                                <td className="px-2 py-1 border-b">{String(v.value)}</td>
-                                                                <td className="px-2 py-1 border-b">{v.count}</td>
+                                                                                                {columns.map(col => (
+                                                                                                    <td key={col} className="px-2 py-1 border-b">{row[col]}</td>
+                                                                                                ))}
                                                             </tr>
                                                         ))}
                                                     </tbody>
                                                 </table>
                                             </div>
-                                        )}
+                                                                        </li>
+                                                                    );
+                                                                }
+                                                                if (Array.isArray(statValue) && statValue.length > 0 && typeof statValue[0] !== 'object') {
+                                                                    return (
+                                                                        <li key={statKey} className="mt-2">
+                                                                            <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                            <ul className="ml-2 list-disc list-inside">
+                                                                                {statValue.map((v, idx) => (
+                                                                                    <li key={idx}>{String(v)}</li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        </li>
+                                                                    );
+                                                                }
+                                                                if (typeof statValue === 'object' && statValue !== null) {
+                                                                    return (
+                                                                        <li key={statKey} className="mt-2">
+                                                                            <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                            <ul className="ml-2">
+                                                                                {Object.entries(statValue).map(([k, v]) => (
+                                                                                    <li key={k}><span className="font-semibold">{friendlyLabel(k)}:</span> {String(v)}</li>
+                                                                                ))}
+                                                                            </ul>
+                                                                        </li>
+                                                                    );
+                                                                }
+                                                                return (
+                                                                    <li key={statKey}><span className="font-semibold">{statKey.toLowerCase() === 'count' ? 'Total Entries' : friendlyLabel(statKey)}:</span> {String(statValue)}</li>
+                                                                );
+                                                            })}
+                                                        </ul>
+                                                    )}
+                                                </>
+                                            )}
+                                            {/* If details is a stats object (min, max, mean, etc.) but no type */}
+                                            {details && typeof details === 'object' && !('type' in details) && isStatsObject(details) && renderStatsObject(details)}
+                                            {/* If details is an array of objects */}
+                                            {Array.isArray(details) && details.length > 0 && typeof details[0] === 'object' && (() => {
+                                                const columns = Object.keys(details[0]);
+                                                return (
+                                                    <div className="overflow-x-auto mt-1">
+                                                        <table className="min-w-full text-xs border border-gray-200 rounded">
+                                                            <thead>
+                                                                <tr>
+                                                                    {columns.map(col => (
+                                                                        <th key={col} className="px-2 py-1 border-b text-left">{friendlyLabel(col)}</th>
+                                                                    ))}
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {details.map((row, i) => (
+                                                                    <tr key={i}>
+                                                                        {columns.map(col => (
+                                                                            <td key={col} className="px-2 py-1 border-b">{row[col]}</td>
+                                                                        ))}
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
                                     </div>
-                                ))}
+                                                );
+                                            })()}
+                                            {/* If details is an array of primitives */}
+                                            {Array.isArray(details) && details.length > 0 && typeof details[0] !== 'object' && (
+                                                <ul className="ml-2 list-disc list-inside">
+                                                    {details.map((v, idx) => (
+                                                        <li key={idx}>{String(v)}</li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                            {/* If details is a plain object (fallback) */}
+                                            {details && typeof details === 'object' && !('type' in details) && !isStatsObject(details) && (
+                                                <ul className="text-sm space-y-1">
+                                                    {Object.entries(details).map(([k, v]) => (
+                                                        <li key={k}><span className="font-semibold">{friendlyLabel(k)}:</span> {String(v)}</li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                            {/* If details is a primitive */}
+                                            {(!details || typeof details !== 'object') && (
+                                                <div className="text-sm">{String(details)}</div>
+                                            )}
+                                            {/* If details is empty or missing */}
+                                            {(!details || (typeof details === 'object' && Object.keys(details).length === 0)) && (
+                                                <div className="text-gray-500 text-sm">No data available.</div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         ) : (
-                            <div className="mb-6 text-gray-500">No summary available.</div>
+                            <div className="text-gray-500">No summary available.</div>
                         )
                     )}
                     {analysis.insights.hypothesis && Array.isArray(analysis.insights.hypothesis) && analysis.insights.hypothesis.length > 0 && (

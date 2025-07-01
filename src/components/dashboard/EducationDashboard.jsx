@@ -8,6 +8,13 @@ import {
 import AIAnalyst from './AIAnalyst';
 
 const EducationDashboard = ({ file, analysis }) => {
+    // Helper function to round numbers to 3 decimal places
+    const round4 = (v) => {
+        if (typeof v === 'number') return Number(v.toFixed(3));
+        if (typeof v === 'string' && !isNaN(Number(v))) return Number(Number(v).toFixed(3));
+        return v;
+    };
+
     if (!file || !analysis) {
         return (
             <div className="text-center p-8">
@@ -119,15 +126,66 @@ const EducationDashboard = ({ file, analysis }) => {
         );
     };
 
-    // Helper: Render Totals (line chart or table style)
-    const [totalsWindow, setTotalsWindow] = useState({});
+    // Add state for number-based totals filter
+    const [totalsWindow, setTotalsWindow] = useState('all');
+    const [totalsCustomN, setTotalsCustomN] = useState(10);
+
     const renderTotals = (totals) => {
         if (!totals || Object.keys(totals).length === 0) return null;
+        // Compute filter indices (number-based only)
+        // Find the length of the first array in totals
+        let firstArrLen = 0;
+        for (const value of Object.values(totals)) {
+            if (typeof value === 'object' && value !== null && Array.isArray(Object.values(value)[0])) {
+                firstArrLen = Object.values(value)[0].length;
+                break;
+            }
+        }
+        let windowN = 0;
+        if (totalsWindow === 'custom') {
+            windowN = Math.max(1, Math.min(firstArrLen, parseInt(totalsCustomN) || 1));
+        } else if (totalsWindow !== 'all') {
+            windowN = Math.min(firstArrLen, parseInt(totalsWindow));
+        } else {
+            windowN = firstArrLen;
+        }
+        const startIdx = Math.max(0, firstArrLen - windowN);
+        const filterIndices = Array.from({length: firstArrLen}, (_, i) => i >= startIdx);
+
         return (
             <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8">
-                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                     <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Totals
                 </h3>
+                    <div className="flex flex-wrap items-center gap-2 bg-white/70 border border-[#7400B8]/10 rounded-xl px-3 py-2 shadow-sm">
+                        <span className="text-sm font-medium text-gray-700">Show:</span>
+                        <select
+                            value={totalsWindow}
+                            onChange={e => {
+                                setTotalsWindow(e.target.value);
+                            }}
+                            className="px-2 py-1 rounded border border-gray-200 text-sm"
+                        >
+                            <option value="7">Last 7</option>
+                            <option value="30">Last 30</option>
+                            <option value="90">Last 90</option>
+                            <option value="all">All</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                        {totalsWindow === 'custom' && (
+                            <input
+                                type="number"
+                                min={1}
+                                max={firstArrLen}
+                                value={totalsCustomN}
+                                onChange={e => setTotalsCustomN(e.target.value)}
+                                className="px-2 py-1 rounded border border-gray-200 text-sm w-20"
+                                placeholder="N"
+                            />
+                        )}
+                    </div>
+                </div>
                 <div className="flex flex-col gap-8 w-full">
                     {Object.entries(totals).map(([key, value], idx) => {
                         // Line chart for object with two arrays of equal length
@@ -140,41 +198,22 @@ const EducationDashboard = ({ file, analysis }) => {
                         ) {
                             const [labelKey, valueKey] = Object.keys(value);
                             const dataLength = value[labelKey].length;
-                            const showSlider = dataLength > 12;
-                            const windowState = totalsWindow[key] || [0, 12];
-                            const [start, end] = windowState;
-                            const data = value[labelKey].map((label, i) => ({
+                            // Filter data using filterIndices if available
+                            let data = value[labelKey].map((label, i) => ({
                                 [labelKey]: label,
                                 [valueKey]: value[valueKey][i]
                             }));
-                            const visibleData = showSlider ? data.slice(start, end) : data;
-                            const handleTotalsWindowChange = (e) => {
-                                const val = Number(e.target.value);
-                                setTotalsWindow(prev => ({ ...prev, [key]: [val, Math.min(val + 12, dataLength)] }));
-                            };
+                            if (filterIndices && filterIndices.length === data.length) {
+                                data = data.filter((_, i) => filterIndices[i]);
+                            }
                             return (
                                 <div key={key} className="w-full flex flex-col items-center justify-center h-full flex-1 overflow-visible">
                                     <h4 className="font-bold mb-2 text-center w-full break-words">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
-                                    {showSlider && (
-                                        <div className="mb-2 flex items-center gap-2 w-full max-w-md mx-auto">
-                                            <label htmlFor={`totals-slider-${key}`} className="text-xs text-gray-500">Window:</label>
-                                            <input
-                                                id={`totals-slider-${key}`}
-                                                type="range"
-                                                min={0}
-                                                max={dataLength - 12}
-                                                value={start}
-                                                onChange={handleTotalsWindowChange}
-                                                className="w-full max-w-xs"
-                                            />
-                                            <span className="text-xs text-gray-500">{start + 1} - {end}</span>
-                                        </div>
-                                    )}
                                     <div className="w-full flex items-center justify-center h-full overflow-visible">
                                         <ResponsiveContainer width="100%" height={300}>
-                                            <LineChart data={visibleData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                            <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                                <XAxis dataKey={labelKey} tick={{ fontSize: 12 }} interval={0} angle={visibleData.length > 8 ? -30 : 0} textAnchor={visibleData.length > 8 ? 'end' : 'middle'} height={visibleData.length > 8 ? 60 : 30} />
+                                                <XAxis dataKey={labelKey} tick={{ fontSize: 12 }} interval={0} angle={data.length > 8 ? -30 : 0} textAnchor={data.length > 8 ? 'end' : 'middle'} height={data.length > 8 ? 60 : 30} />
                                                 <YAxis />
                                                 <Tooltip formatter={(v) => v} />
                                                 <Legend />
@@ -188,32 +227,14 @@ const EducationDashboard = ({ file, analysis }) => {
                         // Fallback: table or primitive
                         if (typeof value === 'object' && value !== null && Array.isArray(Object.values(value)[0])) {
                             const dataLength = Object.values(value)[0].length;
-                            const showSlider = dataLength > 12;
-                            const windowState = totalsWindow[key] || [0, 12];
-                            const [start, end] = windowState;
-                            const visibleRows = showSlider ? Array.from({length: end - start}, (_, i) => start + i) : Array.from({length: dataLength}, (_, i) => i);
-                            const handleTotalsWindowChange = (e) => {
-                                const val = Number(e.target.value);
-                                setTotalsWindow(prev => ({ ...prev, [key]: [val, Math.min(val + 12, dataLength)] }));
-                            };
+                            // Filter rows using filterIndices if available
+                            let visibleRows = Array.from({length: dataLength}, (_, i) => i);
+                            if (filterIndices && filterIndices.length === dataLength) {
+                                visibleRows = visibleRows.filter(i => filterIndices[i]);
+                            }
                             return (
                                 <div key={key} className="w-full">
                                     <h4 className="font-bold mb-2">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h4>
-                                    {showSlider && (
-                                        <div className="mb-2 flex items-center gap-2 w-full max-w-md mx-auto">
-                                            <label htmlFor={`totals-slider-table-${key}`} className="text-xs text-gray-500">Window:</label>
-                                            <input
-                                                id={`totals-slider-table-${key}`}
-                                                type="range"
-                                                min={0}
-                                                max={dataLength - 12}
-                                                value={start}
-                                                onChange={handleTotalsWindowChange}
-                                                className="w-full max-w-xs"
-                                            />
-                                            <span className="text-xs text-gray-500">{start + 1} - {end}</span>
-                                        </div>
-                                    )}
                                     <div className="overflow-x-auto">
                                         <table className="min-w-full text-xs">
                                             <thead>
@@ -264,9 +285,12 @@ const EducationDashboard = ({ file, analysis }) => {
         );
     };
 
+    // Add state for advanced trends filter
+    const [trendWindow, setTrendWindow] = useState('all');
+    const [customRange, setCustomRange] = useState({ start: '', end: '' });
+
     // Helper: Render Trends
     const [trendMetric, setTrendMetric] = useState(null);
-    const [trendWindow, setTrendWindow] = useState([0, 12]);
     const renderTrends = (trends) => {
         if (!Array.isArray(trends) || trends.length === 0) return null;
         if (trends.length < 3) {
@@ -281,26 +305,77 @@ const EducationDashboard = ({ file, analysis }) => {
         const allKeys = Object.keys(trends[0] || {});
         const mainKey = trendMetric || numericKeys[0] || allKeys[1];
         const xKey = allKeys[0];
-        // Window logic
-        const dataLength = trends.length;
-        const showSlider = dataLength > 12;
-        const [start, end] = trendWindow;
-        const visibleData = showSlider ? trends.slice(start, end) : trends;
-        // Dropdown for metric selection
-        const handleMetricChange = (e) => setTrendMetric(e.target.value);
-        // Slider for window selection
-        const handleWindowChange = (e) => {
-            const val = Number(e.target.value);
-            setTrendWindow([val, Math.min(val + 12, dataLength)]);
+        // --- Advanced filter logic ---
+        // Helper to normalize to YYYY-MM-DD
+        const toYMD = (date) => {
+            if (!date) return '';
+            const d = new Date(date);
+            if (isNaN(d)) return '';
+            return d.toISOString().slice(0, 10);
         };
+        let filtered = trends;
+        if (trendWindow === 'custom' && (customRange.start || customRange.end)) {
+            const startYMD = customRange.start;
+            const endYMD = customRange.end;
+            filtered = trends.filter(d => {
+                const dYMD = toYMD(d[xKey]);
+                if (!dYMD) return false;
+                if (startYMD && endYMD) return dYMD >= startYMD && dYMD <= endYMD;
+                if (startYMD) return dYMD >= startYMD;
+                if (endYMD) return dYMD <= endYMD;
+                return true;
+            });
+        } else if (trendWindow !== 'all') {
+            const window = Math.min(trends.length, parseInt(trendWindow));
+            const start = trends.length - window;
+            filtered = trends.slice(start);
+        }
+        // Format date for display
+        filtered = filtered.map(d => ({ ...d, [xKey]: new Date(d[xKey]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }));
         return (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 rounded-3xl p-6 shadow-xl border border-white/20 mb-8 w-full">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                     <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                         <FiBarChart2 className="w-6 h-6 text-[#7400B8]" /> Trends
                     </h3>
-                    <div className="flex items-center gap-2">
-                        <label htmlFor="trend-metric" className="text-sm font-semibold text-[#7400B8] mr-1">Metric:</label>
+                    <div className="flex flex-wrap items-center gap-2 bg-white/70 border border-[#7400B8]/10 rounded-xl px-3 py-2 shadow-sm">
+                        <span className="text-sm font-medium text-gray-700">Show:</span>
+                        <select
+                            value={trendWindow}
+                            onChange={e => {
+                                setTrendWindow(e.target.value);
+                                if (e.target.value !== 'custom') {
+                                    setCustomRange({ start: '', end: '' });
+                                }
+                            }}
+                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[#7400B8] focus:border-[#7400B8] bg-white"
+                        >
+                            <option value="7">Last 7</option>
+                            <option value="30">Last 30</option>
+                            <option value="90">Last 90</option>
+                            <option value="all">All</option>
+                            <option value="custom">Custom Range…</option>
+                        </select>
+                        {trendWindow === 'custom' && (
+                            <>
+                                <input
+                                    type="date"
+                                    value={customRange.start}
+                                    max={customRange.end || undefined}
+                                    onChange={e => setCustomRange(r => ({ ...r, start: e.target.value }))}
+                                    className="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[#7400B8] focus:border-[#7400B8] bg-white ml-2"
+                                />
+                                <span className="mx-1 text-gray-500">to</span>
+                                <input
+                                    type="date"
+                                    value={customRange.end}
+                                    min={customRange.start || undefined}
+                                    onChange={e => setCustomRange(r => ({ ...r, end: e.target.value }))}
+                                    className="border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[#7400B8] focus:border-[#7400B8] bg-white"
+                                />
+                            </>
+                        )}
+                        <label htmlFor="trend-metric" className="text-sm font-semibold text-[#7400B8] ml-4 mr-1">Metric:</label>
                         <select
                             id="trend-metric"
                             value={mainKey}
@@ -314,21 +389,6 @@ const EducationDashboard = ({ file, analysis }) => {
                         </select>
                     </div>
                 </div>
-                {showSlider && (
-                    <div className="mb-4 flex items-center gap-2">
-                        <label htmlFor="trend-slider" className="text-xs text-gray-500">Window:</label>
-                        <input
-                            id="trend-slider"
-                            type="range"
-                            min={0}
-                            max={dataLength - 12}
-                            value={start}
-                            onChange={handleWindowChange}
-                            className="w-full max-w-xs accent-[#7400B8]"
-                        />
-                        <span className="text-xs text-gray-500">{start + 1} - {end}</span>
-                    </div>
-                )}
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={mainKey}
@@ -339,7 +399,7 @@ const EducationDashboard = ({ file, analysis }) => {
                         className="h-[350px] w-full"
                     >
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={visibleData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                            <AreaChart data={filtered} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#7400B8" stopOpacity={0.8}/>
@@ -361,6 +421,30 @@ const EducationDashboard = ({ file, analysis }) => {
     };
 
     // Helper: Render Summary
+    const friendlyLabel = (key) => {
+        const map = {
+            mean: "Average",
+            median: "Middle Value",
+            std: "Variation",
+            stddev: "Variation",
+            min: "Minimum",
+            max: "Maximum",
+            sum: "Total",
+            count: "Total Entries",
+            mode: "Most Common",
+            percentile: "Percentile",
+            range: "Range",
+            variance: "Spread",
+            skew: "Skewness",
+            kurtosis: "Peakedness",
+        };
+        const cleaned = key.replace(/_/g, '').toLowerCase();
+        for (const [stat, label] of Object.entries(map)) {
+            if (cleaned === stat || cleaned.endsWith(stat) || cleaned.startsWith(stat)) return label;
+        }
+        return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    };
+
     const renderSummary = (summary) => {
         if (!summary || Object.keys(summary).length === 0) return null;
         return (
@@ -373,26 +457,99 @@ const EducationDashboard = ({ file, analysis }) => {
                 </button>
                 {showSummary && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {Object.entries(summary).map(([field, details]) => (
+                        {Object.entries(summary).map(([field, details]) => {
+                            const isPercentField = field.toLowerCase().includes('%') || field.toLowerCase().includes('percent');
+                            const isStatsObject = (obj) => {
+                                if (!obj || typeof obj !== 'object') return false;
+                                const statKeys = ['min', 'max', 'mean', 'median', 'stddev', 'count', 'sum'];
+                                return statKeys.some(k => k in obj);
+                            };
+                            const renderStatsObject = (obj) => (
+                                <ul className="text-sm space-y-1">
+                                    {Object.entries(obj).map(([k, v]) => (
+                                        <li key={k}>
+                                            <span className="font-semibold">{k.toLowerCase() === 'count' ? 'Total Entries' : friendlyLabel(k)}:</span> {typeof v === 'number' ? round4(v) : String(v)}
+                                        </li>
+                                    ))}
+                                </ul>
+                            );
+                            return (
                             <div key={field} className="bg-[#F9F4FF] rounded-2xl p-4 border border-[#7400B8]/10">
-                                <h4 className="font-bold mb-2">{field}</h4>
-                                {/* Numeric summary */}
+                                    <h4 className="font-bold mb-2">{friendlyLabel(field)}</h4>
+                                    {details && typeof details === 'object' && 'type' in details && (
+                                        <>
                                 {details.type === 'numeric' && (
                                     <ul className="text-sm space-y-1">
-                                        <li><span className="font-semibold">Count:</span> {details.count}</li>
-                                        <li><span className="font-semibold">Min:</span> {details.min}</li>
-                                        <li><span className="font-semibold">Max:</span> {details.max}</li>
-                                        <li><span className="font-semibold">Mean:</span> {details.mean}</li>
-                                        <li><span className="font-semibold">Median:</span> {details.median}</li>
-                                        <li><span className="font-semibold">Stddev:</span> {details.stddev}</li>
+                                                    {Object.entries(details).map(([statKey, statValue]) => {
+                                                        if (statKey === 'type') return null;
+                                                        if (statKey.toLowerCase().includes('variation')) {
+                                                            return (
+                                                                <li key={statKey}><span className="font-semibold">{friendlyLabel(statKey)}:</span> {isPercentField ? `${round4(statValue)}%` : round4(statValue)}</li>
+                                                            );
+                                                        }
+                                                        if (Array.isArray(statValue) && statValue.length > 0 && typeof statValue[0] === 'object') {
+                                                            const columns = Object.keys(statValue[0]);
+                                                            return (
+                                                                <li key={statKey} className="mt-2">
+                                                                    <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                    <div className="overflow-x-auto mt-1">
+                                                                        <table className="min-w-full text-xs border border-gray-200 rounded">
+                                                                            <thead>
+                                                                                <tr>
+                                                                                    {columns.map(col => (
+                                                                                        <th key={col} className="px-2 py-1 border-b text-left">{friendlyLabel(col)}</th>
+                                                                                    ))}
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                {statValue.map((row, i) => (
+                                                                                    <tr key={i}>
+                                                                                        {columns.map(col => (
+                                                                                            <td key={col} className="px-2 py-1 border-b">{row[col]}</td>
+                                                                                        ))}
+                                                                                    </tr>
+                                                                                ))}
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                </li>
+                                                            );
+                                                        }
+                                                        if (Array.isArray(statValue) && statValue.length > 0 && typeof statValue[0] !== 'object') {
+                                                            return (
+                                                                <li key={statKey} className="mt-2">
+                                                                    <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                    <ul className="ml-2 list-disc list-inside">
+                                                                        {statValue.map((v, idx) => (
+                                                                            <li key={idx}>{String(v)}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </li>
+                                                            );
+                                                        }
+                                                        if (typeof statValue === 'object' && statValue !== null) {
+                                                            return (
+                                                                <li key={statKey} className="mt-2">
+                                                                    <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                    <ul className="ml-2">
+                                                                        {Object.entries(statValue).map(([k, v]) => (
+                                                                            <li key={k}><span className="font-semibold">{friendlyLabel(k)}:</span> {String(v)}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </li>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <li key={statKey}><span className="font-semibold">{statKey.toLowerCase() === 'count' ? 'Total Entries' : friendlyLabel(statKey)}:</span> {String(statValue)}</li>
+                                                        );
+                                                    })}
                                     </ul>
                                 )}
-                                {/* Categorical summary */}
-                                {details.type === 'categorical' && (
-                                    <>
-                                        <div className="mb-2 text-sm"><span className="font-semibold">Unique Count:</span> {details.unique_count}</div>
-                                        <div className="overflow-x-auto">
-                                            <table className="min-w-full text-xs">
+                                            {details.type === 'boolean' && Array.isArray(details.counts) && (
+                                                <div className="mt-2">
+                                                    <span className="font-semibold">Counts:</span>
+                                                    <div className="overflow-x-auto mt-1">
+                                                        <table className="min-w-full text-xs border border-gray-200 rounded">
                                                 <thead>
                                                     <tr>
                                                         <th className="px-2 py-1 border-b text-left">Value</th>
@@ -400,40 +557,129 @@ const EducationDashboard = ({ file, analysis }) => {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {details.top_values && details.top_values.map((v, i) => (
+                                                                {details.counts.map((row, i) => (
+                                                                    <tr key={i}>
+                                                                        <td className="px-2 py-1 border-b">{row.value === true ? 'Yes' : row.value === false ? 'No' : String(row.value)}</td>
+                                                                        <td className="px-2 py-1 border-b">{row.count}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {details.type === 'categorical' && (
+                                                <ul className="text-sm space-y-1">
+                                                    {Object.entries(details).filter(([statKey]) => statKey !== 'type').map(([statKey, statValue]) => {
+                                                        if (Array.isArray(statValue) && statValue.length > 0 && typeof statValue[0] === 'object') {
+                                                            const columns = Object.keys(statValue[0]);
+                                                            return (
+                                                                <li key={statKey} className="mt-2">
+                                                                    <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                    <div className="overflow-x-auto mt-1">
+                                                                        <table className="min-w-full text-xs border border-gray-200 rounded">
+                                                                            <thead>
+                                                                                <tr>
+                                                                                    {columns.map(col => (
+                                                                                        <th key={col} className="px-2 py-1 border-b text-left">{friendlyLabel(col)}</th>
+                                                                                    ))}
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                {statValue.map((row, i) => (
                                                         <tr key={i}>
-                                                            <td className="px-2 py-1 border-b">{v.value}</td>
-                                                            <td className="px-2 py-1 border-b">{v.count}</td>
+                                                                                        {columns.map(col => (
+                                                                                            <td key={col} className="px-2 py-1 border-b">{row[col]}</td>
+                                                                                        ))}
                                                         </tr>
                                                     ))}
                                                 </tbody>
                                             </table>
                     </div>
+                                                                </li>
+                                                            );
+                                                        }
+                                                        if (Array.isArray(statValue) && statValue.length > 0 && typeof statValue[0] !== 'object') {
+                                                            return (
+                                                                <li key={statKey} className="mt-2">
+                                                                    <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                    <ul className="ml-2 list-disc list-inside">
+                                                                        {statValue.map((v, idx) => (
+                                                                            <li key={idx}>{String(v)}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </li>
+                                                            );
+                                                        }
+                                                        if (typeof statValue === 'object' && statValue !== null) {
+                                                            return (
+                                                                <li key={statKey} className="mt-2">
+                                                                    <span className="font-semibold">{friendlyLabel(statKey)}:</span>
+                                                                    <ul className="ml-2">
+                                                                        {Object.entries(statValue).map(([k, v]) => (
+                                                                            <li key={k}><span className="font-semibold">{friendlyLabel(k)}:</span> {String(v)}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </li>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <li key={statKey}><span className="font-semibold">{statKey.toLowerCase() === 'count' ? 'Total Entries' : friendlyLabel(statKey)}:</span> {String(statValue)}</li>
+                                                        );
+                                                    })}
+                                                </ul>
+                                            )}
                                     </>
                                 )}
-                                {/* Boolean summary */}
-                                {details.type === 'boolean' && (
-                                    <div className="overflow-x-auto">
-                                        <table className="min-w-full text-xs">
+                                    {details && typeof details === 'object' && !('type' in details) && isStatsObject(details) && renderStatsObject(details)}
+                                    {Array.isArray(details) && details.length > 0 && typeof details[0] === 'object' && (() => {
+                                        const columns = Object.keys(details[0]);
+                                        return (
+                                            <div className="overflow-x-auto mt-1">
+                                                <table className="min-w-full text-xs border border-gray-200 rounded">
                                             <thead>
                                                 <tr>
-                                                    <th className="px-2 py-1 border-b text-left">Value</th>
-                                                    <th className="px-2 py-1 border-b text-left">Count</th>
+                                                            {columns.map(col => (
+                                                                <th key={col} className="px-2 py-1 border-b text-left">{friendlyLabel(col)}</th>
+                                                            ))}
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {details.counts && details.counts.map((v, i) => (
+                                                        {details.map((row, i) => (
                                                     <tr key={i}>
-                                                        <td className="px-2 py-1 border-b">{String(v.value)}</td>
-                                                        <td className="px-2 py-1 border-b">{v.count}</td>
+                                                                {columns.map(col => (
+                                                                    <td key={col} className="px-2 py-1 border-b">{row[col]}</td>
+                                                                ))}
                                                     </tr>
                                                 ))}
                                             </tbody>
                                         </table>
                                     </div>
+                                        );
+                                    })()}
+                                    {Array.isArray(details) && details.length > 0 && typeof details[0] !== 'object' && (
+                                        <ul className="ml-2 list-disc list-inside">
+                                            {details.map((v, idx) => (
+                                                <li key={idx}>{String(v)}</li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                    {details && typeof details === 'object' && !('type' in details) && !isStatsObject(details) && (
+                                        <ul className="text-sm space-y-1">
+                                            {Object.entries(details).map(([k, v]) => (
+                                                <li key={k}><span className="font-semibold">{friendlyLabel(k)}:</span> {String(v)}</li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                    {(!details || typeof details !== 'object') && (
+                                        <div className="text-sm">{String(details)}</div>
+                                    )}
+                                    {(!details || (typeof details === 'object' && Object.keys(details).length === 0)) && (
+                                        <div className="text-gray-500 text-sm">No data available.</div>
                                 )}
                                 </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
