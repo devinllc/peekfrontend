@@ -2,10 +2,16 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiUser, FiMail, FiShield } from 'react-icons/fi';
+import { FiX, FiUser, FiMail, FiShield, FiGift } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+const PLAN_OPTIONS = [
+    { name: 'free', label: 'Free' },
+    { name: 'premium', label: 'Premium' },
+    { name: 'enterprise', label: 'Enterprise' },
+];
 
 const AdminDashboard = () => {
     const { user } = useAuth();
@@ -16,6 +22,10 @@ const AdminDashboard = () => {
     const [success, setSuccess] = useState('');
     const [selectedUser, setSelectedUser] = useState(null);
     const [showModal, setShowModal] = useState(false);
+    const [assignPlanUser, setAssignPlanUser] = useState(null);
+    const [assignPlanModalOpen, setAssignPlanModalOpen] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState('free');
+    const [assigningPlan, setAssigningPlan] = useState(false);
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -91,6 +101,36 @@ const AdminDashboard = () => {
         setSelectedUser(null);
     };
 
+    const openAssignPlanModal = (user) => {
+        setAssignPlanUser(user);
+        setSelectedPlan('free');
+        setAssignPlanModalOpen(true);
+    };
+    const closeAssignPlanModal = () => {
+        setAssignPlanModalOpen(false);
+        setAssignPlanUser(null);
+    };
+    const handleAssignPlan = async () => {
+        if (!assignPlanUser || !selectedPlan) return;
+        setAssigningPlan(true);
+        try {
+            await axios.post(
+                `${API_BASE_URL}/admin/assign-plan`,
+                {
+                    planName: selectedPlan,
+                    userId: assignPlanUser._id || assignPlanUser.id
+                }
+            );
+            toast.success('Plan assigned successfully!');
+            closeAssignPlanModal();
+            fetchUsers();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to assign plan');
+        } finally {
+            setAssigningPlan(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-[#7400B8]/5 via-[#9B4DCA]/5 to-[#C77DFF]/5 p-4">
             <div className="w-full max-w-7xl mx-auto bg-white/80 rounded-3xl shadow-xl border border-white/20 p-2 sm:p-6 mt-10">
@@ -160,6 +200,12 @@ const AdminDashboard = () => {
                                             >
                                                 {actionLoading === (u._id || u.id) ? 'Deleting...' : 'Delete'}
                                             </button>
+                                            <button
+                                                className="bg-green-500 text-white px-3 py-1 rounded-xl hover:bg-green-600 transition-all duration-200 text-xs font-medium shadow flex items-center gap-1"
+                                                onClick={() => openAssignPlanModal(u)}
+                                            >
+                                                <FiGift className="w-4 h-4" /> Assign Plan
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
@@ -169,6 +215,54 @@ const AdminDashboard = () => {
                 )}
                 {success && null}
             </div>
+
+            {/* Assign Plan Modal */}
+            <AnimatePresence>
+                {assignPlanModalOpen && assignPlanUser && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-0 sm:p-0 max-w-md w-full relative border border-[#7400B8]/10 mx-2 flex flex-col items-center overflow-hidden"
+                        >
+                            <button
+                                className="absolute top-4 right-4 text-gray-400 hover:text-[#7400B8] transition-all z-20"
+                                onClick={closeAssignPlanModal}
+                            >
+                                <FiX className="w-6 h-6" />
+                            </button>
+                            <div className="w-full flex flex-col items-center justify-center bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 pt-10 pb-6 px-6 relative">
+                                <FiGift className="w-12 h-12 text-[#7400B8] mb-2" />
+                                <h2 className="text-2xl font-bold text-gray-800 mb-1 tracking-tight drop-shadow">Assign Plan</h2>
+                                <div className="text-gray-600 mb-4">Assign a subscription plan to <span className="font-semibold">{assignPlanUser.name || assignPlanUser.email}</span></div>
+                                <select
+                                    className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent transition-all duration-200 text-base mb-4"
+                                    value={selectedPlan}
+                                    onChange={e => setSelectedPlan(e.target.value)}
+                                >
+                                    {PLAN_OPTIONS.map(opt => (
+                                        <option key={opt.name} value={opt.name}>{opt.label}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    className="w-full py-3 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl font-semibold hover:from-[#9B4DCA] hover:to-[#C77DFF] transition-all duration-200 mt-2"
+                                    onClick={handleAssignPlan}
+                                    disabled={assigningPlan}
+                                >
+                                    {assigningPlan ? 'Assigning...' : 'Assign Plan'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* User Details Modal */}
             <AnimatePresence>
