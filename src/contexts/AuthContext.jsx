@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const AuthContext = createContext(null);
 
-const API_BASE_URL = 'https://ip.peekbi.com';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 // Helper functions for localStorage and cookies
 const setLocalStorage = (key, value) => {

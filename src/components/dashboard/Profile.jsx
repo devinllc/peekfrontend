@@ -7,7 +7,7 @@ import axios from 'axios';
 import Header from './Header';
 import toast from 'react-hot-toast';
 
-const API_BASE_URL = 'https://ip.peekbi.com';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const PLAN_OPTIONS = [
   { name: 'free', label: 'Free' },

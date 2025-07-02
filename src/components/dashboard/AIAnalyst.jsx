@@ -413,7 +413,53 @@ Provide a comprehensive, helpful response that addresses the user's question whi
     };
 
     const formatMessageContent = (content) => {
-        return content
+        // First, handle table formatting
+        let formattedContent = content;
+        
+        // Convert markdown tables to HTML tables with proper styling
+        const tableRegex = /\|(.+)\|\n\|([-:\s|]+)\|\n((?:\|.+\|\n?)+)/g;
+        formattedContent = formattedContent.replace(tableRegex, (match, headerRow, separatorRow, dataRows) => {
+            const headers = headerRow.split('|').map(h => h.trim()).filter(h => h);
+            const rows = dataRows.trim().split('\n').map(row => 
+                row.split('|').map(cell => cell.trim()).filter(cell => cell)
+            );
+            
+            let tableHtml = '<div class="overflow-x-auto my-4"><table class="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">';
+            
+            // Header
+            tableHtml += '<thead class="bg-gray-50"><tr>';
+            headers.forEach(header => {
+                tableHtml += `<th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-b border-gray-200">${header}</th>`;
+            });
+            tableHtml += '</tr></thead>';
+            
+            // Body
+            tableHtml += '<tbody class="divide-y divide-gray-200">';
+            rows.forEach((row, index) => {
+                tableHtml += '<tr class="hover:bg-gray-50">';
+                row.forEach((cell, cellIndex) => {
+                    const isNumeric = !isNaN(cell) && cell !== '';
+                    const isDate = /^\d{4}-\d{2}-\d{2}/.test(cell);
+                    const isCurrency = /^\$/.test(cell);
+                    
+                    let cellClass = 'px-4 py-3 text-sm text-gray-900 border-b border-gray-100';
+                    if (isNumeric || isCurrency) {
+                        cellClass += ' text-right font-medium';
+                    } else if (isDate) {
+                        cellClass += ' font-medium';
+                    }
+                    
+                    tableHtml += `<td class="${cellClass}">${cell}</td>`;
+                });
+                tableHtml += '</tr>';
+            });
+            tableHtml += '</tbody></table></div>';
+            
+            return tableHtml;
+        });
+        
+        // Then apply other formatting
+        return formattedContent
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.*?)\*/g, '<em>$1</em>')
             .replace(/\n/g, '<br>')
@@ -477,9 +523,42 @@ Instructions:
 - Highlight any obvious patterns, trends, or interesting facts, but avoid technical/statistical terms (like mean, median, stddev, etc.).
 - Use plain language suitable for a non-technical audience.
 - If possible, suggest what a normal business user might want to know or do with this data.
-- If the user asked for a table, show a small sample (first 5 rows) in markdown table format.
 - If the data is too large, summarize only the first 100 rows.
-- If the user asks for a chart, suggest a simple chart type and what it would show, but do not use code.
+
+TABLE FORMATTING:
+- If the user asked for a table, show a small sample (first 5-10 rows) in markdown table format.
+- Format dates as YYYY-MM-DD (remove time if present)
+- Format numbers with appropriate precision (2 decimal places for currency, whole numbers for counts)
+- Clean up column names (remove underscores, capitalize properly)
+- Ensure all data is properly aligned and readable
+- Use consistent formatting across all rows
+
+Example table format:
+| Date | Customer ID | Region | Product Category | Product | Units Sold | Unit Price | Total Revenue |
+|------|-------------|--------|------------------|---------|------------|------------|---------------|
+| 2024-01-02 | C001 | North | Electronics | Smartphone | 2 | $699.00 | $1,398.00 |
+| 2024-01-03 | C002 | West | Clothing | T-Shirt | 5 | $25.00 | $125.00 |
+
+CHART GENERATION:
+If the user asks for a chart or visualization, generate a JSON chart object in this exact format:
+\`\`\`json
+{
+  "type": "bar|line|pie|scatter",
+  "title": "Chart Title",
+  "data": [
+    {"label": "Category 1", "value": 100},
+    {"label": "Category 2", "value": 200}
+  ]
+}
+\`\`\`
+
+Chart types:
+- "bar" for comparing categories
+- "line" for trends over time
+- "pie" for showing proportions
+- "scatter" for correlations
+
+Always include the JSON chart object when the user asks for visualizations or charts.
 `;
     };
 
@@ -510,14 +589,15 @@ Instructions:
         // Track AI prompt usage before calling AI
         const usageResult = await trackAIPromptUsageWithRetry(1);
         if (!usageResult.success) {
-            toast.error(usageResult.message || 'You have reached your AI prompt limit or there was an error. Please try again later.');
+            const errorMessage = usageResult.message || 'You have reached your AI prompt limit. Please upgrade your plan to continue using AI insights.';
+            toast.error(errorMessage);
             setMessages(prev => [
                 ...prev,
                 {
                     id: Date.now() + 1,
                     type: 'ai',
                     isUpgrade: usageResult.isLimit || true,
-                    errorText: usageResult.message || 'You have reached your AI prompt limit or there was an error. Please try again later.',
+                    errorText: errorMessage,
                     timestamp: new Date()
                 }
             ]);
@@ -553,22 +633,28 @@ Instructions:
                 setIsLoading(false);
                 return;
             }
-            try {
-                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        try {
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
                 const prompt = createRawDataPrompt(rawData, promptText);
                 const result = await model.generateContent(prompt);
-                const response = await result.response;
-                const text = response.text();
-                setMessages(prev => [
-                    ...prev,
-                    {
-                        id: Date.now() + 1,
-                        type: 'ai',
-                        content: text,
-                        timestamp: new Date()
-                    }
-                ]);
-            } catch (error) {
+            const response = await result.response;
+            const text = response.text();
+            
+                // Parse the response for charts (same as normal insights)
+            const { content, chartData, rawJsonBlock, rawText } = parseAIResponse(text);
+            
+            const newAiMessage = {
+                id: Date.now() + 1,
+                type: 'ai',
+                content: content,
+                chartSuggestions: chartData,
+                rawJsonBlock: rawJsonBlock,
+                rawText: rawText,
+                timestamp: new Date()
+            };
+
+            setMessages(prev => [...prev, newAiMessage]);
+        } catch (error) {
                 setMessages(prev => [
                     ...prev,
                     {
@@ -820,7 +906,7 @@ Instructions:
                 initial={{ y: 50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 50, opacity: 0 }}
-                className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 w-full max-w-5xl h-full max-h-[90vh] flex flex-col overflow-hidden"
+                className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 w-full max-w-6xl xl:max-w-7xl h-full max-h-[90vh] flex flex-col overflow-hidden"
             >
                 {/* Header */}
                 <div className="bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] p-3 sm:p-4 lg:p-6 text-white flex items-center justify-between">
@@ -853,64 +939,64 @@ Instructions:
                                 <span className="ml-4 text-[#7400B8] font-semibold">Loading raw data...</span>
                             </div>
                         ) : (
-                            <AnimatePresence>
+                        <AnimatePresence>
                                 {messages.map((message, idx) => (
-                                    <motion.div
+                                <motion.div
                                         key={message.id || idx || `${message.role}-${idx}`}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -20 }}
-                                        className={`flex flex-col ${message.type === 'user' ? 'items-end' : 'items-start'}`}
-                                    >
-                                        <div className={`max-w-[85%] sm:max-w-[75%] lg:max-w-[70%]`}>
-                                            <div className={`p-3 sm:p-4 rounded-2xl ${
-                                                message.type === 'user' 
-                                                    ? 'bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white' 
-                                                    : 'bg-white/80 backdrop-blur-sm border border-gray-200 text-gray-800'
-                                            }`}>
-                                                <div className="prose prose-sm sm:prose-base max-w-none">
-                                                    {message.isUpgrade ? (
-                                                        <>
-                                                            <span>{message.errorText}</span>
-                                                            {typeof onUpgradePlan === 'function' && (
-                                                                <button onClick={onUpgradePlan} className="mt-3 px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl font-bold shadow-lg hover:from-[#9B4DCA] hover:to-[#C77DFF] transition-all duration-200">Upgrade Plan</button>
-                                                            )}
-                                                        </>
-                                                    ) : (
-                                                        <div dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }} />
-                                                    )}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -20 }}
+                                    className={`flex flex-col ${message.type === 'user' ? 'items-end' : 'items-start'}`}
+                                >
+                                        <div className={`max-w-[85%] sm:max-w-[85%] lg:max-w-[80%] xl:max-w-[85%]`}>
+                                        <div className={`p-3 sm:p-4 rounded-2xl ${
+                                            message.type === 'user' 
+                                                ? 'bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white' 
+                                                : 'bg-white/80 backdrop-blur-sm border border-gray-200 text-gray-800'
+                                        }`}>
+                                            <div className="prose prose-sm sm:prose-base max-w-none">
+                                                {message.isUpgrade ? (
+                                                    <>
+                                                        <span>{message.errorText}</span>
+                                                        {typeof onUpgradePlan === 'function' && (
+                                                            <button onClick={onUpgradePlan} className="mt-3 px-4 py-2 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white rounded-xl font-bold shadow-lg hover:from-[#9B4DCA] hover:to-[#C77DFF] transition-all duration-200">Upgrade Plan</button>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <div dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }} />
+                                                )}
                                                     {/* If user asks for raw data, show it as a code block */}
                                                     {message.role === 'user' && isRawDataRequest(message.content) && renderRawDataBlock(rawData)}
-                                                </div>
-                                            </div>
-                                            <div className={`text-xs text-gray-500 mt-1 ${message.type === 'user' ? 'text-right' : 'text-left'}`}>
-                                                {message.timestamp ? message.timestamp.toLocaleTimeString() : ''}
                                             </div>
                                         </div>
-                                        {/* Render chart only if valid chartSuggestions and data */}
-                                        {message.type === 'ai' && Array.isArray(message.chartSuggestions) && message.chartSuggestions.length > 0 && message.chartSuggestions.some(s => s.data && s.data.length > 0) && (
-                                            <div className="mt-2 space-y-3 w-full max-w-[85%] sm:max-w-[75%] lg:max-w-[70%]">
-                                                <AnimatePresence>
+                                        <div className={`text-xs text-gray-500 mt-1 ${message.type === 'user' ? 'text-right' : 'text-left'}`}>
+                                                {message.timestamp ? message.timestamp.toLocaleTimeString() : ''}
+                                        </div>
+                                    </div>
+                                    {/* Render chart only if valid chartSuggestions and data */}
+                                    {message.type === 'ai' && Array.isArray(message.chartSuggestions) && message.chartSuggestions.length > 0 && message.chartSuggestions.some(s => s.data && s.data.length > 0) && (
+                                            <div className="mt-2 space-y-3 w-full max-w-[85%] sm:max-w-[85%] lg:max-w-[80%] xl:max-w-[85%]">
+                                            <AnimatePresence>
                                                     {message.chartSuggestions.map((suggestion, cidx) => (
-                                                        suggestion.data && suggestion.data.length > 0 && (
-                                                            <motion.div 
+                                                    suggestion.data && suggestion.data.length > 0 && (
+                                                        <motion.div 
                                                                 key={suggestion.id || cidx || `chart-${cidx}`}
-                                                                initial={{ opacity: 0, y: 10 }}
-                                                                animate={{ opacity: 1, y: 0 }}
-                                                                exit={{ opacity: 0, y: -10 }}
+                                                            initial={{ opacity: 0, y: 10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            exit={{ opacity: 0, y: -10 }}
                                                                 transition={{ delay: cidx * 0.1 }}
-                                                                className=""
-                                                            >
-                                                                {renderChart(suggestion)}
-                                                            </motion.div>
-                                                        )
-                                                    ))}
-                                                </AnimatePresence>
-                                            </div>
-                                        )}
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
+                                                            className=""
+                                                        >
+                                                            {renderChart(suggestion)}
+                                                        </motion.div>
+                                                    )
+                                                ))}
+                                            </AnimatePresence>
+                                        </div>
+                                    )}
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
                         )}
                         
                         {/* Initial loading indicator */}
