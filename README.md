@@ -44,6 +44,8 @@ v1.1.7 --prduction ready
 apii
 
 public v.1.0.1
+public v.1.0.2
+
 
 
 
