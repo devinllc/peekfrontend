@@ -48,13 +48,7 @@ const FAQSection = () => {
     };
 
     return (
-        <section className="py-24 bg-gradient-to-br from-[#F9F4FF] to-white relative overflow-hidden">
-            {/* Background Elements */}
-            <div className="absolute inset-0 -z-10 overflow-hidden">
-                <div className="absolute top-1/4 right-1/4 w-[40rem] h-[40rem] bg-[#7400B8] rounded-full mix-blend-multiply filter blur-3xl opacity-[0.05]"></div>
-                <div className="absolute bottom-1/4 left-1/4 w-[45rem] h-[45rem] bg-[#9B4DCA] rounded-full mix-blend-multiply filter blur-3xl opacity-[0.05]"></div>
-            </div>
-
+        <section className="py-24 bg-gradient-to-br from-[#2D1B69] to-[#4C2A85] relative overflow-hidden">
             <div className="container mx-auto px-4 max-w-[1000px] relative z-10">
                 <motion.div
                     className="text-center mb-16"
@@ -63,8 +57,8 @@ const FAQSection = () => {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5 }}
                 >
-                    <h2 className="text-4xl font-bold mb-4 text-gray-800">Frequently Asked Questions</h2>
-                    <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                    <h2 className="text-4xl font-bold mb-4 text-white">Frequently Asked Questions</h2>
+                    <p className="text-xl text-gray-300 max-w-3xl mx-auto">
                         Everything you need to know about getting started, using features, and maximizing the value of PeekBI for your business analytics needs.
                     </p>
                 </motion.div>
@@ -73,34 +67,31 @@ const FAQSection = () => {
                     {faqs.map((faq, index) => (
                         <motion.div
                             key={index}
-                            className="bg-white/80 backdrop-blur-sm border border-white/30 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300"
+                            className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300"
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true, margin: "50px" }}
                             transition={{ duration: 0.3, delay: index * 0.1 }}
                         >
                             <button
-                                className={`w-full text-left p-6 flex justify-between items-center focus:outline-none transition-all duration-300 ${
-                                    activeIndex === index 
-                                        ? 'bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 border-b border-[#7400B8]/20' 
-                                        : 'hover:bg-gradient-to-r hover:from-[#7400B8]/5 hover:to-[#9B4DCA]/5'
-                                }`}
+                                className={`w-full text-left p-6 flex justify-between items-center focus:outline-none transition-all duration-300 ${activeIndex === index
+                                    ? 'bg-white/10 border-b border-white/20'
+                                    : 'hover:bg-white/5'
+                                    }`}
                                 onClick={() => toggleFAQ(index)}
                             >
                                 <div className="flex items-center space-x-4">
-                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${
-                                        activeIndex === index 
-                                            ? 'bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white' 
-                                            : 'bg-[#F9F4FF] text-[#7400B8]'
-                                    }`}>
+                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${activeIndex === index
+                                        ? 'bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white'
+                                        : 'bg-white/20 text-white'
+                                        }`}>
                                         {faq.icon}
                                     </div>
-                                    <h3 className="text-lg font-semibold text-gray-800 pr-4">{faq.question}</h3>
+                                    <h3 className="text-lg font-semibold text-white pr-4">{faq.question}</h3>
                                 </div>
                                 <svg
-                                    className={`w-6 h-6 text-[#7400B8] transform transition-transform duration-300 flex-shrink-0 ${
-                                        activeIndex === index ? 'rotate-180' : ''
-                                    }`}
+                                    className={`w-6 h-6 text-white transform transition-transform duration-300 flex-shrink-0 ${activeIndex === index ? 'rotate-180' : ''
+                                        }`}
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
@@ -118,7 +109,7 @@ const FAQSection = () => {
                                         transition={{ duration: 0.3 }}
                                         className="overflow-hidden"
                                     >
-                                        <div className="p-6 pt-0 text-gray-700 bg-gradient-to-r from-[#F9F4FF]/50 to-white/50 border-t border-[#7400B8]/10">
+                                        <div className="p-6 pt-0 text-gray-300 bg-black/10 border-t border-white/10">
                                             <div className="prose prose-lg max-w-none">
                                                 <p className="leading-relaxed text-base">{faq.answer}</p>
                                             </div>
@@ -137,10 +128,10 @@ const FAQSection = () => {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: 0.3 }}
                 >
-                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/30 shadow-lg">
-                        <h3 className="text-2xl font-bold text-gray-800 mb-4">Still have questions?</h3>
-                        <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-                            Our expert support team is here to help you get the most out of PeekBI. 
+                    <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-lg">
+                        <h3 className="text-2xl font-bold text-white mb-4">Still have questions?</h3>
+                        <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
+                            Our expert support team is here to help you get the most out of PeekBI.
                             Whether you need technical assistance, have questions about your data, or want to explore advanced features, we're ready to assist.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">

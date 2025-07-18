@@ -111,7 +111,7 @@ const BlogSection = () => {
   }, []);
 
   return (
-    <section className="py-12 bg-white">
+    <section className="py-24 bg-gradient-to-r from-[#f4e8fb] to-[#f8eefd] text-gray-900 min-h-screen flex flex-col justify-center">
       <div className="container mx-auto px-4 max-w-[1200px]">
         {/* Container includes heading + cards for pinning */}
         <div
@@ -128,12 +128,12 @@ const BlogSection = () => {
             transition={{ duration: 0.5 }}
           >
             <div>
-              <h2 className="text-4xl font-bold mb-4 text-gray-800">Latest Insights</h2>
+              <h2 className="text-4xl font-bold mb-4 text-gray-900">Latest Insights</h2>
               <p className="text-xl text-gray-600">
                 Expert advice and thought leadership on data analytics
               </p>
             </div>
-            <a href="#" className="mt-6 md:mt-0 flex items-center text-[#7400B8] font-semibold group">
+            <a href="#" className="mt-6 md:mt-0 flex items-center text-gray-900 font-semibold group">
               View all articles
               <FiArrowRight className="ml-2 group-hover:translate-x-1 transition-transform duration-300" />
             </a>
@@ -142,44 +142,43 @@ const BlogSection = () => {
           <div
             ref={trackRef}
             className="flex gap-6 px-5  h-[420px] sm:h-[450px]"
-            style={{ paddingRight: "calc(50vw - 200px)" }}
+            style={{ paddingRight: "calc(50vw - 175px)" }} // Adjusted padding for smaller cards
           >
             {blogPosts.map((post, index) => (
               <motion.div
                 key={index}
-                className="w-[85vw] sm:w-[400px] min-w-[85vw] sm:min-w-[400px] max-w-[400px] bg-white mb-4 rounded-xl shadow-lg overflow-hidden snap-start"
+                className="w-[80vw] mb-8 sm:w-[350px] min-w-[80vw] sm:min-w-[350px] max-w-[350px] bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg overflow-hidden snap-start group"
 
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={{ y: -10, transition: { duration: 0.2 } }}
+                initial={{ opacity: 0, y: 50, scale: 0.95 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                viewport={{ once: true, amount: 0.5 }}
+                transition={{ duration: 0.6, delay: index * 0.15, ease: [0.25, 1, 0.5, 1] }}
+                whileHover={{ y: -10, scale: 1.03, transition: { duration: 0.3, ease: "circOut" } }}
               >
                 <div className="relative">
                   <img
                     src={post.image}
                     alt={post.title}
-                    className="w-full h-[160px] sm:h-[200px] object-cover"
+                    className="w-full h-[160px] sm:h-[180px] object-cover group-hover:scale-105 transition-transform duration-300 ease-in-out"
                     onError={(e) => {
                       e.target.onerror = null;
                       e.target.src = "/assets/20945368.jpg";
                     }}
                   />
-                  <div className="absolute top-4 left-4 bg-[#7400B8] text-white text-xs font-semibold py-1 px-3 rounded-full">
+                  <div className="absolute top-4 left-4 bg-white/20 text-gray-900 text-xs font-semibold py-1 px-3 rounded-full backdrop-blur-sm">
                     {post.category}
                   </div>
                 </div>
-                <div className="p-6 relative h-full bg-white">
-                  <div className="absolute inset-0 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] opacity-10 group-hover:opacity-20 transition-opacity duration-300"></div>
+                <div className="p-6 relative h-full">
                   <div className="relative z-10">
-                    <div className="flex items-center text-sm text-gray-500 mb-3">
+                    <div className="flex items-center text-sm text-gray-600 mb-3">
                       <span>{post.date}</span>
                       <span className="mx-2">•</span>
                       <span>{post.readTime}</span>
                     </div>
-                    <h3 className="text-xl font-semibold mb-3 text-gray-800 line-clamp-2">{post.title}</h3>
+                    <h3 className="text-xl font-semibold mb-3 text-gray-900 line-clamp-2">{post.title}</h3>
                     <p className="text-gray-600 mb-4 line-clamp-2">{post.excerpt}</p>
-                    <a href="#" className="text-[#7400B8] font-medium flex items-center group">
+                    <a href="#" className="text-gray-900 font-medium flex items-center group">
                       Read more
                       <FiArrowRight className="ml-2 group-hover:translate-x-1 transition-transform duration-300" />
                     </a>
@@ -187,14 +186,14 @@ const BlogSection = () => {
                 </div>
               </motion.div>
             ))}
-            
+
           </div>
-          
+
         </div>
-        
+
       </div>
 
-    
+
     </section>
   );
 };

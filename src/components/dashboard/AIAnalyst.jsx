@@ -22,8 +22,8 @@ const chartColors = [
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 // Track AI prompt usage with retry logic
-const API_BASE_URL = 'https://api.peekbi.com';
-const RAW_DATA_API_BASE_URL = 'https://ip.peekbi.com';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const RAW_DATA_API_BASE_URL = import.meta.env.VITE_RAW_DATA_API_BASE_URL || '';
 
 async function trackAIPromptUsageWithRetry(maxRetries = 1) {
     const token = localStorage.getItem('token');

@@ -100,13 +100,7 @@ const FeaturesSection = forwardRef((props, ref) => {
     ];
 
     return (
-        <section ref={ref} className="bg-[#F7F7FF] py-24 relative overflow-hidden">
-            {/* Background Elements */}
-            <div className="absolute inset-0 -z-10 overflow-hidden">
-                <div className="absolute top-1/4 right-1/4 w-[40rem] h-[40rem] bg-[#7400B8] rounded-full mix-blend-multiply filter blur-3xl opacity-[0.05]"></div>
-                <div className="absolute bottom-1/4 left-1/4 w-[45rem] h-[45rem] bg-[#9B4DCA] rounded-full mix-blend-multiply filter blur-3xl opacity-[0.05]"></div>
-            </div>
-
+        <section ref={ref} className="bg-gradient-to-br from-[#2D1B69] to-[#4C2A85] min-h-screen flex items-center py-24 relative overflow-hidden">
             <div className="container mx-auto px-4 max-w-[1200px]">
                 <motion.div
                     className="text-center mb-16"
@@ -115,29 +109,27 @@ const FeaturesSection = forwardRef((props, ref) => {
                     viewport={{ once: true, margin: "50px" }}
                     transition={{ duration: 0.3 }}
                 >
-                    <h2 className="text-4xl font-bold mb-4 text-gray-800">Powerful Features</h2>
-                    <p className="text-xl text-gray-600 max-w-2xl mx-auto">Everything you need to transform your data into actionable insights</p>
+                    <h2 className="text-4xl font-bold mb-4 text-white">Powerful Features</h2>
+                    <p className="text-xl text-gray-300 max-w-2xl mx-auto">Everything you need to transform your data into actionable insights</p>
                 </motion.div>
                 {/* Features grid - Existing */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {features.map((feature, index) => (
                         <motion.div
                             key={index}
-                            className="relative rounded-xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 group overflow-hidden bg-white"
+                            className="relative rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 group overflow-hidden bg-white/10 backdrop-blur-lg border border-white/20"
                             initial={{ opacity: 0 }}
                             whileInView={{ opacity: 1 }}
                             viewport={{ once: true, margin: "50px" }}
                             transition={{ duration: 0.3 }}
                             whileHover={{ y: -5, transition: { duration: 0.2 } }}
                         >
-                            {/* Gradient Background - matching hero card design */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] opacity-10 group-hover:opacity-20 transition-opacity duration-300"></div>
                             <div className="relative z-10">
-                                <div className="bg-purple-50 rounded-lg p-3 inline-block mb-5">
+                                <div className="bg-white/20 rounded-lg p-3 inline-block mb-5">
                                     {feature.icon}
                                 </div>
-                                <h3 className="text-xl font-bold mb-3 text-gray-800">{feature.title}</h3>
-                                <p className="text-gray-600">{feature.description}</p>
+                                <h3 className="text-xl font-bold mb-3 text-white">{feature.title}</h3>
+                                <p className="text-gray-300">{feature.description}</p>
                             </div>
                         </motion.div>
                     ))}

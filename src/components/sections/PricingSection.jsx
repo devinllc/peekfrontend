@@ -91,7 +91,7 @@ const pricingPlans = [
 
 const PricingSection = () => {
     const navigate = useNavigate();
-    
+
     useEffect(() => {
         gsap.utils.toArray('.pricingCard').forEach(pricingCard => {
             gsap.to(pricingCard, {
@@ -108,7 +108,7 @@ const PricingSection = () => {
     }, []);
 
     const formatLimit = (key, value) => {
-        switch(key) {
+        switch (key) {
             case 'uploads':
                 return `${value} file uploads`;
             case 'download':
@@ -131,7 +131,7 @@ const PricingSection = () => {
     };
 
     const getLimitIcon = (key) => {
-        switch(key) {
+        switch (key) {
             case 'uploads':
                 return <FiUpload className="w-4 h-4" />;
             case 'download':
@@ -154,7 +154,7 @@ const PricingSection = () => {
     };
 
     return (
-        <section className="py-26 bg-white">
+        <section className="py-26 bg-gradient-to-r from-[#f4e8fb] to-[#f8eefd]">
             <div className="container flex flex-col items-center mx-auto px-4 max-w-[1200px]">
                 <motion.div
                     className="text-center mb-16"
@@ -163,13 +163,13 @@ const PricingSection = () => {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5 }}
                 >
-                    <h2 className="text-4xl font-bold mb-4 text-gray-800">Simple, Transparent Pricing</h2>
+                    <h2 className="text-4xl font-bold mb-4 mt-20 text-gray-800">Simple, Transparent Pricing</h2>
                     <p className="text-xl text-gray-600 max-w-2xl mx-auto">Choose the plan that's right for your business with clear usage limits</p>
                 </motion.div>
 
                 <div className="flex card flex-col gap-[20vh] md:w-[45%] pb-[20vh] items-center">
                     {pricingPlans.map((plan, index) => (
-                        <motion.div 
+                        <motion.div
                             key={index}
                             className={`pricingCard sticky top-[15vh] rounded-2xl overflow-hidden shadow-lg relative ${plan.highlighted ? 'border-2 border-[#7400B8] transform scale-105' : 'border border-gray-200'}`}
                             initial={{ opacity: 0, y: 30 }}
