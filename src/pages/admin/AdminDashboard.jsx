@@ -32,7 +32,8 @@ const AdminDashboard = () => {
         setError('');
         try {
             const res = await axios.get(`${API_BASE_URL}/admin/users?userId=${user.id}`);
-            setUsers(res.data.Data || res.data.users || []);
+            console.log('AdminDashboard user list data:', res.data);
+            setUsers(res.data.data || []);
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to fetch users');
         } finally {
@@ -278,7 +279,7 @@ const AdminDashboard = () => {
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
                             transition={{ duration: 0.2 }}
-                            className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-0 sm:p-0 max-w-2xl w-full relative border border-[#7400B8]/10 mx-2 flex flex-col items-center overflow-hidden"
+                            className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-0 sm:p-0 max-w-4xl w-full relative border border-[#7400B8]/10 mx-2 flex flex-col items-center overflow-hidden"
                         >
                             <button
                                 className="absolute top-4 right-4 text-gray-400 hover:text-[#7400B8] transition-all z-20"
@@ -286,132 +287,128 @@ const AdminDashboard = () => {
                             >
                                 <FiX className="w-6 h-6" />
                             </button>
-                            <div className="w-full flex flex-col items-center justify-center bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 pt-10 pb-6 px-6 relative">
-                                <div className="relative mb-4">
-                                    <div className="absolute -inset-2 rounded-full bg-gradient-to-tr from-[#7400B8] to-[#9B4DCA] opacity-30 blur-lg"></div>
-                                    <div className="w-28 h-28 rounded-full bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] flex items-center justify-center text-white text-5xl font-bold shadow-lg border-4 border-white relative z-10">
-                                        <FiUser className="w-16 h-16" />
-                                    </div>
-                                </div>
-                                <h2 className="text-3xl font-extrabold text-gray-800 mb-1 tracking-tight drop-shadow">{selectedUser.name}</h2>
-                                <div className="flex items-center gap-2 text-gray-600 justify-center w-full mb-2">
-                                    <FiMail className="w-5 h-5 text-[#9B4DCA]" />
-                                    <span className="font-medium text-lg">{selectedUser.email}</span>
-                                </div>
+                            <div className="w-full flex flex-col items-center justify-center pt-6 sm:pt-10 pb-0 px-0 sm:px-0 relative">
+                                {/* Empty: header is now just close button */}
                             </div>
-                            <div className="w-full px-6 pb-6">
-                                <div className="bg-white/80 rounded-2xl shadow border border-[#7400B8]/10 p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                                    <div className="flex items-center gap-2 text-gray-700">
-                                        <FiShield className="w-4 h-4 text-[#7400B8]" />
-                                        <span className="font-medium">Role:</span>
-                                        <span className={`px-2 py-1 rounded-xl text-xs font-semibold border ${selectedUser.role === 'admin' ? 'bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white border-transparent' : 'bg-white text-[#7400B8] border-[#7400B8]'}`}>{selectedUser.role}</span>
+                            <div className="w-full px-4 pb-6 overflow-y-auto max-h-[80vh] sm:px-10 sm:pb-10 mt-4">
+                                <div className="bg-white/80 rounded-2xl shadow border border-[#7400B8]/10 p-6 mb-6">
+                                  <div className="flex flex-col sm:flex-row sm:items-center sm:gap-6 mb-6">
+                                    <div className="flex-shrink-0 flex items-center justify-center w-20 h-20 sm:w-28 sm:h-28 rounded-full bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] shadow-lg border-4 border-white">
+                                      <FiUser className="w-10 h-10 sm:w-16 sm:h-16 text-white" />
                                     </div>
-                                    {selectedUser.userType && (
-                                        <div className="flex items-center gap-2 text-gray-700">
-                                            <span className="font-medium">User Type:</span>
-                                            <span className="bg-[#F9F4FF] px-2 py-1 rounded-xl text-xs font-semibold border border-[#9B4DCA]/20">{selectedUser.userType}</span>
-                                        </div>
-                                    )}
-                                    {selectedUser.businessType && (
-                                        <div className="flex items-center gap-2 text-gray-700">
-                                            <span className="font-medium">Business Type:</span>
-                                            <span className="bg-[#F9F4FF] px-2 py-1 rounded-xl text-xs font-semibold border border-[#9B4DCA]/20">{selectedUser.businessType}</span>
-                                        </div>
-                                    )}
-                                    {selectedUser.phone && (
-                                        <div className="flex items-center gap-2 text-gray-700">
-                                            <span className="font-medium">Phone:</span>
-                                            <span className="bg-[#F9F4FF] px-2 py-1 rounded-xl text-xs font-semibold border border-[#9B4DCA]/20">{selectedUser.phone}</span>
-                                        </div>
-                                    )}
-                                    {selectedUser.company && (
-                                        <div className="flex items-center gap-2 text-gray-700">
-                                            <span className="font-medium">Company:</span>
-                                            <span className="bg-[#F9F4FF] px-2 py-1 rounded-xl text-xs font-semibold border border-[#9B4DCA]/20">{selectedUser.company}</span>
-                                        </div>
-                                    )}
-                                    {selectedUser.companyName && (
-                                        <div className="flex items-center gap-2 text-gray-700">
-                                            <span className="font-medium">Company Name:</span>
-                                            <span className="bg-[#F9F4FF] px-2 py-1 rounded-xl text-xs font-semibold border border-[#9B4DCA]/20">{selectedUser.companyName}</span>
-                                        </div>
-                                    )}
-                                    {selectedUser._id && (
-                                        <div className="flex items-center gap-2 text-gray-700">
-                                            <span className="font-medium">User ID:</span>
-                                            <span className="break-all bg-[#F9F4FF] px-2 py-1 rounded-xl text-xs font-semibold border border-[#9B4DCA]/20">{selectedUser._id}</span>
-                                        </div>
-                                    )}
-                                    {selectedUser.createdAt && (
-                                        <div className="flex items-center gap-2 text-gray-700">
-                                            <span className="font-medium">Created:</span>
-                                            <span className="bg-[#F9F4FF] px-2 py-1 rounded-xl text-xs font-semibold border border-[#9B4DCA]/20">{new Date(selectedUser.createdAt).toLocaleString()}</span>
-                                        </div>
-                                    )}
-                                    {selectedUser.updatedAt && (
-                                        <div className="flex items-center gap-2 text-gray-700">
-                                            <span className="font-medium">Updated:</span>
-                                            <span className="bg-[#F9F4FF] px-2 py-1 rounded-xl text-xs font-semibold border border-[#9B4DCA]/20">{new Date(selectedUser.updatedAt).toLocaleString()}</span>
-                                        </div>
-                                    )}
-                                    {selectedUser.status && (
-                                        <div className="flex items-center gap-2 text-gray-700">
-                                            <span className="font-medium">Status:</span>
-                                            <span className="bg-[#F9F4FF] px-2 py-1 rounded-xl text-xs font-semibold border border-[#9B4DCA]/20">{selectedUser.status}</span>
-                                        </div>
-                                    )}
+                                    <div className="mt-4 sm:mt-0">
+                                      <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-800 tracking-tight">{selectedUser.name}</h2>
+                                      <div className="flex items-center gap-2 text-gray-600 mt-2">
+                                        <FiMail className="w-5 h-5 text-[#9B4DCA]" />
+                                        <span className="font-medium text-base sm:text-lg">{selectedUser.email}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div><span className="font-medium text-gray-700">Username:</span> <span className="text-gray-800">{selectedUser.username}</span></div>
+                                    <div><span className="font-medium text-gray-700">Role:</span> <span className={`px-2 py-1 rounded-xl text-xs font-semibold border ${selectedUser.role === 'admin' ? 'bg-gradient-to-r from-[#7400B8] to-[#9B4DCA] text-white border-transparent' : 'bg-white text-[#7400B8] border-[#7400B8]'}`}>{selectedUser.role}</span></div>
+                                    <div><span className="font-medium text-gray-700">User Type:</span> <span className="text-gray-800">{selectedUser.userType}</span></div>
+                                    <div><span className="font-medium text-gray-700">Status:</span> <span className="text-gray-800">{selectedUser.status}</span></div>
+                                    <div><span className="font-medium text-gray-700">User ID:</span> <span className="break-all text-gray-800">{selectedUser._id}</span></div>
+                                    <div><span className="font-medium text-gray-700">Created:</span> <span className="text-gray-800">{selectedUser.createdAt && new Date(selectedUser.createdAt).toLocaleString()}</span></div>
+                                    <div><span className="font-medium text-gray-700">Updated:</span> <span className="text-gray-800">{selectedUser.updatedAt && new Date(selectedUser.updatedAt).toLocaleString()}</span></div>
+                                  </div>
                                 </div>
-                                {selectedUser.plan && (
-                                    <div className="mt-6 p-6 rounded-2xl bg-gradient-to-br from-[#F9F4FF] to-white border border-[#9B4DCA]/20 w-full max-w-lg shadow">
-                                        <h3 className="text-lg font-bold text-[#7400B8] mb-3">Plan Details</h3>
-                                        <div className="flex flex-col gap-2 mb-2">
-                                            {selectedUser.plan.name && (
-                                                <div className="flex items-center gap-2 text-gray-700">
-                                                    <span className="font-medium">Plan Name:</span>
-                                                    <span className="bg-white/80 px-2 py-1 rounded-xl text-xs font-semibold border border-[#9B4DCA]/20">{selectedUser.plan.name}</span>
-                                                </div>
-                                            )}
-                                            {selectedUser.plan.status && (
-                                                <div className="flex items-center gap-2 text-gray-700">
-                                                    <span className="font-medium">Status:</span>
-                                                    <span className="bg-white/80 px-2 py-1 rounded-xl text-xs font-semibold border border-[#9B4DCA]/20">{selectedUser.plan.status}</span>
-                                                </div>
-                                            )}
-                                            {selectedUser.plan.price !== undefined && (
-                                                <div className="flex items-center gap-2 text-gray-700">
-                                                    <span className="font-medium">Price:</span>
-                                                    <span className="bg-white/80 px-2 py-1 rounded-xl text-xs font-semibold border border-[#9B4DCA]/20">{selectedUser.plan.price}</span>
-                                                </div>
-                                            )}
-                                            {selectedUser.plan.expiry && (
-                                                <div className="flex items-center gap-2 text-gray-700">
-                                                    <span className="font-medium">Expiry:</span>
-                                                    <span className="bg-white/80 px-2 py-1 rounded-xl text-xs font-semibold border border-[#9B4DCA]/20">{new Date(selectedUser.plan.expiry).toLocaleString()}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        {selectedUser.plan.limits && (
-                                            <div className="mt-2">
-                                                <h4 className="font-semibold text-[#9B4DCA] mb-1">Limits</h4>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {Object.entries(selectedUser.plan.limits).map(([key, value]) => (
-                                                        <span key={key} className="bg-[#E0C3FC]/60 text-[#7400B8] px-3 py-1 rounded-full text-xs font-semibold border border-[#9B4DCA]/10">{key}: {value}</span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                        {selectedUser.plan.features && (
-                                            <div className="mt-2">
-                                                <h4 className="font-semibold text-[#9B4DCA] mb-1">Features</h4>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {Object.entries(selectedUser.plan.features).map(([key, value]) => (
-                                                        <span key={key} className={`px-3 py-1 rounded-full text-xs font-semibold border ${value ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>{key}: {String(value)}</span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
+                                {/* Business Info */}
+                                <div className="bg-white/80 rounded-2xl shadow border border-[#9B4DCA]/10 p-6 mb-6">
+                                  <h3 className="text-lg font-bold text-[#9B4DCA] mb-4">Business Info</h3>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div><span className="font-medium text-gray-700">Business Type:</span> <span className="text-gray-800">{selectedUser.businessType}</span></div>
+                                    <div><span className="font-medium text-gray-700">Category:</span> <span className="text-gray-800">{selectedUser.category}</span></div>
+                                    <div><span className="font-medium text-gray-700">Company Name:</span> <span className="text-gray-800">{selectedUser.companyName}</span></div>
+                                    <div><span className="font-medium text-gray-700">Phone:</span> <span className="text-gray-800">{selectedUser.phone}</span></div>
+                                  </div>
+                                </div>
+                                {/* Login History */}
+                                {selectedUser.lastLogin && Array.isArray(selectedUser.lastLogin) && (
+                                  <div className="bg-white/80 rounded-2xl shadow border border-[#7400B8]/10 p-6 mb-6">
+                                    <h3 className="text-lg font-bold text-[#7400B8] mb-4">Login History</h3>
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-xs sm:text-sm">
+                                        <thead className="bg-gray-50/80 text-gray-700">
+                                          <tr>
+                                            <th className="py-1 px-2 text-left">#</th>
+                                            <th className="py-1 px-2 text-left">Date</th>
+                                            <th className="py-1 px-2 text-left">Time</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                          {selectedUser.lastLogin.slice(0, 10).map((login, idx) => {
+                                            const date = new Date(login);
+                                            return (
+                                              <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                                                <td className="py-1 px-2">{idx + 1}</td>
+                                                <td className="py-1 px-2">{date.toLocaleDateString()}</td>
+                                                <td className="py-1 px-2">{date.toLocaleTimeString()}</td>
+                                              </tr>
+                                            );
+                                          })}
+                                        </tbody>
+                                      </table>
+                                      {selectedUser.lastLogin.length > 10 && (
+                                        <div className="text-xs text-gray-500 mt-2">Showing 10 of {selectedUser.lastLogin.length} logins</div>
+                                      )}
                                     </div>
+                                  </div>
                                 )}
+                                {/* Subscription Info */}
+                                <div className="bg-white/80 rounded-2xl shadow border border-[#9B4DCA]/10 p-6 mb-6">
+                                  <h3 className="text-lg font-bold text-[#9B4DCA] mb-4">Subscription</h3>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div><span className="font-medium text-gray-700">Subscription Status:</span> <span className="text-gray-800">{selectedUser.subscriptionStatus}</span></div>
+                                    <div><span className="font-medium text-gray-700">Current Period End:</span> <span className="text-gray-800">{selectedUser.currentPeriodEnd && new Date(selectedUser.currentPeriodEnd).toLocaleString()}</span></div>
+                                    <div><span className="font-medium text-gray-700">Subscription IDs:</span> <span className="text-gray-800">{selectedUser.subscription && Array.isArray(selectedUser.subscription) ? selectedUser.subscription.join(', ') : ''}</span></div>
+                                  </div>
+                                </div>
+                                {/* Plan Info */}
+                                {selectedUser.plan && (
+                                  <div className="bg-white/80 rounded-2xl shadow border border-[#7400B8]/10 p-6 mb-6">
+                                    <h3 className="text-lg font-bold text-[#7400B8] mb-4">Plan Info</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                      <div><span className="font-medium text-gray-700">Plan Name:</span> <span className="text-gray-800">{selectedUser.plan.name}</span></div>
+                                      <div><span className="font-medium text-gray-700">Billing Interval:</span> <span className="text-gray-800">{selectedUser.plan.billingInterval}</span></div>
+                                      <div><span className="font-medium text-gray-700">Price:</span> <span className="text-gray-800">₹{selectedUser.plan.price ? (selectedUser.plan.price / 100).toLocaleString('en-IN', {minimumFractionDigits: 0}) : '0'}</span></div>
+                                      <div><span className="font-medium text-gray-700">Is Active:</span> <span className="text-gray-800">{selectedUser.plan.isActive ? 'Yes' : 'No'}</span></div>
+                                      <div><span className="font-medium text-gray-700">Created:</span> <span className="text-gray-800">{selectedUser.plan.createdAt && new Date(selectedUser.plan.createdAt).toLocaleString()}</span></div>
+                                      <div><span className="font-medium text-gray-700">Updated:</span> <span className="text-gray-800">{selectedUser.plan.updatedAt && new Date(selectedUser.plan.updatedAt).toLocaleString()}</span></div>
+                                    </div>
+                                    {/* Plan Limits */}
+                                    {selectedUser.plan.limits && (
+                                      <div className="mb-4">
+                                        <h4 className="font-semibold text-[#9B4DCA] mb-1">Limits</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                          {Object.entries(selectedUser.plan.limits).map(([key, value]) => (
+                                            <span key={key} className="bg-[#E0C3FC]/60 text-[#7400B8] px-3 py-1 rounded-full text-xs font-semibold border border-[#9B4DCA]/10">{key}: {value}</span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {/* Plan Features */}
+                                    {selectedUser.plan.features && (
+                                      <div className="mb-2">
+                                        <h4 className="font-semibold text-[#9B4DCA] mb-1">Features</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                          {Object.entries(selectedUser.plan.features).map(([key, value]) => (
+                                            <span key={key} className={`px-3 py-1 rounded-full text-xs font-semibold border ${value ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>{key}: {String(value)}</span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                {/* Other Info */}
+                                <div className="bg-white/80 rounded-2xl shadow border border-[#7400B8]/10 p-6 mb-6">
+                                  <h3 className="text-lg font-bold text-[#7400B8] mb-4">Other Info</h3>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div><span className="font-medium text-gray-700">Chart Count:</span> <span className="text-gray-800">{selectedUser.chartCount}</span></div>
+                                    <div><span className="font-medium text-gray-700">Report Count:</span> <span className="text-gray-800">{selectedUser.reportCount}</span></div>
+                                  </div>
+                                </div>
                             </div>
                         </motion.div>
                     </motion.div>

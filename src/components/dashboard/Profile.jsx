@@ -20,12 +20,12 @@ const PLAN_DEFAULTS = {
         price: 100,
         billingInterval: 'monthly',
         limits: {
-            uploads: 10,
-            download: 5,
-            analyse: 3,
+            uploads: 15,
+            download: 15,
+            analyse: 8,
             aiPromts: 5,
-            reports: 2,
-            charts: 5,
+            reports: 8,
+            charts: 15,
             maxUsersPerAccount: 1,
             dataRetentionDays: 7,
         },
@@ -38,17 +38,17 @@ const PLAN_DEFAULTS = {
         },
     },
     premium: {
-        price: 9900,
+        price: 29900,
         billingInterval: 'monthly',
         limits: {
             uploads: 100,
-            download: 50,
-            analyse: 30,
+            download: 75,
+            analyse: 60,
             aiPromts: 50,
             reports: 20,
             charts: 50,
             maxUsersPerAccount: 5,
-            dataRetentionDays: 30,
+            dataRetentionDays: 365,
         },
         features: {
             scheduleReports: true,
@@ -59,13 +59,13 @@ const PLAN_DEFAULTS = {
         },
     },
     enterprise: {
-        price: 49900,
+        price: 69900,
         billingInterval: 'monthly',
         limits: {
-            uploads: 1000,
+            uploads: 500,
             download: 500,
-            analyse: 300,
-            aiPromts: 500,
+            analyse: 500,
+            aiPromts: 160,
             reports: 200,
             charts: 500,
             maxUsersPerAccount: 100,
@@ -899,9 +899,9 @@ const Profile = () => {
                                 </button>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 w-full mx-0">
                                 <motion.div 
-                                    className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-8 border border-white/30 shadow-lg"
+                                    className="bg-white/80 backdrop-blur-sm rounded-2xl w-full p-4 sm:p-8 border border-white/30 shadow-lg mx-0 sm:mx-2"
                                     whileHover={{ y: -4 }}
                                     transition={{ duration: 0.3 }}
                                 >
@@ -966,17 +966,17 @@ const Profile = () => {
                                 </motion.div>
 
                                 <motion.div 
-                                    className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/30 shadow-lg"
+                                    className="bg-white/80 backdrop-blur-sm rounded-2xl w-full p-4 sm:p-8 border border-white/30 shadow-lg mx-0 sm:mx-2"
                                     whileHover={{ y: -4 }}
                                     transition={{ duration: 0.3 }}
                                 >
-                                    <div className="flex justify-between items-center mb-6">
+                                    <div className="flex flex-col items-start space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 sm:space-x-4 mb-6">
                                         <h4 className="font-bold text-gray-800 text-lg">Plan Features</h4>
-                                        <div className="relative">
+                                        <div className="relative w-full sm:w-auto">
                                             <select
                                                 value={selectedPlan}
                                                 onChange={(e) => setSelectedPlan(e.target.value)}
-                                                className="px-4 py-2 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent transition-all duration-200 font-medium shadow-lg appearance-none pr-10"
+                                                className="w-full sm:w-auto px-4 py-2 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7400B8] focus:border-transparent transition-all duration-200 font-medium shadow-lg appearance-none pr-10"
                                             >
                                                 {PLAN_OPTIONS.map(opt => (
                                                     <option key={opt.name} value={opt.name}>
@@ -988,12 +988,13 @@ const Profile = () => {
                                                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                                 </svg>
-                                    </div>
+                                            </div>
                                         </div>
                                     </div>
                                     
                                     {/* Selected Plan Details */}
-                                    <div className="mb-6 p-6 bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 rounded-2xl border border-[#7400B8]/20">
+                                    <div className="mb-6 w-full mx-0 px-0 sm:p-6 bg-gradient-to-r from-[#7400B8]/10 to-[#9B4DCA]/10 rounded-2xl border border-[#7400B8]/20">
+                                      <div className="p-4 sm:p-0">
                                         <div className="flex items-center justify-between mb-4">
                                             <h5 className="text-xl font-bold text-[#7400B8] capitalize">{selectedPlan} Plan</h5>
                                             <span className="text-2xl font-bold text-gray-800">
@@ -1005,7 +1006,7 @@ const Profile = () => {
                                         {/* Plan Limits */}
                                         <div className="mb-4">
                                             <h6 className="font-semibold text-gray-700 mb-2">Limits</h6>
-                                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                            <div className="grid grid-cols-2 gap-2 text-sm w-full">
                                                 {Object.entries(PLAN_DEFAULTS[selectedPlan].limits).map(([key, value]) => (
                                                     <div key={key} className="flex justify-between items-center p-2 bg-white/60 rounded-lg">
                                                         <span className="text-gray-600">{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
@@ -1018,30 +1019,31 @@ const Profile = () => {
                                         {/* Plan Features */}
                                         <div>
                                             <h6 className="font-semibold text-gray-700 mb-2">Features</h6>
-                                            <ul className="space-y-2 text-sm">
+                                            <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm w-full">
                                                 {Object.entries(PLAN_DEFAULTS[selectedPlan].features).map(([feature, enabled], index) => (
-                                            <motion.li 
-                                                key={feature} 
-                                                        className="flex items-center space-x-3"
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: index * 0.1 }}
-                                            >
-                                                {enabled ?
+                                                    <motion.li 
+                                                        key={feature} 
+                                                        className="flex items-center space-x-3 bg-white/60 rounded-lg p-2 w-full mx-0"
+                                                        initial={{ opacity: 0, x: -20 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        transition={{ delay: index * 0.1 }}
+                                                    >
+                                                        {enabled ?
                                                             <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
                                                                 <FiCheck className="w-3 h-3 text-white" />
-                                                    </div> :
+                                                            </div> :
                                                             <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
                                                                 <FiX className="w-3 h-3 text-white" />
-                                                    </div>
-                                                }
-                                                <span className={`font-medium ${enabled ? "text-gray-800" : "text-gray-500"}`}>
-                                                    {feature.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                                </span>
-                                            </motion.li>
-                                        ))}
-                                    </ul>
+                                                            </div>
+                                                        }
+                                                        <span className={`font-medium ${enabled ? "text-gray-800" : "text-gray-500"}`}>
+                                                            {feature.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                        </span>
+                                                    </motion.li>
+                                                ))}
+                                            </ul>
                                         </div>
+                                      </div>
                                     </div>
                                     
                                     {/* Upgrade Button */}

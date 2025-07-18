@@ -11,9 +11,9 @@ const PLAN_DEFAULTS = {
         price: 0,
         billingInterval: 'monthly',
         limits: {
-            uploads: 10,
-            download: 5,
-            analyse: 3,
+            uploads: 15,
+            download: 15,
+            analyse: 8,
             aiPromts: 5,
         },
         features: {
@@ -25,14 +25,14 @@ const PLAN_DEFAULTS = {
         },
     },
     premium: {
-        price: 99,
+        price: 299,
         billingInterval: 'monthly',
         limits: {
             uploads: 100,
-            download: 50,
-            analyse: 30,
+            download: 75,
+            analyse: 60,
             aiPromts: 50,
-            dataRetentionDays: 30,
+            dataRetentionDays: 365,
         },
         features: {
             scheduleReports: true,
@@ -43,13 +43,13 @@ const PLAN_DEFAULTS = {
         },
     },
     enterprise: {
-        price: 499,
+        price: 699,
         billingInterval: 'monthly',
         limits: {
-            uploads: 1000,
+            uploads: 500,
             download: 500,
-            analyse: 300,
-            aiPromts: 500,
+            analyse: 500,
+            aiPromts: 160,
             dataRetentionDays: 365,
         },
         features: {
@@ -64,7 +64,7 @@ const PLAN_DEFAULTS = {
 
 const pricingPlans = [
     {
-        name: 'Starter',
+        name: 'Free',
         planKey: 'free',
         highlighted: false,
         buttonText: 'Start Free Trial',
@@ -72,7 +72,7 @@ const pricingPlans = [
         icon: <FiUsers className="w-6 h-6" />
     },
     {
-        name: 'Professional',
+        name: 'Premium',
         planKey: 'premium',
         highlighted: true,
         buttonText: 'Start Free Trial',
@@ -110,21 +110,21 @@ const PricingSection = () => {
     const formatLimit = (key, value) => {
         switch (key) {
             case 'uploads':
-                return `${value} file uploads`;
+                return `${value} File Uploads`;
             case 'download':
-                return `${value} downloads`;
+                return `${value} Downloads`;
             case 'analyse':
-                return `${value} analyses`;
+                return `${value} Analyses`;
             case 'aiPromts':
-                return `${value} AI prompts`;
+                return `${value} AI Prompts`;
             case 'reports':
-                return `${value} reports`;
+                return `${value} Reports`;
             case 'charts':
-                return `${value} charts`;
+                return `${value} Charts`;
             case 'maxUsersPerAccount':
-                return `${value} user${value > 1 ? 's' : ''}`;
+                return `${value} User${value > 1 ? 's' : ''}`;
             case 'dataRetentionDays':
-                return `${value} days retention`;
+                return `${value} days Retention`;
             default:
                 return `${value}`;
         }
@@ -147,7 +147,7 @@ const PricingSection = () => {
             case 'maxUsersPerAccount':
                 return <FiUsers className="w-4 h-4" />;
             case 'dataRetentionDays':
-                return <FiCalendar className="w-4 h-4" />;
+                return <FiCalendar className="w-4 h-4 " />;
             default:
                 return <FiCheck className="w-4 h-4" />;
         }
